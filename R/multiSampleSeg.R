@@ -932,7 +932,8 @@ multiSampleSegSome <- structure(function
     })
   ## for 0, 1, ..., maxPeaks, run the bin pyramid grid search,
   ## around the peaks found in this first step.
-  zoom.peak.list <- list()
+  library(PeakError)
+  zoom.peak.list <- list("0"=Peaks())
   zoom.loss.list <-
     list("0"=data.frame(peaks=0, loss=sum(flat.loss.vec)))
   for(peaks.str in names(best.indices.list)){
@@ -1289,4 +1290,128 @@ multiSampleSegSome <- structure(function
   ggplot(zoom.loss, aes(peaks, loss))+
     geom_point()+
     geom_line()
+  ## Compute PeakError on this sequence of models.
+  regions.by.sample <- split(some.regions, some.regions$sample.id)
+  error.list <- list()
+  for(peaks.str in names(zoom.peak.list)){
+    several.samples <- zoom.peak.list[[peaks.str]]
+    peaks.by.sample <- split(several.samples, several.samples$sample.id)
+    peaks <- as.numeric(peaks.str)
+    error.by.sample <- list()
+    for(sample.id in names(regions.by.sample)){
+      one.sample.peaks <- if(sample.id %in% names(peaks.by.sample)){
+        peaks.by.sample[[sample.id]]
+      }else{
+        Peaks()
+      }
+      one.sample.regions <- regions.by.sample[[sample.id]]
+      error <- PeakErrorChrom(one.sample.peaks, one.sample.regions)
+      error.by.sample[[sample.id]] <- data.frame(sample.id, error)
+    }
+    peaks.error <- do.call(rbind, error.by.sample)
+    fp <- sum(peaks.error$fp)
+    fn <- sum(peaks.error$fn)
+    error.list[[peaks.str]] <-
+      data.frame(peaks, errors=fp+fn, regions=nrow(peaks.error))
+  }
+  error.sum <- do.call(rbind, error.list)
+  show.error <- data.frame(what="incorrect regions", error.sum)
+  show.loss <- data.frame(what="Poisson loss", zoom.loss)
+  ggplot()+
+    geom_point(aes(peaks, loss),
+               data=show.loss)+
+    geom_line(aes(peaks, loss),
+              data=show.loss)+
+    geom_point(aes(peaks, errors),
+               data=show.error)+
+    geom_line(aes(peaks, errors),
+              data=show.error)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(what ~ ., scales="free")
+  rownames(show.error) <- show.error$peaks
+  show.loss$errors <- show.error[paste(show.loss$peaks), "errors"]
+  show.loss$cummin <- cummin(show.loss$loss)
+  compute.loss <- subset(show.loss, loss == cummin)
+  exact.df <- with(compute.loss, exactModelSelection(loss, peaks, peaks))
+  intercept <- show.loss[as.character(exact.df$peaks), "loss"]
+  exact.df$cost <- intercept + exact.df$min.lambda * exact.df$model.complexity
+  exact.df$next.cost <- c(exact.df$cost[-1], NA)
+  ggplot()+
+    geom_point(aes(min.lambda, cost),
+               data=exact.df, pch=1, color="red")+
+    geom_segment(aes(min.lambda, cost,
+                     xend=max.lambda, yend=next.cost),
+                 data=exact.df, color="red", size=1.5)+
+    geom_text(aes((min.lambda+max.lambda)/2, (cost+next.cost)/2,
+                  label=sprintf("%d peak%s optimal", peaks,
+                    ifelse(peaks==1, "", "s"))),
+              data=exact.df, color="red", hjust=0, vjust=1.5)+
+    geom_abline(aes(slope=peaks, intercept=loss),
+                data=show.loss)+
+    geom_text(aes(0, loss, label=peaks),
+              data=show.loss, hjust=1.5, color="red")+
+    ggtitle("model selection: cost = loss_k + lambda*segments_k")
+  ## Solve the optimization using grid search.
+  L.grid <- with(exact.df,{
+    seq(min(max.log.lambda)-1,
+        max(min.log.lambda)+1,
+        l=100)
+  })
+  lambda.grid <- exp(L.grid)
+  kstar.grid <- sapply(lambda.grid,function(lambda){
+    crit <- show.loss$peaks * lambda + show.loss$loss
+    picked <- which.min(crit)
+    show.loss$peaks[picked]
+  })
+  grid.df <- data.frame(log.lambda=L.grid, peaks=kstar.grid)
+  ## Compare the results.
+  ggplot()+
+    geom_segment(aes(min.log.lambda, peaks,
+                     xend=max.log.lambda, yend=peaks),
+                 data=exact.df)+
+    geom_point(aes(log.lambda, peaks),
+               data=grid.df, color="red", pch=1)+
+    ylab("optimal model complexity (peaks)")+
+    xlab("log(lambda)")
+  ## Compute the target interval.
+  exact.df$errors <- show.error[paste(exact.df$peaks), "errors"]
+  indices <- with(exact.df, {
+    largestContinuousMinimum(errors, max.log.lambda-min.log.lambda)
+  })
+  target.interval <-
+    c(exact.df$min.log.lambda[indices$start],
+      exact.df$max.log.lambda[indices$end])
+  ## Compute the feature matrix for this joint segmentation problem.
+  features.by.sample <- list()
+  for(sample.id in names(profile.list)){
+    ## Compute feature vector for learning using this segmentation
+    ## problem.
+    sample.counts <- profile.list[[sample.id]]
+    too.long <- with(sample.counts, rep(count, chromEnd-chromStart))
+    too.long.pos <- with(sample.counts, {
+      (chromStart[1]+1):chromEnd[length(chromEnd)]
+    })
+    stopifnot(length(too.long) == length(too.long.pos))
+    keep <- max.chromStart < too.long.pos & too.long.pos <= min.chromEnd
+    long <- as.numeric(too.long[keep])
+    stopifnot(length(long) == bases)
+
+    feature.vec <-
+      c(quartile=quantile(long),
+        mean=mean(long),
+        sd=sd(long),
+        mad=mad(long),
+        bases=bases,
+        sum=sum(long))
+    
+    suppressWarnings({
+      features.by.sample[[sample.id]] <-
+        c(feature.vec,
+          `log+1`=log(feature.vec+1),
+          log=log(feature.vec),
+          log.log=log(log(feature.vec)))
+    })
+  }
+  feature.mat <- do.call(rbind, features.by.sample)
 })
