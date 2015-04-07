@@ -641,27 +641,32 @@ multiSampleSegSome <- structure(function
           profiles,
           PACKAGE="PeakSegDP")
 }, ex=function(){
-  library(PeakSegDP)
-
-  data(chr11ChIPseq)
-  two.up.two.down <- subset(chr11ChIPseq$coverage,
-                118090000 < chromStart &
-                chromEnd < 118100000)
+  library(PeakSegJoint)
+  data(H3K36me3.TDH.other.chunk1)
+  some.counts <-
+    subset(H3K36me3.TDH.other.chunk1$counts,
+           43100000 < chromEnd & chromStart < 43205000)
+  some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
+                         chromStart < 43205000)
   library(ggplot2)
+  ann.colors <-
+    c(noPeaks="#f6f4bf",
+      peakStart="#ffafaf",
+      peakEnd="#ff4c4c",
+      peaks="#a445ee")
   ggplot()+
-    geom_step(aes(chromStart/1e3, count), data=two.up.two.down)+
-    scale_size_manual(values=c(optimal=2, heuristic=1))+
-    ## geom_segment(aes(chromStart/1e3, 0,
-    ##                  color=model, size=model,
-    ##                  xend=chromEnd/1e3, yend=0),
-    ##              data=peaks)+
+    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                      fill=annotation),
+                  alpha=0.5,
+                  data=some.regions)+
+    scale_fill_manual(values=ann.colors)+
+    geom_step(aes(chromStart/1e3, count), data=some.counts)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
     facet_grid(sample.id ~ ., scales="free")
-  
-  data(H3K4me3.TDH.immune.chunk12.cluster4)
-  profiles <- two.up.two.down
-  profiles <- H3K4me3.TDH.immune.chunk12.cluster4
+  ## Begin R implementation of multiple sample constrained
+  ## segmentation heuristic. Input: profiles data.frame.
+  profiles <- some.counts
   profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
   max.chromStart <- max(sapply(profile.list, with, chromStart[1]))
   min.chromEnd <- min(sapply(profile.list, with, chromEnd[length(chromEnd)]))
@@ -876,6 +881,33 @@ multiSampleSegSome <- structure(function
   ggplot()+
     scale_color_manual(values=c(data="grey50",
                          bins="black", peaks="deepskyblue"))+
+    geom_step(aes(chromStart/1e3, count.norm, color=what),
+              data=dftype("data", norm.df))+
+    geom_segment(aes(chromStart/1e3, y,
+                     xend=chromEnd/1e3, yend=y,
+                     color=what),
+                 size=1,
+                 data=dftype("peaks", best.peaks))+
+    geom_text(aes(chromStart/1e3, y,
+                     label=paste0(peaks, " peak",
+                       ifelse(peaks==1, "", "s"), " "),
+                     color=what),
+              hjust=1,
+              size=3,
+              vjust=0.5,
+              data=dftype("peaks", best.peaks))+
+    geom_segment(aes(chromStart/1e3, mean.norm,
+                     xend=chromEnd/1e3, yend=mean.norm,
+                     color=what),
+                 data=dftype("bins", bin.df))+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
+      sub("McGill0", "", val)
+    })
+  ggplot()+
+    scale_color_manual(values=c(data="grey50",
+                         bins="black", peaks="deepskyblue"))+
     geom_step(aes(chromStart/1e3, count, color=what),
               data=dftype("data", norm.df))+
     geom_segment(aes(chromStart/1e3, 0,
@@ -1069,7 +1101,9 @@ multiSampleSegSome <- structure(function
 
         total.loss <- sum(seg1.loss + seg2.loss + seg3.loss)
         total.loss.vec <- seg1.loss+seg2.loss+seg3.loss
-        model.list[[model.i]] <- data.frame(model.row, total.loss)
+        feasible.vec <- seg1.means < seg2.means & seg2.means > seg3.means
+        model.list[[model.i]] <-
+          data.frame(model.row, total.loss, feasible=all(feasible.vec))
         sample.loss.list[[model.i]] <-
           data.frame(sample.id=samples.with.peaks, loss=total.loss.vec)
       }
@@ -1090,7 +1124,8 @@ multiSampleSegSome <- structure(function
       ## Then plot the peaks only, colored by total cost of the model.
       model.df <- do.call(rbind, model.list)
       model.df$y <- with(model.df, model.i/max(model.i))
-      best.model <- model.df[which.min(model.df$total.loss), ]
+      feasible.models <- subset(model.df, feasible)
+      best.model <- feasible.models[which.min(feasible.models$total.loss), ]
 
       ggplot()+
         xlab("position on chromosome (kilobases = kb)")+
@@ -1100,14 +1135,16 @@ multiSampleSegSome <- structure(function
                   color="grey")+
         geom_segment(aes(chromStart/1e3, mean.norm,
                          xend=chromEnd/1e3, yend=mean.norm),
-                     data=data.frame(bin.df, what="bins"),
+                     data=data.frame(sub.bin.df, what="bins"),
                      color="black")+
         geom_segment(aes(peakStart/1e3, 0,
                          xend=peakEnd/1e3, yend=0),
                      data=data.frame(loss.best, what="peak"),
                      color="green")+
+        scale_linetype_manual(values=c("TRUE"=1, "FALSE"=2))+
         geom_segment(aes(left.chromStart/1e3, y,
                          color=total.loss,
+                         linetype=feasible,
                          xend=right.chromEnd/1e3, yend=y),
                      data=data.frame(model.df, sample.id="peaks"),
                      size=1)+
@@ -1188,6 +1225,35 @@ multiSampleSegSome <- structure(function
   }
   zoom.peaks <- do.call(rbind, zoom.peak.list)
   zoom.loss <- do.call(rbind, zoom.loss.list)
+  ggplot()+
+    scale_color_manual(values=c(data="grey50",
+                         bins="black", peaks="deepskyblue"))+
+    geom_step(aes(chromStart/1e3, count.norm, color=what),
+              data=dftype("data", norm.df))+
+    geom_segment(aes(chromStart/1e3, -peaks*0.1,
+                     xend=chromEnd/1e3, yend=-peaks*0.1,
+                     color=what),
+                 size=1,
+                 data=dftype("peaks", zoom.peaks))+
+    geom_text(aes(chromStart/1e3, -peaks*0.1,
+                  label=paste0(peaks,
+                    " peak",
+                    ifelse(peaks==1, "", "s"),
+                    " "),
+                  color=what),
+              hjust=1,
+              vjust=0.5,
+              size=3,
+              data=dftype("peaks", zoom.peaks))+
+    geom_segment(aes(chromStart/1e3, mean.norm,
+                     xend=chromEnd/1e3, yend=mean.norm,
+                     color=what),
+                 data=dftype("bins", bin.df))+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
+      sub("McGill0", "", val)
+    })
   ggplot()+
     scale_color_manual(values=c(data="grey50",
                          bins="black", peaks="deepskyblue"))+

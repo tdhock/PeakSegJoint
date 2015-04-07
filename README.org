@@ -1,0 +1,11 @@
+PeakSegJoint
+
+Fast heuristic segmentation algorithm for supervised joint peak
+detection.
+
+#+BEGIN_SRC R
+install.packages("devtools")
+devtools::install_github("tdhock/PeakSegJoint")
+library(PeakSegJoint)
+example(binSum)
+#+END_SRC
