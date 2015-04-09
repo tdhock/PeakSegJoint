@@ -643,11 +643,16 @@ multiSampleSegSome <- structure(function
 }, ex=function(){
   library(PeakSegJoint)
   data(H3K36me3.TDH.other.chunk1)
+  lims <- c(43100000, 43205000) # 1 peak
+  lims <- c(43100000, 43170000) # half peak
+  lims <- c(43100000, 43300000) # two peaks
+  lims <- c(43000000, 43200000) # left
+  lims <- c(43200000, 43400000) # right
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
-           43100000 < chromEnd & chromStart < 43205000)
+           lims[1] < chromEnd & chromStart < lims[2])
   some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
-                         chromStart < 43205000)
+                         chromStart < lims[2])
   library(ggplot2)
   ann.colors <-
     c(noPeaks="#f6f4bf",
@@ -667,11 +672,49 @@ multiSampleSegSome <- structure(function
   ## Begin R implementation of multiple sample constrained
   ## segmentation heuristic. Input: profiles data.frame.
   profiles <- some.counts
-  profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  max.chromStart <- max(sapply(profile.list, with, chromStart[1]))
-  min.chromEnd <- min(sapply(profile.list, with, chromEnd[length(chromEnd)]))
-  c(max.chromStart, min.chromEnd)
+  unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
+  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromEnd <-
+    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+  unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
+  bin.factor <- 2L
+  bases.per.bin <- 1L
+  while(unfilled.bases/bases.per.bin/bin.factor >= 4){
+    bases.per.bin <- bases.per.bin * bin.factor
+  }
+  n.bins <- as.integer(unfilled.bases %/% bases.per.bin + 1L)
+
+  extra.bases <- n.bins * bases.per.bin - unfilled.bases
+  extra.before <- as.integer(extra.bases/2)
+  extra.after <- extra.bases - extra.before
+  max.chromStart <- unfilled.chromStart-extra.before
+  min.chromEnd <- unfilled.chromEnd + extra.after
+  profile.list <- list()
+  for(sample.id in names(unfilled.profile.list)){
+    one.sample <- 
+      subset(unfilled.profile.list[[sample.id]],
+             unfilled.chromStart < chromEnd &
+               chromStart <= unfilled.chromEnd)
+    one.sample$chromStart[1] <- unfilled.chromStart
+    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
+    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
+    first.row <- last.row <- one.sample[1,]
+    first.row$chromStart <- max.chromStart
+    first.row$chromEnd <- unfilled.chromStart
+    first.row$count <- 0L
+    last.row$chromStart <- unfilled.chromEnd
+    last.row$chromEnd <- min.chromEnd
+    last.row$count <- 0L
+    profile.list[[sample.id]] <-
+      rbind(first.row, one.sample, last.row)
+  }
   bases <- min.chromEnd-max.chromStart
+  
+  ## End pre-processing to add zeros.
+  
+  ## Small bins are just for testing the computation of the loss
+  ## function in the R implementation, and should not be ported to C
+  ## code.
   n.samples <- length(profile.list)
   small.chromEnd <- (max.chromStart+1):min.chromEnd
   small.bins <-
@@ -684,12 +727,7 @@ multiSampleSegSome <- structure(function
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
-  bin.factor <- 2L
-  bases.per.bin <- 1L
-  while(bases/bases.per.bin/bin.factor >= 4){
-    bases.per.bin <- bases.per.bin * bin.factor
-  }
-  n.bins <- as.integer(bases %/% bases.per.bin + 1L)
+
   na.mat <- 
     matrix(NA, n.bins, n.samples,
            dimnames=list(bin=NULL, sample.id=names(profile.list)))
@@ -714,6 +752,22 @@ multiSampleSegSome <- structure(function
   }
   bin.df <- do.call(rbind, bin.list)
   norm.df <- do.call(rbind, norm.list)
+
+  ggplot()+
+    scale_color_manual(values=c(data="grey50",
+                         bins="black", segments="green"))+
+    geom_step(aes(chromStart/1e3, count, color=what),
+              data=data.frame(norm.df, what="data"))+
+    geom_segment(aes(chromStart/1e3, mean,
+                     xend=chromEnd/1e3, yend=mean,
+                     color=what),
+                 data=data.frame(bin.df, what="bins"))+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
+      sub("McGill0", "", val)
+    })
+  
   ## The formula for the optimal Poisson loss 
   ## for 1 segment with d integer data points x_j is
   ## \sum_{j=1}^d m - x_j \log m_j =
@@ -950,7 +1004,7 @@ multiSampleSegSome <- structure(function
       last.cumsums[[data.type]] <-
         data.mat[nrow(data.mat),][samples.with.peaks]
       before.cumsums$left[[data.type]] <- if(loss.best$seg1.last == 1){
-        rep(0, n.samples)
+        structure(rep(0, n.samples), names=samples.with.peaks)
       }else{
         data.mat[loss.best$seg1.last-1,][samples.with.peaks]
       }
