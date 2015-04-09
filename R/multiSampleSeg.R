@@ -645,14 +645,18 @@ multiSampleSegSome <- structure(function
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43100000, 43205000) # 1 peak
   lims <- c(43100000, 43170000) # half peak
-  lims <- c(43100000, 43300000) # two peaks
   lims <- c(43000000, 43200000) # left
+  lims <- c(43100000, 43300000) # two peaks
   lims <- c(43200000, 43400000) # right
+  some.sample.ids <- c("McGill0023", "McGill0022")
+  some.sample.ids <- H3K36me3.TDH.other.chunk1$counts$sample.id
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
+           sample.id %in% some.sample.ids &
            lims[1] < chromEnd & chromStart < lims[2])
   some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
-                         chromStart < lims[2])
+                         chromStart < lims[2] &
+                           sample.id %in% some.sample.ids)
   library(ggplot2)
   ann.colors <-
     c(noPeaks="#f6f4bf",
