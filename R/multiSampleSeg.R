@@ -657,6 +657,13 @@ multiSampleSegSome <- structure(function
   some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
                          chromStart < lims[2] &
                            sample.id %in% some.sample.ids)
+  ## load("~/projects/chip-seq-paper/chunks/H3K36me3_AM_immune/13/counts.RData")
+  ## load("~/projects/chip-seq-paper/chunks/H3K36me3_AM_immune/13/regions.RData")
+  ## lims <- c(52980000, 53020000)
+  ## some.counts <-
+  ##   subset(transform(counts, count=coverage),
+  ##          lims[1] < chromEnd & chromStart < lims[2])
+  ## some.regions <- regions
   library(ggplot2)
   ann.colors <-
     c(noPeaks="#f6f4bf",

@@ -73,6 +73,10 @@ multiSampleSegHeuristic_interface(
   int *optimal_ptr = INTEGER(optimal);
   status = multiSampleSegHeuristic(
     samples, n_profiles, n_bins_int, optimal_ptr);
+  for(profile_i=0; profile_i < n_profiles; profile_i++){
+    free(samples[profile_i]);
+  }
+  free(samples);
   if(status == ERROR_BIN_FACTOR_TOO_LARGE){
     error("bin factor too large");
   }
@@ -88,10 +92,6 @@ multiSampleSegHeuristic_interface(
   if(status != 0){
     error("unrecognized error code %d", status);
   }
-  for(profile_i=0; profile_i < n_profiles; profile_i++){
-    free(samples[profile_i]);
-  }
-  free(samples);
   UNPROTECT(1);
   return optimal;
 }
