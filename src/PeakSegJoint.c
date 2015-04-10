@@ -67,7 +67,7 @@ int PeakSegJointHeuristicStep1(
   int bin_factor,
   struct PeakSegJointModelList *model_list
   ){
-  int sample_i, coverage_i, min_chromEnd, max_chromStart, 
+  int sample_i, coverage_i, 
     chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
   struct Profile *profile;
   profile = samples[0];
@@ -107,33 +107,63 @@ int PeakSegJointHeuristicStep1(
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;
-  max_chromStart = unfilled_chromStart - extra_before;
-  min_chromEnd = unfilled_chromEnd + extra_after;
-  model_list->seg_start_end[0] = max_chromStart;
-  model_list->seg_start_end[1] = min_chromEnd;
-  return 0;
+  int seg1_chromStart = unfilled_chromStart - extra_before;
+  int seg3_chromEnd = unfilled_chromEnd + extra_after;
+  int bases = seg3_chromEnd - seg1_chromStart;
+  model_list->seg_start_end[0] = seg1_chromStart;
+  model_list->seg_start_end[1] = seg3_chromEnd;
   // sample_*_mat variables are matrices n_bins x n_samples (in
   // contrast to model_*_mat which are n_bins x n_segments=3).
   int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  int *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples[sample_i];
+    count_vec = sample_count_mat + n_bins*sample_i;
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
-		    sample_count_mat + n_bins*sample_i,
-		    bases_per_bin, n_bins, max_chromStart, 
+		    count_vec,
+		    bases_per_bin, n_bins, seg1_chromStart, 
 		    ERROR_EMPTY_BIN);
+    if(status != 0){
+      free(sample_count_mat);
+      return status;
+    }
+    /* Profiles may not have the same first chromStart and last
+     * chromEnd, so subtract any values that are before or after the
+     * maximum region that overlaps all profiles.
+     */
+
+    status = binSum(profile->chromStart, profile->chromEnd,
+		    profile->coverage, profile->n_entries,
+		    &extra_before,
+		    unfilled_chromStart - seg1_chromStart,
+		    1,
+		    seg1_chromStart,
+		    EMPTY_AS_ZERO);
+    if(status != 0){
+      free(sample_count_mat);
+      return status;
+    }
+    count_vec[0] -= extra_before;
+    status = binSum(profile->chromStart, profile->chromEnd,
+		    profile->coverage, profile->n_entries,
+		    &extra_after,
+		    seg3_chromEnd - unfilled_chromEnd,
+		    1,
+		    unfilled_chromEnd,
+		    EMPTY_AS_ZERO);
+    if(status != 0){
+      free(sample_count_mat);
+      return status;
+    }
+    count_vec[n_bins - 1] -= extra_after;
   }//for sample_i
-  if(status != 0){
-    /* printf("first sample_i=%d bases_per_bin=%d n_bins=%d\n",  */
-    /* 	     sample_i, bases_per_bin, n_bins); */
-    free(sample_count_mat);
-    return status;
-  }
   int bin_i, offset;
-  int *count_vec, *cumsum_vec, cumsum_value;
   double *loss_vec, mean_value, loss_value;
   int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *peak_loss_vec = malloc(sizeof(double)*n_samples);
+  double *flat_loss_vec = malloc(sizeof(double)*n_samples);
   for(sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
     offset = n_bins * sample_i;
@@ -146,102 +176,18 @@ int PeakSegJointHeuristicStep1(
       cumsum_vec[bin_i] = cumsum_value;
     }
     //printf("\n");
+    bases_value = (double)bases;
+    mean_value = cumsum_value / bases_value;
+    //printf("sample_i=%d cumsum=%d bases=%d\n", sample_i, cumsum_value, bases);
+    model_list->sample_mean_vec[sample_i] = mean_value;
+    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+    flat_loss_vec[sample_i] = loss_value;
   }
-  double *seg1_loss_vec = (double*) malloc(n_bins * sizeof(double));
-  for(bin_i=0; bin_i < n_bins; bin_i++){
-    seg1_loss_vec[bin_i] = 0;
-    for(sample_i=0; sample_i < n_samples; sample_i++){
-      cumsum_value = sample_cumsum_mat[n_bins*sample_i+bin_i];
-      /*
-      printf("bin=%d sample=%d cumsum=%d\n", 
-	     bin_i, sample_i, cumsum_value);
-      */
-      bases_value = (bin_i+1) * bases_per_bin;
-      mean_value = ((double) cumsum_value) / bases_value;
-      loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-      seg1_loss_vec[bin_i] += loss_value;
-    }
-    //printf("seg1_loss[%d]=%f\n", bin_i, seg1_loss_vec[bin_i]);
-  }
-  /* 
-     Second step of DPA: compute optimal loss in 2 segments up to data
-     point t, for all data points = bins.
-   */
-  double *seg12_loss_vec = (double*) malloc(n_bins * sizeof(double));
-  int *seg2_first_vec = (int*) malloc(n_bins * sizeof(int));
-  int seg2_FirstIndex, seg2_LastIndex, best_FirstIndex;
-  double seg1_loss, min_loss, seg2_loss, candidate_loss, seg3_loss;
-  for(seg2_LastIndex=1; 
-      seg2_LastIndex <= n_bins-2; 
-      seg2_LastIndex++){
-    //printf("seg2_LastIndex=%d\n", seg2_LastIndex);
-    get_best_FirstIndex(
-      seg1_loss_vec,
-      n_bins,
-      sample_cumsum_mat,
-      n_samples,
-      1, // first_possible_index
-      seg2_LastIndex, // last_possible_index
-      bases_per_bin,
-      seg2_first_vec + seg2_LastIndex,
-      seg12_loss_vec + seg2_LastIndex);
-  }
-  /*
-    For the best segmentation in 3 segments up to n_bins-1, the first
-    index of the 3rd segment is computed using the following code. No
-    need for a for loop on seg3_LastIndex, since we only want to know
-    the optimal model which ends at the last data point = bin (we are
-    not continuing the DPA past 3 segments).
-  */
-  int seg3_FirstIndex;
-  double best_loss;
-  get_best_FirstIndex(
-    seg12_loss_vec,
-    n_bins,
-    sample_cumsum_mat,
-    n_samples,
-    2, // first_possible_index
-    n_bins-1, // last_possible_index
-    bases_per_bin,
-    &seg3_FirstIndex,
-    &best_loss);
-  seg2_LastIndex = seg3_FirstIndex-1;
-  seg2_FirstIndex = seg2_first_vec[seg2_LastIndex];
-  int seg1_LastIndex = seg2_FirstIndex-1;
 
-  free(seg1_loss_vec);
-  free(seg12_loss_vec);
-  free(seg2_first_vec);
-
-  /* printf("[0,%d] %d[%d,%d]%d [%d,%d]\n", */
-  /* 	 seg1_LastIndex, */
-  /* 	 optimal_start_end[0], */
-  /* 	 seg2_FirstIndex, seg2_LastIndex, */
-  /* 	 optimal_start_end[1], */
-  /* 	 seg3_FirstIndex, n_bins-1); */
-
-  int last_chromEnd = n_bins * bases_per_bin + max_chromStart;
-  int *left_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
-  int *right_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
-  int *last_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
-  for(sample_i=0; sample_i < n_samples; sample_i++){
-    if(seg1_LastIndex > 0){
-      left_cumsum_vec[sample_i] = 
-	sample_cumsum_mat[n_bins*sample_i+seg1_LastIndex-1];
-    }else{ // there is no data before the first data point.
-      left_cumsum_vec[sample_i] = 0;
-    }
-    right_cumsum_vec[sample_i] = 
-      sample_cumsum_mat[n_bins*sample_i+seg2_LastIndex-1];
-    last_cumsum_vec[sample_i] = sample_cumsum_mat[n_bins*(sample_i+1)-1];
-  }
   free(sample_cumsum_mat);
   free(sample_count_mat);
-
-  //cleanup!
-  free(left_cumsum_vec);
-  free(right_cumsum_vec);
-  free(last_cumsum_vec);
+  free(flat_loss_vec);
+  free(peak_loss_vec);
 
   return status;
 }

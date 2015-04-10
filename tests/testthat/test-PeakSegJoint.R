@@ -1,6 +1,7 @@
 context("PeakSegJoint")
 
 test_that("Step1 C result agrees with R", {
+  library(testthat)
   library(PeakSegJoint)
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43000000, 43200000) # left
@@ -146,6 +147,9 @@ test_that("Step1 C result agrees with R", {
   best.loss.list <- list()
   flat.cumsums <- first.cumsums$count[n.bins, ]
   flat.means <- flat.cumsums/bases
+
+  expect_equal(fit$sample_mean_vec, as.numeric(flat.means))
+  
   flat.loss.vec <- OptimalPoissonLoss(flat.means, flat.cumsums)
   best.loss.list[["0"]] <- sum(flat.loss.vec)
   for(seg1.last in 1:(n.bins-2)){
