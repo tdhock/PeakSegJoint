@@ -61,6 +61,12 @@ void free_model_list(struct PeakSegJointModelList *model_list){
   free(model_list);
 }
 
+int LossIndex_compare(const void *a, const void *b){
+  const struct LossIndex *A = a, *B = b;
+  //printf("compare %f %f\n", A->loss, B->loss);
+  return (int)(A->loss - B->loss);
+}
+
 int PeakSegJointHeuristicStep1(
   struct Profile **samples,
   int n_samples,
@@ -160,10 +166,12 @@ int PeakSegJointHeuristicStep1(
     count_vec[n_bins - 1] -= extra_after;
   }//for sample_i
   int bin_i, offset;
-  double *loss_vec, mean_value, loss_value;
+  double mean_value, loss_value;
   int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  double *peak_loss_vec = malloc(sizeof(double)*n_samples);
   double *flat_loss_vec = malloc(sizeof(double)*n_samples);
+  struct LossIndex *diff_index_vec = 
+    malloc(sizeof(struct LossIndex)*n_samples);
+  int n_feasible;
   for(sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
     offset = n_bins * sample_i;
@@ -184,11 +192,87 @@ int PeakSegJointHeuristicStep1(
     flat_loss_vec[sample_i] = loss_value;
   }
 
+  int seg1_LastIndex, seg2_LastIndex;
+  double *seg1_mean_vec = malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = malloc(sizeof(double)*n_samples);
+  double *peak_loss_vec = malloc(sizeof(double)*n_samples);
+  double *seg1_loss_vec = malloc(sizeof(double)*n_samples);
+  for(seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
+    for(sample_i=0; sample_i < n_samples; sample_i++){
+      cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+      cumsum_value = cumsum_vec[seg1_LastIndex];
+      bases_value = (seg1_LastIndex+1)*bases_per_bin;
+      mean_value = cumsum_value/bases_value;
+      seg1_mean_vec[sample_i] = mean_value;
+      loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+      seg1_loss_vec[sample_i] = loss_value;
+    }
+    for(seg2_LastIndex=seg1_LastIndex+1; 
+	seg2_LastIndex < n_bins-1; 
+	seg2_LastIndex++){
+      n_feasible=0;
+      for(sample_i=0; sample_i < n_samples; sample_i++){
+	peak_loss_vec[sample_i] = seg1_loss_vec[sample_i];
+	cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+	//segment 2.
+	cumsum_value = cumsum_vec[seg2_LastIndex]-cumsum_vec[seg1_LastIndex];
+	bases_value = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
+	mean_value = cumsum_value/bases_value;
+	seg2_mean_vec[sample_i] = mean_value;
+	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	peak_loss_vec[sample_i] += loss_value;
+	//segment 3.
+	cumsum_value = cumsum_vec[n_bins-1]-cumsum_vec[seg2_LastIndex];
+	bases_value = (n_bins-1-seg2_LastIndex)*bases_per_bin;
+	mean_value = cumsum_value/bases_value;
+	seg3_mean_vec[sample_i] = mean_value;
+	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	peak_loss_vec[sample_i] += loss_value;
+	//if feasible, add to list of loss differences.
+	if(seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
+	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
+	  diff_index_vec[n_feasible].sample_i = sample_i;
+	  diff_index_vec[n_feasible].loss = 
+	    peak_loss_vec[sample_i]-flat_loss_vec[sample_i];
+	  /* printf("%d peak=%f flat=%f diff=%f\n",  */
+	  /* 	 sample_i, */
+	  /* 	 peak_loss_vec[sample_i],  */
+	  /* 	 flat_loss_vec[sample_i], */
+	  /* 	 diff_index_vec[sample_i].loss); */
+	  n_feasible++;
+	}
+      }//sample_i
+      /* printf("[0,%d][%d,%d][%d,%d] %d feasible\n", */
+      /* 	     seg1_LastIndex, */
+      /* 	     seg1_LastIndex+1, */
+      /* 	     seg2_LastIndex, */
+      /* 	     seg2_LastIndex+1, */
+      /* 	     n_bins-1, */
+      /* 	     n_feasible); */
+      /* printf("before sort"); */
+      /* for(sample_i=0; sample_i < n_feasible; sample_i++){ */
+      /* 	printf(" %f", diff_index_vec[sample_i].loss); */
+      /* } */
+      /* printf("\n"); */
+      qsort(diff_index_vec, n_feasible, sizeof(struct LossIndex), 
+	    LossIndex_compare);
+      /* printf("after sort"); */
+      /* for(sample_i=0; sample_i < n_feasible; sample_i++){ */
+      /* 	printf(" %f", diff_index_vec[sample_i].loss); */
+      /* } */
+      /* printf("\n"); */
+    }//seg2_LastIndex
+  }//seg2_FirstIndex
   free(sample_cumsum_mat);
   free(sample_count_mat);
   free(flat_loss_vec);
   free(peak_loss_vec);
-
+  free(seg1_loss_vec);
+  free(seg1_mean_vec);
+  free(seg2_mean_vec);
+  free(seg3_mean_vec);
+  free(diff_index_vec);
   return status;
 }
 
