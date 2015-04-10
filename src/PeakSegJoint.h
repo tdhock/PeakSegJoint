@@ -30,6 +30,11 @@ struct PeakSegJointModelList {
   double *sample_mean_vec;
 };
 
+struct LossIndex {
+  int sample_i;
+  double loss;
+};
+
 struct PeakSegJointModelList * 
 malloc_model_list(
   int n_samples

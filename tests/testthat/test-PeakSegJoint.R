@@ -29,7 +29,7 @@ test_that("Step1 C result agrees with R", {
     theme(panel.margin=grid::unit(0, "cm"))+
     facet_grid(sample.id ~ ., scales="free")
 
-  fit <- PeakSegJointHeuristicStep1(some.counts, 2L)
+  fit <- PeakSegJointHeuristicStep1(some.counts)
   
   ## Begin R implementation of multiple sample constrained
   ## segmentation heuristic. Input: profiles data.frame.
@@ -71,8 +71,10 @@ test_that("Step1 C result agrees with R", {
       rbind(first.row, one.sample, last.row)
   }
   bases <- min.chromEnd-max.chromStart
-  
   ## End pre-processing to add zeros.
+
+  expect_identical(fit$seg_start_end[1], max.chromStart)
+  expect_identical(fit$seg_start_end[2], min.chromEnd)
   
   ## Small bins are just for testing the computation of the loss
   ## function in the R implementation, and should not be ported to C

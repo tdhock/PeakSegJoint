@@ -23,7 +23,7 @@ PeakSegJointHeuristicStep1 <- function
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
- bin.factor
+ bin.factor=2L
 ### Size of bin pyramid. Bigger values result in slower computation.
  ){
   stopifnot(is.numeric(bin.factor))
