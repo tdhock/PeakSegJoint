@@ -27,6 +27,7 @@ struct PeakSegJointModelList {
   int n_models;
   struct PeakSegJointModel **model_vec;
   int *seg_start_end; // size 2.
+  double *sample_mean_vec;
 };
 
 struct PeakSegJointModelList * 
