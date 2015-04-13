@@ -167,22 +167,34 @@ Ralloc_model_struct
   UNPROTECT(1);//model_names.
 }
 
+struct PeakSegJointModelList *
+malloc_PeakSegJointModelList(int n_models){
+  struct PeakSegJointModelList *model_list = 
+    malloc(sizeof(struct PeakSegJointModelList));
+  model_list->n_models = n_models;
+  model_list->model_vec = 
+    malloc(n_models * sizeof(struct PeakSegJointModel));
+  return model_list;
+}
+
+void
+free_PeakSegJointModelList(struct PeakSegJointModelList *model_list){
+  free(model_list->model_vec);
+  free(model_list);
+}
+
 SEXP
 PeakSegJointHeuristicStep1_interface(
   SEXP profile_list_sexp,
   SEXP bin_factor
   ){
   int n_profiles = length(profile_list_sexp);
-  int profile_i;
   // malloc Profiles for input data.
-  struct Profile *profile;
   struct ProfileList profile_list;
   Ralloc_profile_list(profile_list_sexp, &profile_list);
   // allocVector for outputs.
-  struct PeakSegJointModelList model_list;
-  model_list.n_models = n_profiles + 1;
-  model_list.model_vec = 
-    malloc(model_list.n_models * sizeof(struct PeakSegJointModel));
+  struct PeakSegJointModelList *model_list = 
+    malloc_PeakSegJointModelList(n_profiles+1);
   SEXP model_list_sexp;
   PROTECT(model_list_sexp = allocPeakSegJointModelList());
 
@@ -190,14 +202,14 @@ PeakSegJointHeuristicStep1_interface(
      This calls allocVector and assigns the resulting pointers to the
      elements of model_list.
   */
-  Ralloc_model_struct(model_list_sexp, &model_list);
+  Ralloc_model_struct(model_list_sexp, model_list);
 
   int status;
   status = PeakSegJointHeuristicStep1(
-    &profile_list, INTEGER(bin_factor)[0], &model_list);
+    &profile_list, INTEGER(bin_factor)[0], model_list);
   // free inputs.
   free_profile_list(&profile_list);
-  free(model_list.model_vec);
+  free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.
   // TODO: if known status codes...
   if(status != 0){
