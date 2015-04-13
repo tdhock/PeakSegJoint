@@ -855,6 +855,9 @@ test_that("Step1 C result agrees with R", {
   expect_equal(fit$sample_mean_vec, as.numeric(flat.means))
   
   flat.loss.vec <- OptimalPoissonLoss(flat.means, flat.cumsums)
+  R.flat.loss <- as.numeric(flat.loss.vec[fit$sample.id])
+  expect_equal(fit$flat_loss_vec, R.flat.loss)
+  
   best.loss.list[["0"]] <- sum(flat.loss.vec)
   for(seg1.last in 1:(n.bins-2)){
     seg1.cumsums <- first.cumsums$count[seg1.last, ]

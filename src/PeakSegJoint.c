@@ -121,7 +121,6 @@ int PeakSegJointHeuristicStep1(
   double mean_value, loss_value;
   double flat_loss_total = 0.0;
   int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  double *flat_loss_vec = malloc(sizeof(double)*n_samples);
   struct LossIndex *diff_index_vec = 
     malloc(sizeof(struct LossIndex)*n_samples);
   int n_feasible;
@@ -143,7 +142,7 @@ int PeakSegJointHeuristicStep1(
     //printf("sample_i=%d cumsum=%d bases=%d\n", sample_i, cumsum_value, bases);
     model_list->sample_mean_vec[sample_i] = mean_value;
     loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-    flat_loss_vec[sample_i] = loss_value;
+    model_list->flat_loss_vec[sample_i] = loss_value;
     flat_loss_total += loss_value;
   }
   model_list->model_vec[0].loss[0] = flat_loss_total;
@@ -191,12 +190,7 @@ int PeakSegJointHeuristicStep1(
 	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
 	  diff_index_vec[n_feasible].sample_i = sample_i;
 	  diff_index_vec[n_feasible].loss = 
-	    peak_loss_vec[sample_i]-flat_loss_vec[sample_i];
-	  /* printf("%d peak=%f flat=%f diff=%f\n",  */
-	  /* 	 sample_i, */
-	  /* 	 peak_loss_vec[sample_i],  */
-	  /* 	 flat_loss_vec[sample_i], */
-	  /* 	 diff_index_vec[sample_i].loss); */
+	    peak_loss_vec[sample_i]-model_list->flat_loss_vec[sample_i];
 	  n_feasible++;
 	}
       }//sample_i
@@ -227,7 +221,7 @@ int PeakSegJointHeuristicStep1(
 	  for(diff_i=0; diff_i < n_peaks; diff_i++){
 	    sample_i = diff_index_vec[diff_i].sample_i;
 	    // subtract the loss of this sample with 1 segment.
-	    loss_value -= flat_loss_vec[sample_i];
+	    loss_value -= model_list->flat_loss_vec[sample_i];
 	    // add loss from this sample with 3 segments (1 peak).
 	    loss_value += peak_loss_vec[sample_i];
 	  }
@@ -259,7 +253,6 @@ int PeakSegJointHeuristicStep1(
   }//seg2_FirstIndex
   free(sample_cumsum_mat);
   free(sample_count_mat);
-  free(flat_loss_vec);
   free(peak_loss_vec);
   free(seg1_loss_vec);
   free(seg1_mean_vec);
@@ -378,7 +371,6 @@ binSumLR
   return 0;
 }
 
-
 int 
 PeakSegJointHeuristicStep2
 (struct ProfileList *profile_list,
@@ -395,9 +387,17 @@ PeakSegJointHeuristicStep2
   int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
   int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *seg1_mean_vec = malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = malloc(sizeof(double)*n_samples);
+  double *seg1_loss_vec = malloc(sizeof(double)*n_samples);
+  double total_loss, loss_value, bases_value, mean_value;
   int *left_cumsum_vec, *right_cumsum_vec;
+  int seg1_LastIndex, seg2_LastIndex;
   int status;
-  int left_cumsum_value, right_cumsum_value;
+  int left_cumsum_value, right_cumsum_value, cumsum_value;
+  int peakStart, peakEnd;
+  int is_feasible;
   for(n_peaks=1; n_peaks < model_list->n_models; n_peaks++){
     model = model_list->model_vec + n_peaks;
     bases_per_bin = model_list->bases_per_bin[0];
@@ -419,6 +419,10 @@ PeakSegJointHeuristicStep2
 	  free(right_bin_vec);
 	  free(left_cumsum_mat);
 	  free(right_cumsum_mat);
+	  free(seg1_mean_vec);
+	  free(seg2_mean_vec);
+	  free(seg3_mean_vec);
+	  free(seg1_loss_vec);
 	  return status;
 	}
 	left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
@@ -431,12 +435,91 @@ PeakSegJointHeuristicStep2
 	  right_cumsum_value += right_bin_vec[bin_i];
 	  right_cumsum_vec[bin_i] = right_cumsum_value;
 	}
-      }//diff_i
+      }//for(diff_i
+      /* 
+	 cumsum matrices have been computed, so now use them to
+	 compute the loss and feasibility of all models.
+       */
+      for(seg1_LastIndex=0; seg1_LastIndex < n_bins; seg1_LastIndex++){
+	peakStart = left_chromStart + (seg1_LastIndex+1)*bases_per_bin;
+	for(diff_i=0; diff_i < n_peaks; diff_i++){
+	  sample_i = model->samples_with_peaks_vec[diff_i];
+	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	  cumsum_value = left_cumsum_vec[seg1_LastIndex];
+	  bases_value = peakStart - model_list->seg_start_end[0];
+	  mean_value = cumsum_value/bases_value;
+	  seg1_mean_vec[sample_i] = mean_value;
+	  loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	  seg1_loss_vec[sample_i] = loss_value;
+	}
+	for(seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
+	  peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
+	  total_loss = model_list->model_vec[0].loss[0];
+	  if(peakEnd <= peakStart){
+	    total_loss = INFINITY;
+	  }
+	  for(diff_i=0; diff_i < n_peaks; diff_i++){
+	    sample_i = model->samples_with_peaks_vec[diff_i];
+	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	    right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+	    total_loss -= model_list->flat_loss_vec[sample_i];
+	    //segment 1.
+	    total_loss += seg1_loss_vec[sample_i];
+	    //segment 2.
+	    cumsum_value = 
+	      right_cumsum_vec[seg2_LastIndex]-left_cumsum_vec[seg1_LastIndex];
+	    bases_value = peakEnd-peakStart;
+	    mean_value = cumsum_value/bases_value;
+	    seg2_mean_vec[sample_i] = mean_value;
+	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	    total_loss += loss_value;
+	    //segment 3.
+	    cumsum_value = 
+	      model_list->last_cumsum_vec[sample_i]-
+	      right_cumsum_vec[seg2_LastIndex];
+	    bases_value = model_list->seg_start_end[1] - peakEnd;
+	    mean_value = cumsum_value/bases_value;
+	    seg3_mean_vec[sample_i] = mean_value;
+	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	    total_loss += loss_value;
+	    //if not feasible, loss is infinite.
+	    if(seg2_mean_vec[sample_i] <= seg1_mean_vec[sample_i] ||
+	       seg2_mean_vec[sample_i] <= seg3_mean_vec[sample_i]){
+	      loss_value = INFINITY;
+	    }
+	  }	  
+	  if(loss_value < model->loss[0]){
+	    model->loss[0] = loss_value;
+	    model->peak_start_end[0] = peakStart;
+	    model->peak_start_end[1] = peakEnd;
+	    for(diff_i=0; diff_i < n_peaks; diff_i++){
+	      sample_i = model->samples_with_peaks_vec[diff_i];
+	      if(seg1_LastIndex != 0){
+		left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+		model->left_cumsum_vec[diff_i] = 
+		  left_cumsum_vec[seg1_LastIndex-1];
+	      }
+	      if(seg2_LastIndex != 0){
+		right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+		model->right_cumsum_vec[diff_i] = 
+		  right_cumsum_vec[seg2_LastIndex-1];
+	      }
+	      model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
+	      model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
+	      model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
+	    }
+	  }
+	}
+      }//sample_i
     }//while(1 < bases_per_bin)
-  }
+  }//for(n_peaks
   free(left_bin_vec);
   free(right_bin_vec);
   free(left_cumsum_mat);
   free(right_cumsum_mat);
+  free(seg1_mean_vec);
+  free(seg2_mean_vec);
+  free(seg3_mean_vec);
+  free(seg1_loss_vec);
   return 0;
 }
