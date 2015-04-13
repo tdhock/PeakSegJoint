@@ -51,7 +51,7 @@ PeakSegJointHeuristicStep1_interface(
   SET_STRING_ELT(model_list_names,0,mkChar("models"));
   SET_STRING_ELT(model_list_names,1,mkChar("seg_start_end"));
   SET_STRING_ELT(model_list_names,2,mkChar("sample_mean_vec"));
-  SET_STRING_ELT(model_list_names,3,mkChar("last_cumsum_sexp"));
+  SET_STRING_ELT(model_list_names,3,mkChar("last_cumsum_vec"));
   namesgets(model_list_sexp, model_list_names);
   UNPROTECT(1);
 

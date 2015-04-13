@@ -254,8 +254,29 @@ test_that("Step1 C result agrees with R", {
     best.indices.list[[peaks.str]] <- loss.best
     last.str <- with(loss.best, paste(seg1.last, seg2.last))
     peaks <- as.numeric(peaks.str)
+    model.i <- peaks + 1
+    model <- fit$models[[model.i]]
+    
+    peak.df <- peak.list[[peaks.str]][[last.str]]
+    C.start.end <- model$peak_start_end
+    R.start.end <- as.integer(peak.df[1, c("chromStart", "chromEnd")])
+    expect_equal(C.start.end, R.start.end)
+
+    sample.i <- model$samples_with_peaks_vec + 1
+    C.sample.id <- fit$sample.id[sample.i]
+    C.sample.sorted <- sort(paste(C.sample.id))
+    R.sample.sorted <- sort(paste(peak.df$sample.id))
+    expect_identical(C.sample.sorted, R.sample.sorted)
+
     seg.df <- seg.list[[peaks.str]][[last.str]]
-    ##stop("TODO: compare seg.df and C code")
+    segs.by.chromStart <- split(seg.df, seg.df$chromStart)
+    for(seg.i in seq_along(segs.by.chromStart)){
+      seg.i.df <- segs.by.chromStart[[seg.i]]
+      rownames(seg.i.df) <- seg.i.df$sample.id
+      R.mean.vec <- as.numeric(seg.i.df[C.sample.id, "mean"])
+      C.mean.vec <- model[[sprintf("seg%d_mean_vec", seg.i)]]
+      expect_equal(C.mean.vec, R.mean.vec)
+    }
 
     ggplot()+
       ggtitle(paste0("best model with ", peaks,
@@ -279,9 +300,6 @@ test_that("Step1 C result agrees with R", {
         sub("McGill0", "", val)
       })
 
-    peak.df <- peak.list[[peaks.str]][[last.str]]
-    ##stop("compare peak.df and C code")
-    
     best.seg.list[[peaks.str]] <- data.frame(peaks, seg.df)
     best.peak.list[[peaks.str]] <-
       data.frame(peaks, y=peaks*-0.1, peak.df)

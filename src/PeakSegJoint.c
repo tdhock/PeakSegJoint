@@ -273,18 +273,41 @@ int PeakSegJointHeuristicStep1(
 	for(model_i=0; model_i < n_feasible; model_i++){
 	  // start from loss of all samples with 1 segment.
 	  loss_value = flat_loss_total;
-	  for(diff_i=0; diff_i <= model_i; diff_i++){
+	  n_peaks = model_i + 1;
+	  for(diff_i=0; diff_i < n_peaks; diff_i++){
 	    sample_i = diff_index_vec[diff_i].sample_i;
 	    // subtract the loss of this sample with 1 segment.
 	    loss_value -= flat_loss_vec[sample_i];
 	    // add loss from this sample with 3 segments (1 peak).
 	    loss_value += peak_loss_vec[sample_i];
 	  }
-	  n_peaks = model_i + 1;
 	  model = model_list->model_vec + n_peaks; 
 	  if(loss_value < model->loss[0]){
 	    model->loss[0] = loss_value;
-	    //TODO: save other model properties.
+	    /* 
+	       TODO: save other model properties:
+	       samples_with_peaks,
+	       left/right_cumsums
+	       seg[123]_means
+	    */
+	    model->peak_start_end[0] = 
+	      seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
+	    model->peak_start_end[1] = 
+	      seg1_chromStart + (seg2_LastIndex+1)*bases_per_bin;
+	    for(diff_i=0; diff_i < n_peaks; diff_i++){
+	      sample_i = diff_index_vec[diff_i].sample_i;
+	      cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+	      model->samples_with_peaks_vec[diff_i] = sample_i;
+	      if(seg1_LastIndex == 0){
+		model->left_cumsum_vec[diff_i] = 0;
+	      }else{
+		model->left_cumsum_vec[diff_i] = cumsum_vec[seg1_LastIndex-1];
+	      }
+	      model->right_cumsum_vec[diff_i] = cumsum_vec[seg2_LastIndex-1];
+	      model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
+	      model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
+	      model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
+	    }
 	  }
 	}//model_i
       }//if(n_feasible)
