@@ -187,6 +187,7 @@ int PeakSegJointHeuristicStep1(
       //printf("%d ", cumsum_value);
       cumsum_vec[bin_i] = cumsum_value;
     }
+    model_list->last_cumsum_vec[sample_i] = cumsum_value;
     //printf("\n");
     bases_value = (double)bases;
     mean_value = cumsum_value / bases_value;
@@ -284,12 +285,6 @@ int PeakSegJointHeuristicStep1(
 	  model = model_list->model_vec + n_peaks; 
 	  if(loss_value < model->loss[0]){
 	    model->loss[0] = loss_value;
-	    /* 
-	       TODO: save other model properties:
-	       samples_with_peaks,
-	       left/right_cumsums
-	       seg[123]_means
-	    */
 	    model->peak_start_end[0] = 
 	      seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	    model->peak_start_end[1] = 

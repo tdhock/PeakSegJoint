@@ -353,8 +353,6 @@ test_that("Step1 C result agrees with R", {
     facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
       sub("McGill0", "", val)
     })
-  ## for 0, 1, ..., maxPeaks, run the bin pyramid grid search,
-  ## around the peaks found in this first step.
   for(peaks.str in names(best.indices.list)){
     loss.best <- best.indices.list[[peaks.str]]
     best.peak.df <- best.peak.list[[peaks.str]]
@@ -374,6 +372,20 @@ test_that("Step1 C result agrees with R", {
       before.cumsums$right[[data.type]] <-
         data.mat[loss.best$seg2.last-1,][samples.with.peaks]
     }
-    stop("compare before.cumsums and last.cumsums with C code")
+    peaks <- as.integer(peaks.str)
+    model.i <- peaks+1L
+    model <- fit$models[[model.i]]
+    C.sample.i <- model$samples_with_peaks_vec + 1L
+    C.sample.id <- fit$sample.id[C.sample.i]
+    for(lr in names(before.cumsums)){
+      R.cumsums <- as.integer(before.cumsums[[lr]]$count[C.sample.id])
+      C.cumsums <- model[[paste0(lr, "_cumsum_vec")]]
+      expect_equal(C.cumsums, R.cumsums)
+    }
   }
+  R.last.cumsums <- as.integer(last.cumsums$count[fit$sample.id])
+  C.last.cumsums <- fit$last_cumsum_vec
+  expect_equal(C.last.cumsums, R.last.cumsums)
+  ## for 0, 1, ..., maxPeaks, run the bin pyramid grid search,
+  ## around the peaks found in this first step.
 })
