@@ -49,6 +49,8 @@ test_that("Step1 C result agrees with R", {
   expect_equal(fit$n_bins, n.bins)
   expect_equal(fit$bases_per_bin, bases.per.bin)
   expect_equal(fit$bin_factor, bin.factor)
+  R.data.start.end <- c(unfilled.chromStart, unfilled.chromEnd)
+  expect_equal(fit$data_start_end, R.data.start.end)
 
   extra.bases <- n.bins * bases.per.bin - unfilled.bases
   extra.before <- as.integer(extra.bases/2)

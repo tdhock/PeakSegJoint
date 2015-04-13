@@ -93,6 +93,8 @@ int PeakSegJointHeuristicStep1(
       unfilled_chromEnd = chromEnd;
     }
   }
+  model_list->data_start_end[0] = unfilled_chromStart;
+  model_list->data_start_end[1] = unfilled_chromEnd;
   int unfilled_bases = unfilled_chromEnd - unfilled_chromStart;
   double bases_value, seg1_loss_value;
   if(unfilled_bases/bin_factor < 4){
