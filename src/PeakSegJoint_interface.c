@@ -5,6 +5,15 @@
 #include <Rinternals.h>
 #include <stdlib.h>
 
+// TODO: for each malloc, check for out of memory error.
+void * malloc_or_error(size_t size, const char * msg){
+  void * ptr = malloc(size);
+  if(ptr == 0){
+    //memory_error();
+  }
+  return ptr;
+}
+
 SEXP
 PeakSegJointHeuristicStep1_interface(
   SEXP profile_list,
