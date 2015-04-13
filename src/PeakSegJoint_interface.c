@@ -15,10 +15,10 @@ PeakSegJointHeuristicStep1_interface(
   SEXP df, chromStart, chromEnd, coverage;
   // malloc Profiles for input data.
   struct Profile *profile;
-  struct Profile **samples = malloc(n_profiles * sizeof(struct Profile *));
+  struct Profile *samples = malloc(n_profiles * sizeof(struct Profile));
   for(profile_i=0; profile_i < n_profiles; profile_i++){
     df = VECTOR_ELT(profile_list, profile_i);
-    profile = malloc(sizeof(struct Profile));
+    profile = samples + profile_i;
     chromStart = VECTOR_ELT(df, 0);
     chromEnd = VECTOR_ELT(df, 1);
     coverage = VECTOR_ELT(df, 2);
@@ -26,7 +26,6 @@ PeakSegJointHeuristicStep1_interface(
     profile->chromEnd = INTEGER(chromEnd);
     profile->coverage = INTEGER(coverage);
     profile->n_entries = length(chromStart);
-    samples[profile_i] = profile;
   }
   // allocVector for outputs.
   int model_i;
@@ -133,9 +132,6 @@ PeakSegJointHeuristicStep1_interface(
   status = PeakSegJointHeuristicStep1(
     samples, n_profiles, INTEGER(bin_factor)[0], model_list);
   // free inputs.
-  for(profile_i=0; profile_i < n_profiles; profile_i++){
-    free(samples[profile_i]);
-  }
   free(samples);
   for(model_i=0; model_i < model_list->n_models; model_i++){
     free(model_list->model_vec[model_i]);

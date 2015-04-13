@@ -68,7 +68,7 @@ int LossIndex_compare(const void *a, const void *b){
 }
 
 int PeakSegJointHeuristicStep1(
-  struct Profile **samples,
+  struct Profile *samples,
   int n_samples,
   int bin_factor,
   struct PeakSegJointModelList *model_list
@@ -76,11 +76,11 @@ int PeakSegJointHeuristicStep1(
   int sample_i, coverage_i, 
     chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
   struct Profile *profile;
-  profile = samples[0];
+  profile = samples;
   unfilled_chromEnd = get_max_chromEnd(profile);
   unfilled_chromStart = get_min_chromStart(profile);
   for(sample_i=1; sample_i < n_samples; sample_i++){
-    profile = samples[sample_i];
+    profile = samples + sample_i;
     chromStart = get_min_chromStart(profile);
     if(unfilled_chromStart < chromStart){
       unfilled_chromStart = chromStart;
@@ -124,7 +124,7 @@ int PeakSegJointHeuristicStep1(
   int *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(sample_i=0; sample_i < n_samples; sample_i++){
-    profile = samples[sample_i];
+    profile = samples + sample_i;
     count_vec = sample_count_mat + n_bins*sample_i;
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
