@@ -30,7 +30,7 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     theme(panel.margin=grid::unit(0, "cm"))+
     facet_grid(sample.id ~ ., scales="free")
 
-  fit <- PeakSegJointHeuristicStep1(some.counts)
+  fit <- PeakSegJointHeuristic(some.counts)
   
   ## Begin R implementation of multiple sample constrained
   ## segmentation heuristic. Input: profiles data.frame.
