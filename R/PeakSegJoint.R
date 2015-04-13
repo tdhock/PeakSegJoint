@@ -121,43 +121,36 @@ PeakSegJointHeuristic <- structure(function
 ### for easier interpretation.
 }, ex=function(){
   library(PeakSegJoint)
-  library(ggplot2)
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43000000, 43200000) # left
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
            lims[1] < chromEnd & chromStart < lims[2])
-  fit <- PeakSegJointHeuristic(some.counts)
-  ## Compute bins to show on plot as well.
+  library(microbenchmark)
+  microbenchmark(fit={
+    fit <- PeakSegJointHeuristic(some.counts)
+  }, fit.convert={
+    fit <- PeakSegJointHeuristic(some.counts)
+    converted <- ConvertModelList(fit)
+  })
+  ## Normalize profile counts to [0,1].
   profile.list <- split(some.counts, some.counts$sample.id)
-  bin.list <- list()
   norm.list <- list()
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
     max.count <- max(one$count)
-    bins <- binSum(one, fit$seg_start_end[1], fit$bases_per_bin, fit$n_bins)
-    stopifnot(fit$n_bins == nrow(bins))
-    bins$mean <- with(bins, count/(chromEnd-chromStart))
-    bins$mean.norm <- bins$mean/max.count
-    stopifnot(bins$count >= 0)
     one$count.norm <- one$count/max.count
     norm.list[[sample.id]] <- one
-    bin.list[[sample.id]] <- data.frame(sample.id, bins)
   }
-  bin.df <- do.call(rbind, bin.list)
   norm.df <- do.call(rbind, norm.list)
-  converted <- ConvertModelList(fit)
   best.peaks <- transform(converted$peaks, y=peaks*-0.1, what="peaks")
+  library(ggplot2)
   ggplot()+
     scale_color_manual(values=c(data="grey50",
                          peaks="deepskyblue",
                          bins="black", segments="green"))+
     geom_step(aes(chromStart/1e3, count.norm, color=what),
               data=data.frame(norm.df, what="data"))+
-    geom_segment(aes(chromStart/1e3, mean.norm,
-                     xend=chromEnd/1e3, yend=mean.norm,
-                     color=what),
-                 data=data.frame(bin.df, what="bins"))+
     geom_segment(aes(chromStart/1e3, y,
                      xend=chromEnd/1e3, yend=y,
                      color=what),
@@ -176,6 +169,13 @@ PeakSegJointHeuristic <- structure(function
     facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
       sub("McGill0", "", val)
     })
+  ggplot()+
+    geom_segment(aes(chromStart/1e3, peaks,
+                     xend=chromEnd/1e3, yend=peaks),
+                 data=best.peaks)
+  ggplot(converted$loss, aes(peaks, loss))+
+    geom_point()+
+    geom_line()
 })
 
 ConvertModelList <- function
