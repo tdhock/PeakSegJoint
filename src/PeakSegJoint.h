@@ -30,6 +30,7 @@ struct PeakSegJointModelList {
   int *last_cumsum_vec; //n_samples;
   int *n_bins; //size 1.
   int *bases_per_bin; //size 1.
+  int *bin_factor; //size 1.
 };
 
 struct LossIndex {
