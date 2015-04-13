@@ -72,7 +72,7 @@ PeakSegJointHeuristicStep1_interface(
     left_cumsum_sexp, right_cumsum_sexp, 
     seg1_mean_sexp, seg2_mean_sexp, seg3_mean_sexp,
     model_sexp, model_names;
-  PROTECT(model_names = allocVector(STRSXP, 9));
+  PROTECT(model_names = allocVector(STRSXP, 8));
   SET_STRING_ELT(model_names,0,mkChar("loss"));
   SET_STRING_ELT(model_names,1,mkChar("peak_start_end"));
   SET_STRING_ELT(model_names,2,mkChar("samples_with_peaks_vec"));

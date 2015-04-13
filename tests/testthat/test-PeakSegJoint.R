@@ -251,12 +251,11 @@ test_that("Step1 C result agrees with R", {
   for(peaks.str in names(loss.list)){
     loss.df <- do.call(rbind, loss.list[[peaks.str]])
     loss.best <- loss.df[which.min(loss.df$total.loss), ]
-    stop("TODO: compare loss.best and C code")
     best.indices.list[[peaks.str]] <- loss.best
     last.str <- with(loss.best, paste(seg1.last, seg2.last))
     peaks <- as.numeric(peaks.str)
     seg.df <- seg.list[[peaks.str]][[last.str]]
-    stop("TODO: compare seg.df and C code")
+    ##stop("TODO: compare seg.df and C code")
 
     ggplot()+
       ggtitle(paste0("best model with ", peaks,
@@ -281,13 +280,17 @@ test_that("Step1 C result agrees with R", {
       })
 
     peak.df <- peak.list[[peaks.str]][[last.str]]
-    stop("compare peak.df and C code")
+    ##stop("compare peak.df and C code")
     
     best.seg.list[[peaks.str]] <- data.frame(peaks, seg.df)
     best.peak.list[[peaks.str]] <-
       data.frame(peaks, y=peaks*-0.1, peak.df)
     best.loss.list[[peaks.str]] <- loss.best$total.loss
   }
+  R.loss.vec <- as.numeric(best.loss.list)
+  C.loss.vec <- sapply(fit$models, "[[", "loss")
+  expect_equal(C.loss.vec, R.loss.vec)
+  
   best.peaks <- do.call(rbind, best.peak.list)
   by.sample.loc <-
     split(best.peaks, with(best.peaks, paste(sample.id, chromStart, chromEnd)))
