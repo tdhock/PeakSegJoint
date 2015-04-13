@@ -70,8 +70,7 @@ int PeakSegJointHeuristic(
   );
 
 int PeakSegJointHeuristicStep1(
-  struct Profile *samples,
-  int n_samples,
+  struct ProfileList *,
   int bin_factor,
   struct PeakSegJointModelList *model_list
   );

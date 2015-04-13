@@ -14,20 +14,20 @@ void * malloc_or_error(size_t size, const char * msg){
   return ptr;
 }
 
-SEXP
-PeakSegJointHeuristicStep1_interface(
-  SEXP profile_list,
-  SEXP bin_factor
+void 
+Ralloc_profile_list
+(SEXP profile_list_sexp, 
+ struct ProfileList *profile_list
   ){
-  int n_profiles = length(profile_list);
+  struct Profile *profile;
   int profile_i;
   SEXP df, chromStart, chromEnd, coverage;
-  // malloc Profiles for input data.
-  struct Profile *profile;
-  struct Profile *samples = malloc(n_profiles * sizeof(struct Profile));
-  for(profile_i=0; profile_i < n_profiles; profile_i++){
-    df = VECTOR_ELT(profile_list, profile_i);
-    profile = samples + profile_i;
+  profile_list->n_profiles = length(profile_list_sexp);
+  profile_list->profile_vec = 
+    malloc(profile_list->n_profiles * sizeof(struct Profile));
+  for(profile_i=0; profile_i < profile_list->n_profiles; profile_i++){
+    df = VECTOR_ELT(profile_list_sexp, profile_i);
+    profile = profile_list->profile_vec + profile_i;
     chromStart = VECTOR_ELT(df, 0);
     chromEnd = VECTOR_ELT(df, 1);
     coverage = VECTOR_ELT(df, 2);
@@ -36,6 +36,25 @@ PeakSegJointHeuristicStep1_interface(
     profile->coverage = INTEGER(coverage);
     profile->n_entries = length(chromStart);
   }
+}  
+
+void
+free_profile_list
+(struct ProfileList *profile_list){
+  free(profile_list->profile_vec);
+}
+
+SEXP
+PeakSegJointHeuristicStep1_interface(
+  SEXP profile_list_sexp,
+  SEXP bin_factor
+  ){
+  int n_profiles = length(profile_list_sexp);
+  int profile_i;
+  // malloc Profiles for input data.
+  struct Profile *profile;
+  struct ProfileList profile_list;
+  Ralloc_profile_list(profile_list_sexp, &profile_list);
   // allocVector for outputs.
   int model_i;
   struct PeakSegJointModel *model;
@@ -144,9 +163,9 @@ PeakSegJointHeuristicStep1_interface(
   }
   int status;
   status = PeakSegJointHeuristicStep1(
-    samples, n_profiles, INTEGER(bin_factor)[0], &model_list);
+    &profile_list, INTEGER(bin_factor)[0], &model_list);
   // free inputs.
-  free(samples);
+  free_profile_list(&profile_list);
   free(model_list.model_vec);
   UNPROTECT(2); //model_list_sexp and model_names.
   // TODO: if known status codes...

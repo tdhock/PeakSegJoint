@@ -1,3 +1,8 @@
+struct ProfileList {
+  struct Profile * profile_vec;
+  int n_profiles;
+};
+
 struct Profile {
   int *chromStart;
   int *chromEnd;

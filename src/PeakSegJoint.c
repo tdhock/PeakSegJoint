@@ -70,14 +70,14 @@ int LossIndex_compare(const void *a, const void *b){
 }
 
 int PeakSegJointHeuristicStep1(
-  struct Profile *samples,
-  int n_samples,
+  struct ProfileList *profile_list,
   int bin_factor,
   struct PeakSegJointModelList *model_list
   ){
+  int n_samples = profile_list->n_profiles;
   int sample_i, coverage_i, 
     chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
-  struct Profile *profile;
+  struct Profile *profile, *samples = profile_list->profile_vec;
   struct PeakSegJointModel *model;
   profile = samples;
   unfilled_chromEnd = get_max_chromEnd(profile);
