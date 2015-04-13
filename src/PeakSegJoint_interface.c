@@ -30,34 +30,37 @@ PeakSegJointHeuristicStep1_interface(
   // allocVector for outputs.
   int model_i;
   struct PeakSegJointModel *model;
-  struct PeakSegJointModelList *model_list =
-    malloc(sizeof(struct PeakSegJointModelList));
-  model_list->n_models = n_profiles + 1;
-  model_list->model_vec = 
-    malloc(model_list->n_models * sizeof(struct PeakSegJointModel *));
+  struct PeakSegJointModelList model_list;
+  model_list.n_models = n_profiles + 1;
+  model_list.model_vec = 
+    malloc(model_list.n_models * sizeof(struct PeakSegJointModel));
   SEXP model_list_names, model_list_sexp, model_vec_sexp,
-    seg_start_end_sexp, sample_mean_sexp;
-  PROTECT(model_list_sexp = allocVector(VECSXP, 3));
+    seg_start_end_sexp, sample_mean_sexp, last_cumsum_sexp;
+  PROTECT(model_list_sexp = allocVector(VECSXP, 4));
 
-  PROTECT(model_list_names = allocVector(STRSXP, 3));
+  PROTECT(model_list_names = allocVector(STRSXP, 4));
   SET_STRING_ELT(model_list_names,0,mkChar("models"));
   SET_STRING_ELT(model_list_names,1,mkChar("seg_start_end"));
   SET_STRING_ELT(model_list_names,2,mkChar("sample_mean_vec"));
+  SET_STRING_ELT(model_list_names,3,mkChar("last_cumsum_sexp"));
   namesgets(model_list_sexp, model_list_names);
   UNPROTECT(1);
 
-  PROTECT(model_vec_sexp = allocVector(VECSXP, model_list->n_models));
+  PROTECT(model_vec_sexp = allocVector(VECSXP, model_list.n_models));
   PROTECT(seg_start_end_sexp = allocVector(INTSXP, 2));
   PROTECT(sample_mean_sexp = allocVector(REALSXP, n_profiles));
+  PROTECT(last_cumsum_sexp = allocVector(INTSXP, n_profiles));
   SET_VECTOR_ELT(model_list_sexp,0,model_vec_sexp);
   SET_VECTOR_ELT(model_list_sexp,1,seg_start_end_sexp);
   SET_VECTOR_ELT(model_list_sexp,2,sample_mean_sexp);
-  model_list->seg_start_end = INTEGER(seg_start_end_sexp);
-  model_list->sample_mean_vec = REAL(sample_mean_sexp);
-  UNPROTECT(3);
+  SET_VECTOR_ELT(model_list_sexp, 3, last_cumsum_sexp);
+  model_list.seg_start_end = INTEGER(seg_start_end_sexp);
+  model_list.sample_mean_vec = REAL(sample_mean_sexp);
+  model_list.last_cumsum_vec = INTEGER(last_cumsum_sexp);
+  UNPROTECT(4);
 
   SEXP loss_sexp, peak_start_end_sexp, samples_with_peaks_sexp,
-    left_cumsum_sexp, right_cumsum_sexp, last_cumsum_sexp,
+    left_cumsum_sexp, right_cumsum_sexp, 
     seg1_mean_sexp, seg2_mean_sexp, seg3_mean_sexp,
     model_sexp, model_names;
   PROTECT(model_names = allocVector(STRSXP, 9));
@@ -66,16 +69,14 @@ PeakSegJointHeuristicStep1_interface(
   SET_STRING_ELT(model_names,2,mkChar("samples_with_peaks_vec"));
   SET_STRING_ELT(model_names,3,mkChar("left_cumsum_vec"));
   SET_STRING_ELT(model_names,4,mkChar("right_cumsum_vec"));
-  SET_STRING_ELT(model_names,5,mkChar("last_cumsum_vec"));
-  SET_STRING_ELT(model_names,6,mkChar("seg1_mean_vec"));
-  SET_STRING_ELT(model_names,7,mkChar("seg2_mean_vec"));
-  SET_STRING_ELT(model_names,8,mkChar("seg3_mean_vec"));
+  SET_STRING_ELT(model_names,5,mkChar("seg1_mean_vec"));
+  SET_STRING_ELT(model_names,6,mkChar("seg2_mean_vec"));
+  SET_STRING_ELT(model_names,7,mkChar("seg3_mean_vec"));
   
-  for(model_i=0; model_i < model_list->n_models; model_i++){
-    model = malloc(sizeof(struct PeakSegJointModel));
-    model_list->model_vec[model_i] = model;
+  for(model_i=0; model_i < model_list.n_models; model_i++){
+    model = model_list.model_vec + model_i;
 
-    PROTECT(model_sexp = allocVector(VECSXP, 9));
+    PROTECT(model_sexp = allocVector(VECSXP, 8));
     SET_VECTOR_ELT(model_vec_sexp, model_i, model_sexp);
     namesgets(model_sexp, model_names);
     UNPROTECT(1);
@@ -107,37 +108,28 @@ PeakSegJointHeuristicStep1_interface(
       model->right_cumsum_vec = INTEGER(right_cumsum_sexp);
       UNPROTECT(1);
 
-      PROTECT(last_cumsum_sexp = allocVector(INTSXP, model_i));
-      SET_VECTOR_ELT(model_sexp, 5, last_cumsum_sexp);
-      model->last_cumsum_vec = INTEGER(last_cumsum_sexp);
-      UNPROTECT(1);
-
       PROTECT(seg1_mean_sexp = allocVector(REALSXP, model_i));
-      SET_VECTOR_ELT(model_sexp, 6, seg1_mean_sexp);
+      SET_VECTOR_ELT(model_sexp, 5, seg1_mean_sexp);
       model->seg1_mean_vec = REAL(seg1_mean_sexp);
       UNPROTECT(1);
 
       PROTECT(seg2_mean_sexp = allocVector(REALSXP, model_i));
-      SET_VECTOR_ELT(model_sexp, 7, seg2_mean_sexp);
+      SET_VECTOR_ELT(model_sexp, 6, seg2_mean_sexp);
       model->seg2_mean_vec = REAL(seg2_mean_sexp);
       UNPROTECT(1);
 
       PROTECT(seg3_mean_sexp = allocVector(REALSXP, model_i));
-      SET_VECTOR_ELT(model_sexp, 8, seg3_mean_sexp);
+      SET_VECTOR_ELT(model_sexp, 7, seg3_mean_sexp);
       model->seg3_mean_vec = REAL(seg3_mean_sexp);
       UNPROTECT(1);
     }// if(0 < model_i)
   }
   int status;
   status = PeakSegJointHeuristicStep1(
-    samples, n_profiles, INTEGER(bin_factor)[0], model_list);
+    samples, n_profiles, INTEGER(bin_factor)[0], &model_list);
   // free inputs.
   free(samples);
-  for(model_i=0; model_i < model_list->n_models; model_i++){
-    free(model_list->model_vec[model_i]);
-  }
-  free(model_list->model_vec);
-  free(model_list);
+  free(model_list.model_vec);
   UNPROTECT(2); //model_list_sexp and model_names.
   // TODO: if known status codes...
   if(status != 0){

@@ -17,7 +17,6 @@ struct PeakSegJointModel {
   int *samples_with_peaks_vec;
   int *left_cumsum_vec;
   int *right_cumsum_vec;
-  int *last_cumsum_vec;
   double *seg1_mean_vec;
   double *seg2_mean_vec;
   double *seg3_mean_vec;
@@ -25,9 +24,11 @@ struct PeakSegJointModel {
 
 struct PeakSegJointModelList {
   int n_models;
-  struct PeakSegJointModel **model_vec;
+  struct PeakSegJointModel *model_vec; // n_models = n_samples + 1.
   int *seg_start_end; // size 2.
+  // These are vectors of size n_samples:
   double *sample_mean_vec;
+  int *last_cumsum_vec;
 };
 
 struct LossIndex {
