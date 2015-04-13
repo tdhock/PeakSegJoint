@@ -113,6 +113,8 @@ int PeakSegJointHeuristicStep1(
   if(unfilled_bases % bases_per_bin != 0){
     n_bins ++ ;
   }
+  model_list->n_bins[0] = n_bins;
+  model_list->bases_per_bin[0] = bases_per_bin;
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;

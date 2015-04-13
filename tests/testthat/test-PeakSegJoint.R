@@ -46,6 +46,8 @@ test_that("Step1 C result agrees with R", {
     bases.per.bin <- bases.per.bin * bin.factor
   }
   n.bins <- as.integer(unfilled.bases %/% bases.per.bin + 1L)
+  expect_equal(fit$n_bins, n.bins)
+  expect_equal(fit$bases_per_bin, bases.per.bin)
 
   extra.bases <- n.bins * bases.per.bin - unfilled.bases
   extra.before <- as.integer(extra.bases/2)
