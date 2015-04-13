@@ -218,3 +218,44 @@ PeakSegJointHeuristicStep1_interface(
   return model_list_sexp;
 }
 
+SEXP
+PeakSegJointHeuristic_interface(
+  SEXP profile_list_sexp,
+  SEXP bin_factor
+  ){
+  int n_profiles = length(profile_list_sexp);
+  // malloc Profiles for input data.
+  struct ProfileList profile_list;
+  Ralloc_profile_list(profile_list_sexp, &profile_list);
+  // allocVector for outputs.
+  struct PeakSegJointModelList *model_list = 
+    malloc_PeakSegJointModelList(n_profiles+1);
+  SEXP model_list_sexp;
+  PROTECT(model_list_sexp = allocPeakSegJointModelList());
+
+  /* 
+     This calls allocVector and assigns the resulting pointers to the
+     elements of model_list.
+  */
+  Ralloc_model_struct(model_list_sexp, model_list);
+
+  int status;
+  status = PeakSegJointHeuristicStep1(
+    &profile_list, INTEGER(bin_factor)[0], model_list);
+  if(status != 0){
+    free_profile_list(&profile_list);
+    free_PeakSegJointModelList(model_list);
+    UNPROTECT(1); //model_list_sexp.
+    error("unrecognized error code %d", status);
+  }
+  
+  status = PeakSegJointHeuristicStep2(&profile_list, model_list);
+  free_profile_list(&profile_list);
+  free_PeakSegJointModelList(model_list);
+  UNPROTECT(1); //model_list_sexp.
+  if(status != 0){
+    error("unrecognized error code %d", status);
+  }
+  return model_list_sexp;
+}
+

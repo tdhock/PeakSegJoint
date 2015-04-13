@@ -269,3 +269,10 @@ int PeakSegJointHeuristicStep1(
   return status;
 }
 
+int 
+PeakSegJointHeuristicStep2
+(struct ProfileList *profile_list,
+ struct PeakSegJointModelList *model_list
+  ){
+  return 0;
+}
