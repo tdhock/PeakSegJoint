@@ -247,18 +247,9 @@ PeakSegJointHeuristic_interface(
   int status;
   status = PeakSegJointHeuristicStep1(
     &profile_list, INTEGER(bin_factor)[0], model_list);
-  if(status != 0){
-    free_profile_list(&profile_list);
-    free_PeakSegJointModelList(model_list);
-    UNPROTECT(1); //model_list_sexp.
-    if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND)
-      error("chromStart not less than chromEnd");
-    if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)
-      error("chromStart[i] != chromEnd[i-1]");
-    error("unrecognized error code %d", status);
+  if(status == 0){
+    status = PeakSegJointHeuristicStep2(&profile_list, model_list);
   }
-  
-  status = PeakSegJointHeuristicStep2(&profile_list, model_list);
   free_profile_list(&profile_list);
   free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.
@@ -267,6 +258,10 @@ PeakSegJointHeuristic_interface(
       error("chromStart not less than chromEnd");
     if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)
       error("chromStart[i] != chromEnd[i-1]");
+    if(status == ERROR_BIN_FACTOR_TOO_LARGE)
+      error("bin factor too large");
+    if(status == ERROR_EMPTY_BIN)
+      error("empty bin");
     error("unrecognized error code %d", status);
   }
   return model_list_sexp;
