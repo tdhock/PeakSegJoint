@@ -1,4 +1,10 @@
-ProfileList <- function(profiles){
+ProfileList <- function
+### Convert a data.frame or list of profiles to a list that can be
+### passed to .Call("PeakSegJointHeuristic...").
+(profiles
+### List of data.frames with columns chromStart, chromEnd, count, or
+### single data.frame with additional column sample.id.
+ ){
   if(is.data.frame(profiles)){
     profiles <- as.data.frame(profiles)
     stopifnot(!is.null(profiles$sample.id))
@@ -14,12 +20,15 @@ ProfileList <- function(profiles){
     profiles[[profile.i]] <- df[, c("chromStart", "chromEnd", "count")]
   }
   profiles
+### Named list of data.frames with columns chromStart, chromEnd,
+### count.
 }
 
 PeakSegJointHeuristicStep1 <- structure(function
 ### Run the first step of the PeakSegJoint fast heuristic optimization
-### algorithm, for testing the results of the C code against the R
-### implementation.
+### algorithm. NB: this function is only for testing the C code
+### against the R implementation. For real data see
+### PeakSegJointHeuristic.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -132,7 +141,7 @@ PeakSegJointHeuristic <- structure(function
   }, fit.convert={
     fit <- PeakSegJointHeuristic(some.counts)
     converted <- ConvertModelList(fit)
-  })
+  }, times=10)
   ## Normalize profile counts to [0,1].
   profile.list <- split(some.counts, some.counts$sample.id)
   norm.list <- list()

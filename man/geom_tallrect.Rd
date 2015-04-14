@@ -1,0 +1,27 @@
+\name{geom_tallrect}
+\alias{geom_tallrect}
+\title{geom tallrect}
+\description{Used for plotting annotated regions.}
+\usage{geom_tallrect(mapping = NULL, data = NULL, stat = "identity", 
+    position = "identity", ...)}
+\arguments{
+  \item{mapping}{
+}
+  \item{data}{
+}
+  \item{stat}{
+}
+  \item{position}{
+}
+  \item{\dots}{
+}
+}
+
+
+
+\author{Toby Dylan Hocking}
+
+
+
+
+

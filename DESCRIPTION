@@ -1,9 +1,9 @@
 Package: PeakSegJoint
 Maintainer: Toby Dylan Hocking <toby.hocking@mail.mcgill.ca>
 Author: Toby Dylan Hocking
-Version: 2015.07.02
+Version: 2015.04.14
 License: GPL-3
 Title: Joint peak detection via constrained optimal segmentation
 Description: Segment several ChIP-seq samples to jointly find the peaks.
-Suggests: ggplot2, testthat, proto, PeakError
+Suggests: ggplot2, testthat, proto, PeakError, microbenchmark
 Depends: R (>= 2.10)

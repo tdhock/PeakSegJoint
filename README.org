@@ -7,5 +7,6 @@ detection.
 install.packages("devtools")
 devtools::install_github("tdhock/PeakSegJoint")
 library(PeakSegJoint)
-example(binSum)
+example(PeakSegJointHeuristic)
+example(largestContinuousMinimum)
 #+END_SRC

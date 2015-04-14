@@ -1,5 +1,6 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
+#include "binSum.h"
 #include "PeakSegJoint.h"
 #include <R.h>
 #include <Rinternals.h>
@@ -250,6 +251,10 @@ PeakSegJointHeuristic_interface(
     free_profile_list(&profile_list);
     free_PeakSegJointModelList(model_list);
     UNPROTECT(1); //model_list_sexp.
+    if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND)
+      error("chromStart not less than chromEnd");
+    if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)
+      error("chromStart[i] != chromEnd[i-1]");
     error("unrecognized error code %d", status);
   }
   
@@ -258,6 +263,10 @@ PeakSegJointHeuristic_interface(
   free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.
   if(status != 0){
+    if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND)
+      error("chromStart not less than chromEnd");
+    if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)
+      error("chromStart[i] != chromEnd[i-1]");
     error("unrecognized error code %d", status);
   }
   return model_list_sexp;

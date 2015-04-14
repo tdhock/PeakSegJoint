@@ -47,32 +47,25 @@ exactModelSelection <- structure(function # Exact model selection function
              min.lambda = vL,
              max.lambda = c(vL[-1], Inf))
 },ex=function(){
-  data(chr11ChIPseq)
-  one <- subset(chr11ChIPseq$coverage, sample.id=="McGill0002")
-  fit <- PeakSegDP(one, 5L)
-  library(ggplot2)
-  ggplot()+
-    geom_step(aes(chromStart/1e3, count), data=one)+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 data=fit$segments, color="green")+
-    geom_segment(aes(chromStart/1e3, 0,
-                     xend=chromEnd/1e3, yend=0),
-                 data=subset(fit$segments, status=="peak"),
-                 size=3, color="deepskyblue")+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(peaks ~ ., scales="free", labeller=function(var, val){
-      s <- ifelse(val==1, "", "s")
-      paste0(val, " peak", s)
-    })
+  data(H3K36me3.TDH.other.chunk1)
+  lims <- c(43000000, 43200000) # left
+  some.counts <-
+    subset(H3K36me3.TDH.other.chunk1$counts,
+           lims[1] < chromEnd & chromStart < lims[2])
+  fit <- PeakSegJointHeuristic(some.counts)
+  converted <- ConvertModelList(fit)
+  ## Ignore a model if there is another one with lower peaks and loss.
+  all.loss <- converted$loss
+  all.loss$cummin <- cummin(all.loss$loss)
+  some.loss <- subset(all.loss, loss == cummin)
   ## Calculate the exact path of breakpoints in the optimal number of
   ## peaks function.
-  rownames(fit$error) <- fit$error$peaks
-  exact.df <- with(fit$error, exactModelSelection(error, segments, peaks))
-  intercept <- fit$error[as.character(exact.df$peaks), "error"]
+  exact.df <- with(some.loss, exactModelSelection(loss, peaks, peaks))
+  rownames(some.loss) <- some.loss$peaks
+  intercept <- some.loss[as.character(exact.df$peaks), "loss"]
   exact.df$cost <- intercept + exact.df$min.lambda * exact.df$model.complexity
   exact.df$next.cost <- c(exact.df$cost[-1], NA)
+  library(ggplot2)
   ggplot()+
     geom_point(aes(min.lambda, cost),
                data=exact.df, pch=1, color="red")+
@@ -83,9 +76,9 @@ exactModelSelection <- structure(function # Exact model selection function
                   label=sprintf("%d peak%s optimal", peaks,
                     ifelse(peaks==1, "", "s"))),
               data=exact.df, color="red", hjust=0, vjust=1.5)+
-    geom_abline(aes(slope=segments, intercept=error), data=fit$error)+
-    geom_text(aes(0, error, label=peaks),
-              data=fit$error, hjust=1.5, color="red")+
+    geom_abline(aes(slope=peaks, intercept=loss), data=some.loss)+
+    geom_text(aes(0, loss, label=peaks),
+              data=some.loss, hjust=1.5, color="red")+
     ggtitle("model selection: cost = loss_k + lambda*segments_k")
   ## Solve the optimization using grid search.
   L.grid <- with(exact.df,{
@@ -95,9 +88,9 @@ exactModelSelection <- structure(function # Exact model selection function
   })
   lambda.grid <- exp(L.grid)
   kstar.grid <- sapply(lambda.grid,function(lambda){
-    crit <- fit$error$segments * lambda + fit$error$error
+    crit <- some.loss$peaks * lambda + some.loss$loss
     picked <- which.min(crit)
-    fit$error$peaks[picked]
+    some.loss$peaks[picked]
   })
   grid.df <- data.frame(log.lambda=L.grid, peaks=kstar.grid)
   ## Compare the results.
@@ -131,68 +124,92 @@ largestContinuousMinimum <- structure(function
   largest <- which.max(runs$size)
   list(start=starts[largest],end=ends[largest])
 }, ex=function(){
-  data(chr11ChIPseq)
-  one <- subset(chr11ChIPseq$coverage, sample.id=="McGill0322")
-  fit <- PeakSegDP(one, 5L)
-  ## First compute the optimal number of peaks function.
-  exact.df <- with(fit$error, exactModelSelection(error, segments, peaks))
-  ## Then compute the PeakError of these models with respect to the
-  ## annotated regions.
-  regions <- subset(chr11ChIPseq$regions, sample.id=="McGill0322")
-  peak.list <- split(fit$segments, fit$segments$peaks)
-  require(PeakError)
-  all.error <- NULL
-  error.regions <- NULL
-  for(peaks.chr in names(peak.list)){
-    peaks <- subset(peak.list[[peaks.chr]], status=="peak")
-    error <- PeakErrorChrom(peaks, regions)
-    error.regions <- rbind(error.regions, data.frame(peaks=peaks.chr, error))
-    all.error <- rbind(all.error, {
-      data.frame(peaks=as.integer(peaks.chr),
-                 errors=with(error, sum(fp+fn)))
-    })
+  data(H3K36me3.TDH.other.chunk1)
+  lims <- c(43000000, 43200000) # left
+  some.counts <-
+    subset(H3K36me3.TDH.other.chunk1$counts,
+           lims[1] < chromEnd & chromStart < lims[2])
+  fit <- PeakSegJointHeuristic(some.counts)
+  converted <- ConvertModelList(fit)
+  ## Ignore a model if there is another one with lower peaks and loss.
+  all.loss <- converted$loss
+  all.loss$cummin <- cummin(all.loss$loss)
+  some.loss <- subset(all.loss, loss == cummin)
+  ## Compute PeakError on this sequence of models.
+  some.regions <- 
+    subset(H3K36me3.TDH.other.chunk1$regions,
+           chromStart < lims[2])
+  regions.by.sample <- split(some.regions, some.regions$sample.id)
+  peaks.by.peaks <- split(converted$peaks, converted$peaks$peaks)
+  library(PeakError)
+  error.list <- list()
+  for(peaks in some.loss$peaks){
+    peaks.str <- paste(peaks)
+    several.samples <- if(peaks.str %in% names(peaks.by.peaks)){
+      peaks.by.peaks[[peaks.str]]
+    }else{
+      Peaks()
+    }
+    peaks.by.sample <- split(several.samples, several.samples$sample.id)
+    error.by.sample <- list()
+    for(sample.id in names(regions.by.sample)){
+      one.sample.peaks <- if(sample.id %in% names(peaks.by.sample)){
+        peaks.by.sample[[sample.id]]
+      }else{
+        Peaks()
+      }
+      one.sample.regions <- regions.by.sample[[sample.id]]
+      error <- PeakErrorChrom(one.sample.peaks, one.sample.regions)
+      error.by.sample[[sample.id]] <- data.frame(sample.id, error)
+    }
+    peaks.error <- do.call(rbind, error.by.sample)
+    fp <- sum(peaks.error$fp)
+    fn <- sum(peaks.error$fn)
+    error.list[[peaks.str]] <-
+      data.frame(peaks, errors=fp+fn, regions=nrow(peaks.error))
   }
-  ## plot the annotation error of the 6 models.
-  ann.colors <- c(noPeaks = "#f6f4bf", peakStart = "#ffafaf", 
-                  peakEnd = "#ff4c4c", peaks = "#a445ee")
+  error.sum <- do.call(rbind, error.list)
+  show.error <- data.frame(what="incorrect regions", error.sum)
+  show.loss <- data.frame(what="Poisson loss", some.loss)
   library(ggplot2)
   ggplot()+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-                      fill=annotation),
-                  data=error.regions, alpha=1/2)+
-    geom_step(aes(chromStart/1e3, count), data=one, color="grey40")+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-                      linetype=status),
-                  data=error.regions, fill=NA, color="black", size=2)+
-    scale_fill_manual(values=ann.colors)+
-    scale_linetype_manual(values=c("false negative"=3,
-                          "false positive"=1,
-                          "correct"=0))+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 data=fit$segments, color="green")+
-    geom_segment(aes(chromStart/1e3, 0,
-                     xend=chromEnd/1e3, yend=0),
-                 data=subset(fit$segments, status=="peak"),
-                 size=3, color="deepskyblue")+
+    geom_point(aes(peaks, loss),
+               data=show.loss)+
+    geom_line(aes(peaks, loss),
+              data=show.loss)+
+    geom_point(aes(peaks, errors),
+               data=show.error)+
+    geom_line(aes(peaks, errors),
+              data=show.error)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(peaks ~ ., scales="free", labeller=function(var, val){
-      s <- ifelse(val==1, "", "s")
-      paste0(val, " peak", s)
-    })  
-  rownames(all.error) <- all.error$peaks
-  exact.df$errors <-
-    all.error[as.character(exact.df$model.complexity), "errors"]
+    facet_grid(what ~ ., scales="free")
+  ## Compute the exact model selection function.
+  exact.df <- with(some.loss, exactModelSelection(loss, peaks, peaks))
+  ## Compute the target interval.
+  rownames(show.error) <- show.error$peaks
+  exact.df$errors <- show.error[paste(exact.df$peaks), "errors"]
   indices <- with(exact.df, {
     largestContinuousMinimum(errors, max.log.lambda-min.log.lambda)
   })
-  ## The target interval (min.log.lambda, max.log.lambda) is the
-  ## largest continuous interval such that the error is minimal.
-  target.interval <- with(indices, {
-    data.frame(min.log.lambda=exact.df$min.log.lambda[start],
-               max.log.lambda=exact.df$max.log.lambda[end])
-  })
-  print(target.interval)
+  target.interval <-
+    data.frame(min.log.lambda=exact.df$min.log.lambda[indices$start],
+               max.log.lambda=exact.df$max.log.lambda[indices$end])
+  ggplot()+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(what ~ ., scales="free")+
+    geom_tallrect(aes(xmin=min.log.lambda, xmax=max.log.lambda),
+                  data=target.interval,
+                  fill="grey",
+                  alpha=0.5)+
+    ggtitle(paste("target interval of penalty values with",
+                  "minimal incorrect regions in grey"))+
+    geom_segment(aes(min.log.lambda, errors,
+                     xend=max.log.lambda, yend=errors),
+                 data=data.frame(exact.df, what="incorrect regions"))+
+    geom_segment(aes(min.log.lambda, peaks,
+                     xend=max.log.lambda, yend=peaks),
+                 data=data.frame(exact.df, what="peaks"))
 })
 
