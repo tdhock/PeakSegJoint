@@ -39,6 +39,7 @@ int PeakSegJointHeuristicStep1(
   }
   model_list->data_start_end[0] = unfilled_chromStart;
   model_list->data_start_end[1] = unfilled_chromEnd;
+  //printf("data_start_end=[%d,%d]\n", unfilled_chromStart, unfilled_chromEnd);
   int unfilled_bases = unfilled_chromEnd - unfilled_chromStart;
   double bases_value, seg1_loss_value;
   if(unfilled_bases/bin_factor < 4){
@@ -70,6 +71,7 @@ int PeakSegJointHeuristicStep1(
   int bases = seg3_chromEnd - seg1_chromStart;
   model_list->seg_start_end[0] = seg1_chromStart;
   model_list->seg_start_end[1] = seg3_chromEnd;
+  //printf("seg_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
   // sample_*_mat variables are matrices n_bins x n_samples (in
   // contrast to model_*_mat which are n_bins x n_segments=3).
   int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
@@ -78,6 +80,7 @@ int PeakSegJointHeuristicStep1(
   for(sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
     count_vec = sample_count_mat + n_bins*sample_i;
+    //printf("initial sample_i=%d\n", sample_i);
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
 		    count_vec,
@@ -314,13 +317,14 @@ binSumLR
 	extra_chromStart = bin_chromStart;
 	extra_chromEnd = data_start_end[0];
 	extra_bases = extra_chromEnd - extra_chromStart;
+	//printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
 	status = binSum(chromStart, chromEnd,
 			coverage, n_entries,
 			&extra_coverage,
 			extra_bases,
 			1,
 			extra_chromStart,
-			ERROR_EMPTY_BIN);
+			EMPTY_AS_ZERO);
 	if(status != 0){
 	  return status;
 	}
@@ -349,13 +353,14 @@ binSumLR
       extra_chromStart = data_start_end[1];
       extra_chromEnd = bin_chromEnd;
       extra_bases = extra_chromEnd - extra_chromStart;
+      //printf("right start=%d bases=%d\n", extra_chromStart, extra_bases);
       status = binSum(chromStart, chromEnd,
 		      coverage, n_entries,
 		      &extra_coverage,
 		      extra_bases,
 		      1,
 		      extra_chromStart,
-		      ERROR_EMPTY_BIN);
+		      EMPTY_AS_ZERO);
       if(status != 0){
 	return status;
       }
@@ -409,6 +414,7 @@ PeakSegJointHeuristicStep2
       for(diff_i=0; diff_i < n_peaks; diff_i++){
 	sample_i = model->samples_with_peaks_vec[diff_i];
 	profile = profile_list->profile_vec + sample_i;
+	//printf("binSumLR sample_i=%d\n", sample_i);
 	status = binSumLR(model_list->data_start_end,
 			  profile->chromStart, profile->chromEnd,
 			  profile->coverage, profile->n_entries,
