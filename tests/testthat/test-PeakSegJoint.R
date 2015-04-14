@@ -354,6 +354,8 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     loss.best <- best.indices.list[[peaks.str]]
     best.peak.df <- best.peak.list[[peaks.str]]
     samples.with.peaks <- paste(best.peak.df$sample.id)
+    flat.without.peaks <- sum(flat.loss.vec)-
+      sum(flat.loss.vec[samples.with.peaks])
     sub.norm.df <- subset(norm.df, sample.id %in% samples.with.peaks)
     sub.bin.df <- subset(bin.df, sample.id %in% samples.with.peaks)
     n.samples <- length(samples.with.peaks)
@@ -424,6 +426,7 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
           }
         }
       }
+      ##print(t(cumsum.mats$left$count[-1,]))
       possible.grid <- 
         expand.grid(left.cumsum.row=3:n.cumsum, right.cumsum.row=2:n.cumsum)
       possible.grid$left.chromStart <-
@@ -513,12 +516,14 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
 
         total.bases <- sum(seg1.bases + seg2.bases + seg3.bases)
         stopifnot(all.equal(total.bases, last.chromEnd - max.chromStart))
-
+        
         total.loss <- sum(seg1.loss + seg2.loss + seg3.loss)
+        with.without.loss <- flat.without.peaks + total.loss
         total.loss.vec <- seg1.loss+seg2.loss+seg3.loss
         feasible.vec <- seg1.means < seg2.means & seg2.means > seg3.means
         model.list[[model.i]] <-
-          data.frame(model.row, total.loss, feasible=all(feasible.vec))
+          data.frame(model.row, total.loss, with.without.loss,
+                     feasible=all(feasible.vec))
         sample.loss.list[[model.i]] <-
           data.frame(sample.id=samples.with.peaks, loss=total.loss.vec)
       }
@@ -541,6 +546,11 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
       model.df$y <- with(model.df, model.i/max(model.i))
       feasible.models <- subset(model.df, feasible)
       best.model <- feasible.models[which.min(feasible.models$total.loss), ]
+
+      ggplot()+
+        coord_equal()+
+        geom_point(aes(with.without.loss, total.loss),
+                   data=model.df)
 
       ggplot()+
         xlab("position on chromosome (kilobases = kb)")+
@@ -588,7 +598,7 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
           structure(mats$count[before.i,],
                     names=colnames(mats$count))
       }
-    }
+    }##while(bases.per.bin.zoom)
     samplefac <- function(L){
       df <- do.call(rbind, L)
       sample.ids <- unique(norm.df$sample.id)
@@ -599,6 +609,10 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     }
     search.df <- samplefac(search.list)
     best.df <- samplefac(best.list)
+    C.cols <-
+      c("bases.per.bin.zoom", "left.chromStart",
+        "right.chromEnd", "with.without.loss")
+    best.df[, C.cols]
     searchPlot <- 
       ggplot()+
         xlab("position on chromosome (kilobases = kb)")+
