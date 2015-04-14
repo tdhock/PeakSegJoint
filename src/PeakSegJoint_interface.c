@@ -243,13 +243,16 @@ PeakSegJointHeuristic_interface(
      elements of model_list.
   */
   Ralloc_model_struct(model_list_sexp, model_list);
-
+  
+  //printf("before step1\n");
   int status;
   status = PeakSegJointHeuristicStep1(
     &profile_list, INTEGER(bin_factor)[0], model_list);
+  //printf("before step2\n");
   if(status == 0){
     status = PeakSegJointHeuristicStep2(&profile_list, model_list);
   }
+  //printf("after step2\n");
   free_profile_list(&profile_list);
   free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.
