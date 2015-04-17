@@ -320,7 +320,7 @@ binSumLR
 	extra_chromStart = bin_chromStart;
 	extra_chromEnd = data_start_end[0];
 	extra_bases = extra_chromEnd - extra_chromStart;
-	printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
+	//printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
 	status = binSum(chromStart, chromEnd,
 			coverage, n_entries,
 			&extra_coverage,
