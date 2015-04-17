@@ -1,5 +1,8 @@
+/* -*- compile-command: "R CMD INSTALL .." -*- */
+
 #include "binSum.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 int binSum
 (int *profile_chromStart, 
@@ -24,6 +27,8 @@ int binSum
       return ERROR_CHROMSTART_CHROMEND_MISMATCH;
     }
   }
+  /* printf("bin_chromStart=%d bin_size=%d n_bins=%d status=%d\n", */
+  /* 	 bin_chromStart, bin_size, n_bins, status_for_empty_bin); */
   int *bin_touched = (int*) malloc(sizeof(int) * n_bins);
   for(bin_i = 0; bin_i < n_bins; bin_i++){
     bin_total[bin_i] = 0;
@@ -35,7 +40,7 @@ int binSum
   // (999, 1000], but start counting (0, 1001], (1000, 1001], (1000, 1002].
   bin_i = 0;
   profile_i = 0;
-  while(profile_chromEnd[profile_i] <= bin_chromStart){
+  while(profile_i < n_profiles && profile_chromEnd[profile_i] <= bin_chromStart){
     profile_i ++;
   }
   int count_until, bases, bin_add, profile_add;
@@ -81,6 +86,7 @@ int binSum
   }
   // If EMPTY_AS_ZERO flag, return now (untouched totals are zero).
   if(status_for_empty_bin == EMPTY_AS_ZERO){
+    free(bin_touched);
     return 0;
   }
   // If there was no data at all that overlapped a bin (not even

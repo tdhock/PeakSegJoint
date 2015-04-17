@@ -252,7 +252,7 @@ PeakSegJointHeuristic_interface(
   if(status == 0){
     status = PeakSegJointHeuristicStep2(&profile_list, model_list);
   }
-  //printf("after step2\n");
+  //printf("after step2 status=%d\n", status);
   free_profile_list(&profile_list);
   free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.

@@ -125,7 +125,7 @@ int PeakSegJointHeuristicStep1(
   double flat_loss_total = 0.0;
   int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   struct LossIndex *diff_index_vec = 
-    malloc(sizeof(struct LossIndex)*n_samples);
+    (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
   int n_feasible;
   for(sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
@@ -152,11 +152,11 @@ int PeakSegJointHeuristicStep1(
 
   int seg1_LastIndex, seg2_LastIndex;
   int model_i, diff_i, n_peaks;
-  double *seg1_mean_vec = malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = malloc(sizeof(double)*n_samples);
-  double *peak_loss_vec = malloc(sizeof(double)*n_samples);
-  double *seg1_loss_vec = malloc(sizeof(double)*n_samples);
+  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *peak_loss_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   for(seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
     for(sample_i=0; sample_i < n_samples; sample_i++){
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
@@ -276,6 +276,8 @@ binSumLR
   int bin_chromEnd, bin_chromStart;
   int extra_chromStart, extra_chromEnd, extra_bases, extra_coverage;
   int status;
+  /* printf("left bin_size=%d bins=%d start=%d\n",  */
+  /* 	 bases_per_bin, n_bins, left_chromStart); */
   status = binSum(chromStart, chromEnd,
 		  coverage, n_entries,
 		  left_bin_vec,
@@ -286,6 +288,8 @@ binSumLR
   if(status != 0){
     return status;
   }
+  /* printf("right bin_size=%d bins=%d start=%d\n",  */
+  /* 	 bases_per_bin, n_bins, right_chromStart); */
   status = binSum(chromStart, chromEnd,
 		  coverage, n_entries,
 		  right_bin_vec,
@@ -296,8 +300,7 @@ binSumLR
   if(status != 0){
     return status;
   }
-  int bin_i;
-  for(bin_i=0; bin_i < n_bins; bin_i++){
+  for(int bin_i=0; bin_i < n_bins; bin_i++){
     //left bin.
     bin_chromStart = left_chromStart + bases_per_bin * bin_i;
     bin_chromEnd = bin_chromStart + bases_per_bin;
@@ -317,7 +320,7 @@ binSumLR
 	extra_chromStart = bin_chromStart;
 	extra_chromEnd = data_start_end[0];
 	extra_bases = extra_chromEnd - extra_chromStart;
-	//printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
+	printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
 	status = binSum(chromStart, chromEnd,
 			coverage, n_entries,
 			&extra_coverage,
@@ -336,42 +339,42 @@ binSumLR
       // bin does not overlap data, so set it to zero.
       left_bin_vec[bin_i] = 0;
     }
-  }
-  //right bin.
-  bin_chromStart = right_chromStart + bases_per_bin * bin_i;
-  bin_chromEnd = bin_chromStart + bases_per_bin;
-  if(bin_chromStart < data_start_end[1]){
-    if(bin_chromEnd <= data_start_end[1]){
-      // (  data  ]
-      //      (bin]    
-      //  (bin]
-      // bin is completely data, leave it alone!
+    //right bin.
+    bin_chromStart = right_chromStart + bases_per_bin * bin_i;
+    bin_chromEnd = bin_chromStart + bases_per_bin;
+    if(bin_chromStart < data_start_end[1]){
+      if(bin_chromEnd <= data_start_end[1]){
+	// (  data  ]
+	//      (bin]    
+	//  (bin]
+	// bin is completely data, leave it alone!
+      }else{
+	// (  data  ]
+	//        (bin]
+	//           -- extra
+	extra_chromStart = data_start_end[1];
+	extra_chromEnd = bin_chromEnd;
+	extra_bases = extra_chromEnd - extra_chromStart;
+	//printf("right start=%d bases=%d\n", extra_chromStart, extra_bases);
+	status = binSum(chromStart, chromEnd,
+			coverage, n_entries,
+			&extra_coverage,
+			extra_bases,
+			1,
+			extra_chromStart,
+			EMPTY_AS_ZERO);
+	if(status != 0){
+	  return status;
+	}
+	right_bin_vec[bin_i] -= extra_coverage;
+      }
     }else{
       // (  data  ]
-      //        (bin]
-      //           -- extra
-      extra_chromStart = data_start_end[1];
-      extra_chromEnd = bin_chromEnd;
-      extra_bases = extra_chromEnd - extra_chromStart;
-      //printf("right start=%d bases=%d\n", extra_chromStart, extra_bases);
-      status = binSum(chromStart, chromEnd,
-		      coverage, n_entries,
-		      &extra_coverage,
-		      extra_bases,
-		      1,
-		      extra_chromStart,
-		      EMPTY_AS_ZERO);
-      if(status != 0){
-	return status;
-      }
-      right_bin_vec[bin_i] -= extra_coverage;
+      //          (bin]
+      //              (bin]
+      // bin does not overlap data, so set it to zero.
+      right_bin_vec[bin_i] = 0;
     }
-  }else{
-    // (  data  ]
-    //          (bin]
-    //              (bin]
-    // bin does not overlap data, so set it to zero.
-    right_bin_vec[bin_i] = 0;
   }
   return 0;
 }
@@ -388,14 +391,15 @@ PeakSegJointHeuristicStep2
   struct Profile *profile;
   int bases_per_bin;
   int left_chromStart, right_chromStart;
+  //printf("before malloc n_bins=%d n_samples=%d\n", n_bins, n_samples);
   int *left_bin_vec = (int*) malloc(n_bins * sizeof(int));
   int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
   int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  double *seg1_mean_vec = malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = malloc(sizeof(double)*n_samples);
-  double *seg1_loss_vec = malloc(sizeof(double)*n_samples);
+  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   //printf("after malloc\n");
   double total_loss, loss_value, bases_value, mean_value;
   int *left_cumsum_vec, *right_cumsum_vec;
@@ -424,6 +428,7 @@ PeakSegJointHeuristicStep2
 			    left_chromStart, right_chromStart,
 			    bases_per_bin, n_bins);
 	  if(status != 0){
+	    //printf("binSumLR bad status\n");
 	    free(left_bin_vec);
 	    free(right_bin_vec);
 	    free(left_cumsum_mat);
@@ -572,6 +577,7 @@ PeakSegJointHeuristicStep2
       }//while(1 < bases_per_bin)
     }//if(loss < INFINITY
   }//for(n_peaks
+  //printf("free at end\n");
   free(left_bin_vec);
   free(right_bin_vec);
   free(left_cumsum_mat);
