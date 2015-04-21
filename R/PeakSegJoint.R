@@ -108,8 +108,10 @@ PeakSegJointHeuristicStep1 <- structure(function
 
 PeakSegJointHeuristic <- structure(function
 ### Run the PeakSegJoint fast heuristic optimization algorithm, which
-### attempts to find the 1 or 3 segment models with maximum Poisson
-### likelihood, across several profiles.
+### gives an approximate solution to a multi-sample Poisson maximum
+### likelihood segmentation problem. Given S samples, this function
+### computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
+### samples with an overlapping peak (maximum of one peak per sample).
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -185,6 +187,43 @@ PeakSegJointHeuristic <- structure(function
   ggplot(converted$loss, aes(peaks, loss))+
     geom_point()+
     geom_line()
+  ## PeakSegJointHeuristic can also be used as a fast approximate
+  ## solver for the PeakSeg model with just 1 peak.
+  some.counts <-
+    subset(H3K36me3.TDH.other.chunk1$counts,
+           43379893 < chromEnd)
+  profile.list <- split(some.counts, some.counts$sample.id)
+  require(PeakSegDP)
+  sample.peak.list <- list()
+  for(sample.id in names(profile.list)){
+    sample.counts <- profile.list[[sample.id]]
+    fit <- PeakSegJointHeuristic(sample.counts)
+    heuristic <- fit$models[[2]]$peak_start_end
+    dp <- PeakSegDP(sample.counts, maxPeaks=1L)
+    dp.peak <- dp$peaks[["1"]]
+    sample.peak.list[[sample.id]] <-
+      data.frame(sample.id,
+                 y=-0.1 * (1:2) * max(sample.counts$count),
+                 algorithm=c("heuristic", "cDPA"),
+                 chromStart=c(heuristic[1], dp.peak$chromStart),
+                 chromEnd=c(heuristic[2], dp.peak$chromEnd))
+  }
+  sample.peaks <- do.call(rbind, sample.peak.list)
+  ggplot()+
+    scale_color_discrete(limits=c("heuristic", "cDPA"))+
+    geom_step(aes(chromStart/1e3, count),
+              data=some.counts,
+              color="grey50")+
+    geom_segment(aes(chromStart/1e3, y,
+                     color=algorithm,
+                     xend=chromEnd/1e3, yend=y),
+                 data=sample.peaks,
+                 size=2)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
+      sub("McGill0", "", val)
+    })
 })
 
 ConvertModelList <- function
