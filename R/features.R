@@ -1,6 +1,9 @@
 ### Compute the feature matrix for this joint segmentation problem.
-computeFeatures <- function(){
+featureMatrix <- function(profile.list){
   features.by.sample <- list()
+  min.chromEnd <- min(sapply(profile.list, with, chromEnd[length(chromEnd)]))
+  max.chromStart <- max(sapply(profile.list, with, chromStart[1]))
+  bases <- min.chromEnd-max.chromStart
   for(sample.id in names(profile.list)){
     ## Compute feature vector for learning using this segmentation
     ## problem.
@@ -28,5 +31,5 @@ computeFeatures <- function(){
           log.log=log(log(feature.vec)))
     })
   }
-  feature.mat <- do.call(rbind, features.by.sample)
+  do.call(rbind, features.by.sample)
 }
