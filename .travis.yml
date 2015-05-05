@@ -1,0 +1,10 @@
+language: r
+
+r_github_packages:
+  - tdhock/PeakSegDP
+  - tdhock/PeakError
+
+notifications:
+  email:
+    on_success: change
+    on_failure: change
