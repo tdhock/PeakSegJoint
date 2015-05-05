@@ -1,13 +1,21 @@
 IntervalRegressionProblems <- structure(function
 ### Compute a sequence of interval regression models for increasingly
 ### more L1 regularization, until we get to a regularization parameter
-### that gives an optimal weight vector of zero.
+### that gives an optimal weight vector of zero. The problem is w* =
+### argmin_w L(w) + regularization * ||w||_1 where L(w) is the mean
+### squared hinge loss and ||w||_1 is the L1-norm of the non-intercept
+### coefficients. We first scale the input features and then
+### repeatedly call IntervalRegressionMatrix, using warm restarts.
 (problem.list,
 ### List of problems with features (numeric matrix) and target
 ### (numeric vector of length 2).
  initial.regularization=0.001,
+### Initial regularization parameter.
  factor.regularization=1.5,
+### Increase regularization by this factor after finding an optimal
+### solution.
  verbose=1,
+### Print messages if >= 1.
  ...
 ### Other parameters to pass to IntervalRegressionMatrix.
  ){
@@ -126,7 +134,10 @@ IntervalRegressionProblems <- structure(function
          colSums(intercept.mat %*% weight.mat)
        })
 ### List representing fit model. You can do
-### fit$predict(feature.matrix) to get a predicted log penalty value.
+### fit$predict(feature.matrix) to get a predicted log penalty
+### value. The mean.vec and sd.vec were used for scaling the training
+### data matrices. The weight.mat is the n.features * n.regularization
+### numeric matrix of optimal coefficients.
 }, ex=function(){
   library(PeakSegJoint)
   data(H3K4me3.PGP.immune.4608)
@@ -201,7 +212,7 @@ IntervalRegressionMatrix <- function
 ### A numeric scalar or NULL, which means to compute Lipschitz as the
 ### mean of the squared L2-norms of the rows of the feature matrix.
  verbose=2
-### Print messages if > 0.
+### Print messages if >= 2.
  ){
   stopifnot(is.matrix(features))
   stopifnot(is.numeric(features))

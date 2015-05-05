@@ -32,4 +32,5 @@ featureMatrix <- function(profile.list){
     })
   }
   do.call(rbind, features.by.sample)
+### Numeric feature matrix (samples x features).
 }

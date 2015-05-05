@@ -1,3 +1,7 @@
+2015.05.05
+
+Squared hinge loss FISTA implementation.
+
 2015.04.17
 
 Bugfixes for C memory issues.
