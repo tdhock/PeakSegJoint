@@ -4,7 +4,7 @@ contains [[file:R/fista.R][an R implementation of a Fast Iterative Shinkage-Thre
 Algorithm (FISTA) for L1-regularized interval regression with the
 squared hinge loss]].
 
-[[https://travis-ci.org/tdhock/animintd][https://travis-ci.org/tdhock/animint.png?branch=master]]
+[[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
 
 #+BEGIN_SRC R
 install.packages("devtools")
