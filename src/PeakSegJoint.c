@@ -1,7 +1,6 @@
 /* -*- compile-command: "R CMD INSTALL .." -*- */
 
 #include "PeakSegJoint.h"
-#include "DPA.h"
 #include "OptimalPoissonLoss.h"
 #include "binSum.h"
 #include <stdio.h>

@@ -7,10 +7,10 @@ squared hinge loss]].
 [[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
 
 #+BEGIN_SRC R
-install.packages("devtools")
-devtools::install_github("tdhock/PeakSegJoint")
-library(PeakSegJoint)
-example(PeakSegJointHeuristic) #segmentation algo.
-example(largestContinuousMinimum)
-example(IntervalRegressionProblems) #fista interval regression algo.
+  install.packages("devtools")
+  devtools::install_github("tdhock/PeakSegJoint")
+  library(PeakSegJoint)
+  example(PeakSegJointHeuristic) #segmentation algo.
+  example(largestContinuousMinimum)
+  example(IntervalRegressionProblems) #fista interval regression algo.
 #+END_SRC
