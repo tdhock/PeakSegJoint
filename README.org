@@ -1,12 +1,16 @@
-PeakSegJoint
+PeakSegJoint is an R package with [[file:src/PeakSegJoint.c][C code implementing a fast heuristic
+segmentation algorithm]] for supervised joint peak detection. It also
+contains [[file:R/fista.R][an R implementation of a Fast Iterative Shinkage-Thresholding
+Algorithm (FISTA) for L1-regularized interval regression with the
+squared hinge loss]].
 
-Fast heuristic segmentation algorithm for supervised joint peak
-detection.
+[[https://travis-ci.org/tdhock/animintd][https://travis-ci.org/tdhock/animint.png?branch=master]]
 
 #+BEGIN_SRC R
 install.packages("devtools")
 devtools::install_github("tdhock/PeakSegJoint")
 library(PeakSegJoint)
-example(PeakSegJointHeuristic)
+example(PeakSegJointHeuristic) #segmentation algo.
 example(largestContinuousMinimum)
+example(IntervalRegressionProblems) #fista interval regression algo.
 #+END_SRC
