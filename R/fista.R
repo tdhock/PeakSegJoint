@@ -25,7 +25,7 @@ IntervalRegressionProblems <- structure(function
   stopifnot(initial.regularization > 0)
   stopifnot(is.numeric(factor.regularization))
   stopifnot(length(factor.regularization) == 1)
-  stopifnot(factor.regularization > 0)
+  stopifnot(factor.regularization > 1)
   
   n.input.features <- ncol(problem.list[[1]]$features)
 
