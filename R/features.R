@@ -10,12 +10,23 @@ featureMatrix <- structure(function(profile.list){
     ## Compute feature vector for learning using this segmentation
     ## problem.
     one.list <- profile.list[sample.id]
-    fit <- PeakSegJointHeuristic(one.list)
-    loss <- sapply(fit$models, "[[", "loss")
-    if(length(loss) == 1){
-      loss <- c(loss, loss)
-    }
     sample.counts <- profile.list[[sample.id]]
+    loss <- tryCatch({
+      fit <- PeakSegJointHeuristic(one.list)
+      seg.bases <- with(fit, seg_start_end[2] - seg_start_end[1])
+      loss <- sapply(fit$models, "[[", "loss")/seg.bases
+      if(!is.finite(loss[2])){
+        loss[2] <- loss[1]
+      }
+      loss
+    }, error=function(e){
+      bases.vec <- with(sample.counts, chromEnd-chromStart)
+      seg.bases <- sum(bases.vec)
+      seg.mean <- sum(sample.counts$count  * bases.vec)/seg.bases
+      loss0 <- PoissonLoss(sample.counts$count, seg.mean, bases.vec)/seg.bases
+      c(loss0, loss0)
+    })
+    stopifnot(length(loss) == 2)
     too.long <- with(sample.counts, rep(count, chromEnd-chromStart))
     too.long.pos <- with(sample.counts, {
       (chromStart[1]+1):chromEnd[length(chromEnd)]
@@ -31,7 +42,9 @@ featureMatrix <- structure(function(profile.list){
         mad=mad(long),
         bases=bases,
         sum=sum(long),
-        diff.loss=loss[1]-loss[2])
+        loss.0peaks=loss[1],
+        loss.1peak=loss[2],
+        loss.diff=loss[1]-loss[2])
     suppressWarnings({
       features.by.sample[[sample.id]] <-
         c(feature.vec,
