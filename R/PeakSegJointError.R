@@ -6,7 +6,11 @@ PeakSegJointError <- function
 ### data.frame of annotated region labels.
  ){
   regions.by.sample <- split(problem.regions, problem.regions$sample.id)
-  peaks.by.peaks <- with(converted, split(peaks, peaks$peaks))
+  peaks.by.peaks <- with(converted, if(is.null(peaks)){
+    list()
+  }else{
+    split(peaks, peaks$peaks)
+  })
   error.by.peaks <- list()
   error.regions.list <- list()
   for(peaks.str in c("0", names(peaks.by.peaks))){
