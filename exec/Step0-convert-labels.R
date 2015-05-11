@@ -108,6 +108,7 @@ for(chrom in names(match.by.chrom)){
 
 ## determine total set of cell types with positive=Peak annotations.
 stripped <- gsub(" *$", "", gsub("^ *", "", match.df$types))
+is.noPeaks <- stripped == ""
 type.list <- strsplit(stripped, split=" ")
 names(type.list) <- rownames(match.df)
 cell.types <- unique(unlist(type.list))
@@ -115,6 +116,13 @@ cat("cell types with peak annotations: ",
     paste(cell.types, collapse=", "),
     "\n",
     sep="")
+
+## Use positive region sizes to limit problem size grid search.
+positive.df <- match.df[!is.noPeaks, ]
+positive.bases <- with(positive.df, chromEnd-chromStart)
+cat("peak region size in bases:\n")
+print(positive.q <- quantile(positive.bases))
+min.bases.per.problem <- positive.q[["25%"]]
 
 match.by.chunk <- split(match.df, match.df$chunk.id)
 regions.by.chunk <- list()
@@ -164,5 +172,5 @@ for(chunk.str in names(regions.by.chunk)){
   RData.dir <- dirname(RData.file)
   dir.create(RData.dir, showWarnings=FALSE, recursive=TRUE)
   cat("Writing ", nrow(regions), " labels to ", RData.file, "\n", sep="")
-  save(regions, file=RData.file)
+  save(regions, min.bases.per.problem, file=RData.file)
 }
