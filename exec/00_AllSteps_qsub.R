@@ -72,7 +72,10 @@ for(step.name in names(cmd.list)){
   for(cmd.name in names(cmd.vec)){
     cmd <- cmd.vec[[cmd.name]]
     last.file <- sub(".* ", "", cmd)
-    prefix <- sub("[.].*?$", "", last.file)
+    last.base <- basename(last.file)
+    last.dir <- dirname(last.file)
+    prefix.only <- sub("[.].*?$", "", last.base)
+    prefix <- file.path(last.dir, prefix.only)
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
