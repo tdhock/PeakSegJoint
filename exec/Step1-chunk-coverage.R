@@ -10,8 +10,6 @@ argv <-
                         "McGill0322.bedGraph"),
               package="PeakSegDP")
 
-argv <- "/gs/project/mugqic/epigenome/pipelines/atac_seq/v_1/EMC_Temporal_Change/hg19/toby_peak_calling/toby_chunks"
-
 argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
