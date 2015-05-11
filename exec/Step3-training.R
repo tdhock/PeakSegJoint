@@ -32,4 +32,21 @@ err.mat <- do.call(rbind, err.mat.list)
 err.vec <- colSums(err.mat)
 res.str <- names(err.vec)[which.min(err.vec)]
 
-stop("train supervised model")
+problems.by.chunk <- list()
+for(chunk.i in seq_along(problems.RData.vec)){
+  problems.RData <- problems.RData.vec[[chunk.i]]
+  objs <- load(problems.RData)
+  chunk.problems <- step2.by.res[[res.str]]
+  for(problem.name in names(chunk.problems)){
+    info <- chunk.problems[[problem.name]]
+    target <- info$error$target
+    n.finite <- sum(is.finite(target))
+    if(n.finite > 0){
+      problems.by.chunk[[paste(chunk.i)]][[problem.name]] <-
+        list(features=info$features,
+             target=target)
+    }
+  }
+}
+
+stop("IntervalRegressionProblems")
