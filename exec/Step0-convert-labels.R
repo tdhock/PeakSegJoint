@@ -162,15 +162,66 @@ for(chunk.id in names(match.by.chunk)){
   regions.by.chunk[[paste(chunk.id)]] <- one.chunk
 }
 
+## Define possible problem sizes.
+bases.per.problem.all <- as.integer(4.5 * 2^seq(3, 20, by=0.5))
+bases.per.problem.vec <-
+  bases.per.problem.all[min.bases.per.problem < bases.per.problem.all &
+                          bases.per.problem.all < min.bases.per.problem * 100]
+
 ## Write chunks to separate RData files.
 for(chunk.str in names(regions.by.chunk)){
   regions <- regions.by.chunk[[chunk.str]]
+
+  max.chromEnd <- max(regions$chromEnd)
+  min.chromStart <- min(regions$chromStart)
+
+  problems.by.res <- list()
+  for(bases.per.problem in bases.per.problem.vec){
+    res.str <- paste(bases.per.problem)
+    problemSeq <- seq(0, max.chromEnd, by=bases.per.problem)
+    problemStart <-
+      as.integer(sort(c(problemSeq,
+                        problemSeq+bases.per.problem/2)))
+    problemEnd <- problemStart+bases.per.problem
+    is.overlap <- min.chromStart < problemEnd &
+      problemStart < max.chromEnd
+    problem.name <- sprintf("%s:%d-%d", chrom, problemStart, problemEnd)
+    res.problems <- 
+      data.table(problem.name, 
+                 bases.per.problem, problemStart, problemEnd)[is.overlap,]
+    setkey(res.problems, problemStart, problemEnd)
+    problems.by.res[[res.str]] <- res.problems
+  }
+
+  problems <- do.call(rbind, problems.by.res)
+  ## ggplot()+
+  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3),
+  ##                 data=data.frame(chromStart=min.chromStart,
+  ##                   chromEnd=max.chromEnd),
+  ##                 color="black",
+  ##                 size=2,
+  ##                 fill="grey")+
+  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+  ##                     fill=annotation),
+  ##                 data=regions)+
+  ##   scale_fill_manual(values=ann.colors)+
+  ##   geom_segment(aes(problemStart/1e3, problem.name,
+  ##                    xend=problemEnd/1e3, yend=problem.name),
+  ##                data=problems)
+
+  chunk <- 
+  data.table(chrom=regions$chrom[1],
+             chunkStart=min(problems$problemStart),
+             chunkEnd=max(problems$problemEnd))
+  setkey(chunk, chrom, chunkStart, chunkEnd)
+  
   RData.file <-
     file.path(dirname(labels.file),
               "PeakSegJoint-chunks",
-              paste0("chunk", chunk.str, ".regions.RData"))
+              chunk.str,
+              "regions.RData")
   RData.dir <- dirname(RData.file)
   dir.create(RData.dir, showWarnings=FALSE, recursive=TRUE)
   cat("Writing ", nrow(regions), " labels to ", RData.file, "\n", sep="")
-  save(regions, min.bases.per.problem, file=RData.file)
+  save(regions, chunk, problems.by.res, file=RData.file)
 }
