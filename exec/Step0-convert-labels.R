@@ -59,7 +59,7 @@ samples.by.type <- split(sample.df, sample.df$cell.type)
 cat("Reading ", labels.file, "\n", sep="")
 labels.lines <- readLines(labels.file)
 is.blank <- labels.lines == ""
-chunk.id <- cumsum(is.blank)
+chunk.id <- cumsum(is.blank)+1L
 label.df <- data.frame(chunk.id, line=labels.lines)[!is.blank, ]
 cat(length(unique(label.df$chunk.id)), " chunks, ",
     nrow(label.df), " label lines\n", sep="")
