@@ -11,10 +11,10 @@ if(!require(PeakError))
 argv <-
   system.file(file.path("exampleData",
                         "PeakSegJoint-chunks",
-                        "0"),
+                        "3"),
               package="PeakSegDP")
 
-argv <- "/gs/project/mugqic/epigenome/pipelines/atac_seq/v_1/EMC_Temporal_Change/hg19/toby_peak_calling/toby_chunks"
+argv <- "~/exampleData/PeakSegJoint-chunks/1"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -30,6 +30,7 @@ chunk.id <- basename(chunk.dir)
 regions.RData <- file.path(chunk.dir, "regions.RData")
 
 objs <- load(regions.RData)
+regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
 ann.colors <-
@@ -162,15 +163,35 @@ for(res.str in names(problems.by.res)){
 
     problems.dt <- data.table(step2.problems)
     setkey(problems.dt, problemStart, problemEnd)
+    setkey(regions, chromStart, chromEnd)
     over.regions <- foverlaps(regions, problems.dt, nomatch=0L)
+    over.regions[,
+                 `:=`(overlapStart=ifelse(problemStart < chromStart,
+                        chromStart, problemStart),
+                      overlapEnd=ifelse(problemEnd < chromEnd,
+                        problemEnd, chromEnd))]
+    over.regions[, overlapBases := overlapEnd-overlapStart]
+    region.i.problems <-
+      over.regions[,
+                   .(problem.name=problem.name[which.max(overlapBases)]),
+                   by=region.i]
+    stopifnot(nrow(region.i.problems) == nrow(regions))
+    setkey(regions, region.i)
+    setkey(region.i.problems, region.i)
+    assigned.regions <- regions[region.i.problems,]
+    stopifnot(nrow(assigned.regions) == nrow(regions))
     regions.by.problem <-
-      split(over.regions, over.regions$problem.name, drop=TRUE)
+      split(assigned.regions, assigned.regions$problem.name, drop=TRUE)
+    setkey(problems.dt, problem.name)
     peaks.by.problem <- list()
     step2.by.problem <- list()
+    step2.peak.list <- list()
+    saved.problem.list <- list()
     for(problem.name in names(regions.by.problem)){
       problem.regions <- regions.by.problem[[problem.name]]
-      problem.i <- problem.regions$problem.i[1]
-      problem <- problems.dt[problem.i, ]
+      problem <- problems.dt[problem.name]
+      setkey(problem, problemStart, problemEnd)
+      problem.i <- problem$problem.i
       problem.counts <-
         foverlaps(counts, problem, nomatch=0L, type="within")
       
@@ -183,18 +204,26 @@ for(res.str in names(problems.by.res)){
           list(converted=converted,
                error=prob.err.list,
                features=featureMatrix(profile.list))
+        saved.problem.list[[problem.name]] <-
+          data.frame(problem, sample.id="step 2")
         best.models <-
           subset(prob.err.list$modelSelection, errors==min(errors))
         peaks.num <- min(best.models$peaks)
         if(peaks.num > 0){
           show.peaks <- subset(converted$peaks, peaks == peaks.num)
           peaks.by.problem[[problem.name]] <- show.peaks
+          peak.row <- show.peaks[1,]
+          peak.row$sample.id <- "step 2"
+          step2.peak.list[[problem.name]] <-
+            data.frame(problem.i, peak.row)
         }
       }, error=function(e){
-        print(e)
+        paste(e) #ignore.
       })
     }#problem.name
     pred.peaks <- do.call(rbind, peaks.by.problem)
+    step2.peaks <- do.call(rbind, step2.peak.list)
+    saved.problems <- do.call(rbind, saved.problem.list)
     ## ggplot()+
     ##   geom_point(aes(chromStart/1e3, sample.id),
     ##              data=pred.peaks,
