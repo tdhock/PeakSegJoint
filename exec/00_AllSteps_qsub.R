@@ -82,7 +82,7 @@ for(step.name in names(cmd.list)){
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
-#PBS -l walltime=12:00:00                      
+#PBS -l walltime=01:00:00
 #PBS -A bws-221-ae", depend.txt, "
 #PBS -o ", prefix, ".out
 #PBS -e ", prefix, ".err
