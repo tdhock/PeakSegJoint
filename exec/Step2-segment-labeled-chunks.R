@@ -1,9 +1,9 @@
 if(!require(data.table))
   install.packages("data.table")
 if(!require(PeakSegJoint))
-  install.packages("PeakSegJoint")
+  devtools::install_github("tdhock/PeakSegJoint")
 if(!require(PeakError))
-  install.packages("PeakError")
+  devtools::install_github("tdhock/PeakError")
 
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
