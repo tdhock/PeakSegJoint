@@ -73,7 +73,7 @@ not.recognized <-
   ! match.mat[, "annotation"] %in% c("peakStart", "peakEnd", "peaks", "noPeaks")
 if(any(not.recognized)){
   print(raw.vec[not.recognized])
-  print(match.mat[not.recognized, drop=FALSE])
+  print(match.mat[not.recognized, , drop=FALSE])
   stop("unrecognized annotation")
 }
 match.df <-
