@@ -19,7 +19,10 @@ Step0 <-
               mustWork=TRUE,
               package="PeakSegJoint")
 cmd <- paste(Rscript, Step0, labels.txt.file)
-system(cmd)
+status <- system(cmd)
+if(status != 0){
+  stop("error in Step0, most likely problem with labels")
+}
 
 ## Starting with Step1, we add vectors of commands that will wait for
 ## each other.
