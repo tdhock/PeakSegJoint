@@ -64,7 +64,7 @@ Step3 <-
               package="PeakSegJoint")
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
 cmd.list$Step3 <-
-  paste(Rscript, Step3, chunks.dir)
+  c(training=paste(Rscript, Step3, chunks.dir))
 
 qsub <- "echo 1 && bash"
 qsub <- "qsub"
@@ -101,7 +101,9 @@ for(step.name in names(cmd.list)){
     qsub.cmd <- paste(qsub, script.file)
     qsub.out <- system(qsub.cmd, intern=TRUE)
     qsub.id <- sub("[.].*", "", qsub.out)
-    cat("submitted job ", qsub.id, "\n", sep="")
+    cat("%s %s submitted as job ",
+        step.name, cmd.name,
+        qsub.id, "\n", sep="")
     depend.list[[cmd.name]] <- qsub.id
   }
 }
