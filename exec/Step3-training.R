@@ -8,6 +8,8 @@ argv <-
                         "PeakSegJoint-chunks"),
               package="PeakSegDP")
 
+argv <- "~/exampleData/PeakSegJoint-chunks"
+
 argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
