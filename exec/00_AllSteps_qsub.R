@@ -90,7 +90,7 @@ for(step.name in names(cmd.list)){
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
-#PBS -l walltime=01:00:00
+#PBS -l walltime=02:00:00
 #PBS -A bws-221-ae", depend.txt, "
 #PBS -m ae
 #PBS -M tdhock5@gmail.com
