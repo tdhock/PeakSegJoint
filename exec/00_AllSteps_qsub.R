@@ -101,8 +101,9 @@ for(step.name in names(cmd.list)){
     qsub.cmd <- paste(qsub, script.file)
     qsub.out <- system(qsub.cmd, intern=TRUE)
     qsub.id <- sub("[.].*", "", qsub.out)
-    cat("%s %s submitted as job ",
-        step.name, cmd.name,
+    cat(step.name, " ",
+        cmd.name, " ",
+        "submitted as job ",
         qsub.id, "\n", sep="")
     depend.list[[cmd.name]] <- qsub.id
   }
