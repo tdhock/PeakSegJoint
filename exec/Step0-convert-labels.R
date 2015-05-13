@@ -181,7 +181,9 @@ for(chunk.str in names(regions.by.chunk)){
     problemSeq <- seq(0, max.chromEnd, by=bases.per.problem)
     problemStart <-
       as.integer(sort(c(problemSeq,
-                        problemSeq+bases.per.problem/2)))
+                        problemSeq+bases.per.problem/2,
+                        problemSeq+bases.per.problem*3/4,
+                        problemSeq+bases.per.problem*1/4)))
     problemEnd <- problemStart+bases.per.problem
     is.overlap <- min.chromStart < problemEnd &
       problemStart < max.chromEnd
