@@ -8,7 +8,7 @@ argv <-
                         "PeakSegJoint-chunks"),
               package="PeakSegDP")
 
-argv <- "PeakSegJoint-chunks/H3K36me3_TDH_other"
+argv <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -53,6 +53,7 @@ chosen.i <- which.min(err.vec)
 res.str <- names(err.vec)[chosen.i]
 chosen.df <- err.df[chosen.i, ]
 
+chunk.best$selected.errors <- err.mat[, res.str]
 chunk.best$bases.per.problem <- NA
 for(chunk.i in seq_along(bpp.list)){
   bpp <- bpp.list[[chunk.i]]
@@ -61,7 +62,8 @@ for(chunk.i in seq_along(bpp.list)){
   chunk.best$bases.per.problem[chunk.i] <- paste0(bpp, collapse="<br />")
 }
 
-chunk.ordered <- chunk.best[order(chunk.best$min.errors),]
+chunk.ordered <-
+  chunk.best[order(chunk.best$selected.errors, decreasing=TRUE),]
 
 resCurve <- 
 ggplot()+
@@ -81,13 +83,19 @@ png(png.name, width=400, h=200, units="px")
 print(resCurve)
 dev.off()
 
+res.xt <- xtable(err.df)
+res.html <-
+  print(res.xt, type="html",
+        include.rownames=FALSE)
+
 xt <- xtable(chunk.ordered)
 html.table <-
   print(xt, type="html",
         include.rownames=FALSE,
         sanitize.text.function=identity)
 html.out <-
-  paste('<img src="figure-train-errors.png" /> <br />',
+  paste(res.html,
+        '<br /> <img src="figure-train-errors.png" /> <br />',
         html.table)
 
 out.file <- file.path(chunks.dir, "figure-train-errors", "index.html")
