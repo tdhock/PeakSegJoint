@@ -666,7 +666,7 @@ test_that("21 peak loss < 20 peak loss", {
     }
     C.start.end <- model$peak_start_end
     R.start.end <- c(peakStart, peakEnd)
-    expect_equal(C.start.end, R.start.end)
+    expect_identical(C.start.end, R.start.end)
     
     loss.with.peaks <- sample.loss.list[[best.model$model.i]]
     samples.without.peaks <-
@@ -1092,7 +1092,7 @@ test_that("Step1 C result agrees with R", {
 data(H3K4me3.TDH.other.chunk8)
 
 test_that("8 peaks are feasible", {
-  fit <- PeakSegJointHeuristic(H3K4me3.TDH.other.chunk8)
+  fit <- PeakSegJointHeuristic(H3K4me3.TDH.other.chunk8, 3)
   converted <- ConvertModelList(fit)
 
   peaks <- unique(converted$peaks[, c("peaks", "chromStart", "chromEnd")])
@@ -1130,7 +1130,7 @@ test_that("8 peaks are feasible", {
   unfilled.chromEnd <-
     min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
-  bin.factor <- 2L
+  bin.factor <- 3L
   bases.per.bin <- 1L
   while(unfilled.bases/bases.per.bin/bin.factor >= 4){
     bases.per.bin <- bases.per.bin * bin.factor
@@ -1775,7 +1775,10 @@ test_that("8 peaks are feasible", {
   }#peaks.str
   zoom.peaks <- do.call(rbind, zoom.peak.list)
   zoom.loss <- do.call(rbind, zoom.loss.list)
-  R.loss.vec <- as.numeric(zoom.loss$loss)
+  R.loss.list <- rep(Inf, n.samples+1)
+  names(R.loss.list) <- 0:n.samples
+  R.loss.list[names(best.loss.list)] <- best.loss.list
+  R.loss.vec <- as.numeric(unlist(R.loss.list))
   C.loss.vec <- sapply(fit$models, "[[", "loss")
   expect_equal(C.loss.vec, R.loss.vec)
   ggplot()+
@@ -1818,13 +1821,13 @@ test_that("8 peaks are feasible", {
 
 test_that("Step1 C result agrees with R", {
   profiles <- H3K4me3.TDH.other.chunk8
-  fit <- PeakSegJointHeuristicStep1(profiles)
+  fit <- PeakSegJointHeuristicStep1(profiles, 3)
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
   unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
     min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
-  bin.factor <- 2L
+  bin.factor <- 3L
   bases.per.bin <- 1L
   while(unfilled.bases/bases.per.bin/bin.factor >= 4){
     bases.per.bin <- bases.per.bin * bin.factor
@@ -1942,7 +1945,7 @@ test_that("Step1 C result agrees with R", {
   flat.loss.vec <- OptimalPoissonLoss(flat.means, flat.cumsums)
   R.flat.loss <- as.numeric(flat.loss.vec[fit$sample.id])
   expect_equal(fit$flat_loss_vec, R.flat.loss)
-  
+
   best.loss.list[["0"]] <- sum(flat.loss.vec)
   for(seg1.last in 1:(n.bins-2)){
     seg1.cumsums <- first.cumsums$count[seg1.last, ]
