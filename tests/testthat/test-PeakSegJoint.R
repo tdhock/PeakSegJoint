@@ -1,8 +1,11 @@
+library(testthat)
 context("PeakSegJoint")
 
+library(PeakSegJoint)
+library(ggplot2)
+library(PeakError) # for tallrect.
+
 test_that("PeakSegJointHeuristic C result agrees with R", {
-  library(testthat)
-  library(PeakSegJoint)
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43000000, 43200000) # left
   some.sample.ids <- H3K36me3.TDH.other.chunk1$counts$sample.id
@@ -13,7 +16,6 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
   some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
                          chromStart < lims[2] &
                            sample.id %in% some.sample.ids)
-  library(ggplot2)
   ann.colors <-
     c(noPeaks="#f6f4bf",
       peakStart="#ffafaf",
@@ -346,7 +348,6 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     })
   ## for 0, 1, ..., maxPeaks, run the bin pyramid grid search,
   ## around the peaks found in this first step.
-  library(PeakError)
   zoom.peak.list <- list("0"=Peaks())
   zoom.loss.list <-
     list("0"=data.frame(peaks=0, loss=sum(flat.loss.vec)))
@@ -714,8 +715,6 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
 })
 
 test_that("Step1 C result agrees with R", {
-  library(testthat)
-  library(PeakSegJoint)
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43000000, 43200000) # left
   some.sample.ids <- H3K36me3.TDH.other.chunk1$counts$sample.id
@@ -726,7 +725,6 @@ test_that("Step1 C result agrees with R", {
   some.regions <- subset(H3K36me3.TDH.other.chunk1$regions,
                          chromStart < lims[2] &
                            sample.id %in% some.sample.ids)
-  library(ggplot2)
   ann.colors <-
     c(noPeaks="#f6f4bf",
       peakStart="#ffafaf",
