@@ -14,7 +14,7 @@ argv <-
               package="PeakSegDP")
 
 argv <- "~/exampleData/PeakSegJoint-chunks/1"
-argv <- "PeakSegJoint-chunks/H3K36me3_AM_immune/3"
+argv <- "PeakSegJoint-chunks/H3K36me3_AM_immune/21"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -200,6 +200,16 @@ for(res.str in names(problems.by.res)){
       problem.i <- problem$problem.i
       problem.counts <-
         foverlaps(counts, problem, nomatch=0L, type="within")
+
+      ## ggplot()+
+      ##   theme_bw()+
+      ##   theme(panel.margin=grid::unit(0, "cm"))+
+      ##   facet_grid(sample.id ~ ., labeller=function(var, val){
+      ##     sub("McGill0", "", sub(" ", "\n", val))
+      ##   }, scales="free")+
+      ##   geom_step(aes(chromStart/1e3, count),
+      ##             data=problem.counts,
+      ##             color="grey50")
       
       tryCatch({
         profile.list <- ProfileList(problem.counts)
