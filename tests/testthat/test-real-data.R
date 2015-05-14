@@ -1440,8 +1440,8 @@ test_that("8 peaks are feasible", {
   zoom.peak.list <- list("0"=Peaks())
   zoom.loss.list <-
     list("0"=data.frame(peaks=0, loss=sum(flat.loss.vec)))
-  peaks.str <- "21"  
-  for(peaks.str in names(best.indices.list)){
+  peaks.str <- "10" #problematic!
+  for(peaks.str in paste(1:9)){
     loss.best <- best.indices.list[[peaks.str]]
     best.peak.df <- best.peak.list[[peaks.str]]
     samples.with.peaks <- paste(best.peak.df$sample.id)
@@ -1522,9 +1522,8 @@ test_that("8 peaks are feasible", {
       right.mat <- t(cumsum.mats$right$count[-1,])
       colnames(right.mat) <- NULL
       print(bases.per.bin.zoom)
+      print(as.integer(cumsum.mats$left$count[1,]))
       print(left.mat)
-      print(right.mat)
-      print(as.integer(cumsum.mats$right$count[1,]))
       possible.grid <- 
         expand.grid(left.cumsum.row=3:n.cumsum, right.cumsum.row=2:n.cumsum)
       possible.grid$left.chromStart <-
@@ -1538,7 +1537,7 @@ test_that("8 peaks are feasible", {
       feasible.grid <-
         subset(possible.grid,
                left.chromEnd <= right.chromStart &
-                 right.chromEnd < last.chromEnd)
+                 right.chromEnd <= last.chromEnd)
       feasible.grid$model.i <- 1:nrow(feasible.grid)
       model.list <- list()
       seg.list <- list()
@@ -1614,7 +1613,10 @@ test_that("8 peaks are feasible", {
 
         total.bases <- sum(seg1.bases + seg2.bases + seg3.bases)
         stopifnot(all.equal(total.bases, last.chromEnd - max.chromStart))
-        
+
+        ## Total loss is actually just the total of the samples with
+        ## peaks, and with.without.loss is the grand total of samples
+        ## with and without peaks.
         total.loss <- sum(seg1.loss + seg2.loss + seg3.loss)
         with.without.loss <- flat.without.peaks + total.loss
         total.loss.vec <- seg1.loss+seg2.loss+seg3.loss
@@ -1690,7 +1692,7 @@ test_that("8 peaks are feasible", {
       peakEnd <- best.model$right.chromEnd
       cat(sprintf("\nn_peaks=%s bases_per_bin=%d [%d,%d] loss=%15.6f\n",
                   peaks.str, bases.per.bin.zoom,
-                  peakStart, peakEnd, best.model$total.loss))
+                  peakStart, peakEnd, best.model$with.without.loss))
       before.i.list <-
         list(left=best.model$left.cumsum.row-2,
              right=best.model$right.cumsum.row-1)
@@ -1745,6 +1747,11 @@ test_that("8 peaks are feasible", {
     peaks <- as.numeric(peaks.str)
     model.i <- peaks + 1
     model <- fit$models[[model.i]]
+
+    C.start.end <- model$peak_start_end
+    R.start.end <- c(peakStart, peakEnd)
+    expect_true(all(C.start.end - R.start.end == 0))
+    
     sample.i <- model$samples_with_peaks_vec + 1
     C.sample.id <- fit$sample.id[sample.i]
     for(seg.i in 1:3){
@@ -1755,9 +1762,6 @@ test_that("8 peaks are feasible", {
       C.mean.vec <- model[[sprintf("seg%d_mean_vec", seg.i)]]
       expect_equal(C.mean.vec, R.mean.vec)
     }
-    C.start.end <- model$peak_start_end
-    R.start.end <- c(peakStart, peakEnd)
-    expect_equal(C.start.end, R.start.end)
     
     loss.with.peaks <- sample.loss.list[[best.model$model.i]]
     samples.without.peaks <-
@@ -1775,12 +1779,10 @@ test_that("8 peaks are feasible", {
   }#peaks.str
   zoom.peaks <- do.call(rbind, zoom.peak.list)
   zoom.loss <- do.call(rbind, zoom.loss.list)
-  R.loss.list <- rep(Inf, n.samples+1)
-  names(R.loss.list) <- 0:n.samples
-  R.loss.list[names(best.loss.list)] <- best.loss.list
-  R.loss.vec <- as.numeric(unlist(R.loss.list))
   C.loss.vec <- sapply(fit$models, "[[", "loss")
-  expect_equal(C.loss.vec, R.loss.vec)
+  R.loss.vec <- zoom.loss$loss
+  some.C.loss <- C.loss.vec[1:length(R.loss.vec)]
+  expect_equal(some.C.loss, R.loss.vec)
   ggplot()+
     scale_color_manual(values=c(data="grey50",
                          bins="black", peaks="deepskyblue"))+
