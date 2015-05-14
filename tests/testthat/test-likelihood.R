@@ -87,15 +87,10 @@ test_that("C flat models for 2 bin.factors agree", {
   expect_equal(fit2$sample_mean_vec, fit3$sample_mean_vec)
   expect_equal(fit2$flat_loss_vec, fit3$flat_loss_vec)
 
-  fit2 <- PeakSegJointHeuristic(profile.list, 2)
-  fit3 <- PeakSegJointHeuristic(profile.list, 3)
-  expect_equal(fit2$sample_mean_vec, fit3$sample_mean_vec)
-  expect_equal(fit2$flat_loss_vec, fit3$flat_loss_vec)
-
   for(profile.i in seq_along(profile.list)){
     one <- profile.list[profile.i]
-    fit2 <- PeakSegJointHeuristic(one, 2)
-    fit3 <- PeakSegJointHeuristic(one, 3)
+    fit2 <- PeakSegJointHeuristicStep1(one, 2)
+    fit3 <- PeakSegJointHeuristicStep1(one, 3)
     expect_equal(fit2$sample_mean_vec, fit3$sample_mean_vec)
     expect_equal(fit2$flat_loss_vec, fit3$flat_loss_vec)
     pro <- profile.list[[profile.i]]
