@@ -39,7 +39,8 @@ int PeakSegJointHeuristicStep1(
   model_list->data_start_end[1] = unfilled_chromEnd;
   //printf("data_start_end=[%d,%d]\n", unfilled_chromStart, unfilled_chromEnd);
   int unfilled_bases = unfilled_chromEnd - unfilled_chromStart;
-  double bases_value, seg1_loss_value;
+  double data_bases = (double) unfilled_bases;
+  double bin_bases;
   if(unfilled_bases/bin_factor < 4){
     /*
       4 is smallest the number of data points for which the 3-segment
@@ -66,7 +67,6 @@ int PeakSegJointHeuristicStep1(
   int extra_after = extra_bases - extra_before;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
-  int bases = seg3_chromEnd - seg1_chromStart;
   model_list->seg_start_end[0] = seg1_chromStart;
   model_list->seg_start_end[1] = seg3_chromEnd;
   //printf("seg_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
@@ -138,8 +138,7 @@ int PeakSegJointHeuristicStep1(
     }
     model_list->last_cumsum_vec[sample_i] = cumsum_value;
     //printf("\n");
-    bases_value = (double)bases;
-    mean_value = cumsum_value / bases_value;
+    mean_value = cumsum_value / data_bases;
     //printf("sample_i=%d cumsum=%d bases=%d\n", sample_i, cumsum_value, bases);
     model_list->sample_mean_vec[sample_i] = mean_value;
     loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
@@ -159,8 +158,9 @@ int PeakSegJointHeuristicStep1(
     for(int sample_i=0; sample_i < n_samples; sample_i++){
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
       cumsum_value = cumsum_vec[seg1_LastIndex];
-      bases_value = (seg1_LastIndex+1)*bases_per_bin;
-      mean_value = cumsum_value/bases_value;
+      bin_bases = (seg1_LastIndex+1)*bases_per_bin;
+      data_bases = bin_bases - extra_before;
+      mean_value = cumsum_value/data_bases;
       seg1_mean_vec[sample_i] = mean_value;
       loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
       seg1_loss_vec[sample_i] = loss_value;
@@ -174,15 +174,16 @@ int PeakSegJointHeuristicStep1(
 	cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
 	//segment 2.
 	cumsum_value = cumsum_vec[seg2_LastIndex]-cumsum_vec[seg1_LastIndex];
-	bases_value = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
-	mean_value = cumsum_value/bases_value;
+	data_bases = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
+	mean_value = cumsum_value/data_bases;
 	seg2_mean_vec[sample_i] = mean_value;
 	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
 	peak_loss_vec[sample_i] += loss_value;
 	//segment 3.
 	cumsum_value = cumsum_vec[n_bins-1]-cumsum_vec[seg2_LastIndex];
-	bases_value = (n_bins-1-seg2_LastIndex)*bases_per_bin;
-	mean_value = cumsum_value/bases_value;
+	bin_bases = (n_bins-1-seg2_LastIndex)*bases_per_bin;
+	data_bases = bin_bases - extra_after;
+	mean_value = cumsum_value/data_bases;
 	seg3_mean_vec[sample_i] = mean_value;
 	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
 	peak_loss_vec[sample_i] += loss_value;
@@ -517,7 +518,8 @@ PeakSegJointHeuristicStep2
 	      total_loss += seg1_loss_vec[sample_i];
 	      //segment 2.
 	      cumsum_value = 
-		right_cumsum_vec[seg2_LastIndex]-left_cumsum_vec[seg1_LastIndex];
+		right_cumsum_vec[seg2_LastIndex]-
+		left_cumsum_vec[seg1_LastIndex];
 	      bases_value = peakEnd-peakStart;
 	      mean_value = cumsum_value/bases_value;
 	      /* printf("[sample=%d][seg=2] %d %f", */
