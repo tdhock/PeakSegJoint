@@ -17,7 +17,6 @@ test_that("C loss/segment means are correct", {
   loss.list <- list()
   for(sample.i in seq_along(profile.list)){
     sample.id <- names(profile.list)[[sample.i]]
-    cat(sprintf("%4d / %4d %s\n", sample.i, length(profile.list), sample.id))
     sample.counts <- profile.list[[sample.id]]
     one.profile.list <- profile.list[sample.id]
     m.args <- list()
