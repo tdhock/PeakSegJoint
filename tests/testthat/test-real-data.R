@@ -430,10 +430,10 @@ test_that("21 peak loss < 20 peak loss", {
       colnames(left.mat) <- NULL
       right.mat <- t(cumsum.mats$right$count[-1,])
       colnames(right.mat) <- NULL
-      print(bases.per.bin.zoom)
-      print(left.mat)
-      print(right.mat)
-      print(as.integer(cumsum.mats$right$count[1,]))
+      ## print(bases.per.bin.zoom)
+      ## print(left.mat)
+      ## print(right.mat)
+      ## print(as.integer(cumsum.mats$right$count[1,]))
       possible.grid <- 
         expand.grid(left.cumsum.row=3:n.cumsum, right.cumsum.row=2:n.cumsum)
       possible.grid$left.chromStart <-
@@ -597,9 +597,9 @@ test_that("21 peak loss < 20 peak loss", {
 
       peakStart <- best.model$left.chromStart
       peakEnd <- best.model$right.chromEnd
-      cat(sprintf("\nn_peaks=%s bases_per_bin=%d [%d,%d] loss=%15.6f\n",
-                  peaks.str, bases.per.bin.zoom,
-                  peakStart, peakEnd, best.model$total.loss))
+      ## cat(sprintf("\nn_peaks=%s bases_per_bin=%d [%d,%d] loss=%15.6f\n",
+      ##             peaks.str, bases.per.bin.zoom,
+      ##             peakStart, peakEnd, best.model$total.loss))
       before.i.list <-
         list(left=best.model$left.cumsum.row-2,
              right=best.model$right.cumsum.row-1)
@@ -1521,9 +1521,9 @@ test_that("8 peaks are feasible", {
       colnames(left.mat) <- NULL
       right.mat <- t(cumsum.mats$right$count[-1,])
       colnames(right.mat) <- NULL
-      print(bases.per.bin.zoom)
-      print(as.integer(cumsum.mats$left$count[1,]))
-      print(left.mat)
+      ## print(bases.per.bin.zoom)
+      ## print(as.integer(cumsum.mats$left$count[1,]))
+      ## print(left.mat)
       possible.grid <- 
         expand.grid(left.cumsum.row=3:n.cumsum, right.cumsum.row=2:n.cumsum)
       possible.grid$left.chromStart <-
@@ -1690,9 +1690,9 @@ test_that("8 peaks are feasible", {
 
       peakStart <- best.model$left.chromStart
       peakEnd <- best.model$right.chromEnd
-      cat(sprintf("\nn_peaks=%s bases_per_bin=%d [%d,%d] loss=%15.6f\n",
-                  peaks.str, bases.per.bin.zoom,
-                  peakStart, peakEnd, best.model$with.without.loss))
+      ## cat(sprintf("\nn_peaks=%s bases_per_bin=%d [%d,%d] loss=%15.6f\n",
+      ##             peaks.str, bases.per.bin.zoom,
+      ##             peakStart, peakEnd, best.model$with.without.loss))
       before.i.list <-
         list(left=best.model$left.cumsum.row-2,
              right=best.model$right.cumsum.row-1)
