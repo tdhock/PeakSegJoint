@@ -19,13 +19,15 @@ test_that("C loss/segment means are correct", {
     sample.id <- names(profile.list)[[sample.i]]
     cat(sprintf("%4d / %4d %s\n", sample.i, length(profile.list), sample.id))
     sample.counts <- profile.list[[sample.id]]
+    one.profile.list <- profile.list[sample.id]
     m.args <- list()
     result.list <- list()
     for(param in param.values){
       param.name <- paste(param)
       param.int <- as.integer(param)
-      fit <- PeakSegJointHeuristic(sample.counts, param.int)
+      fit <- PeakSegJointHeuristic(one.profile.list, param.int)
       model <- fit$models[[2]]
+      expect_true(is.finite(model$loss))
       peak <- model$peak_start_end
       result.list[[param.name]] <- 
         data.frame(param.int,

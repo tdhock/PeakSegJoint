@@ -65,6 +65,7 @@ int PeakSegJointHeuristicStep1(
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;
+  int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
   model_list->seg_start_end[0] = seg1_chromStart;
@@ -95,7 +96,7 @@ int PeakSegJointHeuristicStep1(
 
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
-		    &extra_before,
+		    &extra_count,
 		    unfilled_chromStart - seg1_chromStart,
 		    1,
 		    seg1_chromStart,
@@ -104,10 +105,10 @@ int PeakSegJointHeuristicStep1(
       free(sample_count_mat);
       return status;
     }
-    count_vec[0] -= extra_before;
+    count_vec[0] -= extra_count;
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
-		    &extra_after,
+		    &extra_count,
 		    seg3_chromEnd - unfilled_chromEnd,
 		    1,
 		    unfilled_chromEnd,
@@ -116,7 +117,7 @@ int PeakSegJointHeuristicStep1(
       free(sample_count_mat);
       return status;
     }
-    count_vec[n_bins - 1] -= extra_after;
+    count_vec[n_bins - 1] -= extra_count;
   }//for sample_i
   int bin_i, offset;
   double mean_value, loss_value;
@@ -159,7 +160,9 @@ int PeakSegJointHeuristicStep1(
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
       cumsum_value = cumsum_vec[seg1_LastIndex];
       bin_bases = (seg1_LastIndex+1)*bases_per_bin;
-      data_bases = bin_bases - extra_before;
+      data_bases = bin_bases - (double)extra_before;
+      /* printf("sample_i=%d extra_before=%d bin_bases=%f data_bases=%f\n", */
+      /* 	     sample_i, extra_before, bin_bases, data_bases); */
       mean_value = cumsum_value/data_bases;
       seg1_mean_vec[sample_i] = mean_value;
       loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
@@ -188,6 +191,11 @@ int PeakSegJointHeuristicStep1(
 	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
 	peak_loss_vec[sample_i] += loss_value;
 	//if feasible, add to list of loss differences.
+	printf("sample_i=%d means %f %f %f\n",
+	       sample_i,
+	       seg1_mean_vec[sample_i],
+	       seg2_mean_vec[sample_i],
+	       seg3_mean_vec[sample_i]);
 	if(seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
 	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
 	  diff_index_vec[n_feasible].sample_i = sample_i;
