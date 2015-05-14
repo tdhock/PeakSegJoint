@@ -1,5 +1,10 @@
+PeakErrorSamples <- function
 ### Compute PeakError for several samples.
-PeakErrorSamples <- function(peaks, regions){
+(peaks,
+### data.frame of peaks with sample.id.
+ regions
+### data.frame of annotated region labels with sample.id.
+ ){
   stopifnot(is.data.frame(peaks))
   stopifnot(is.data.frame(regions))
   regions.by.sample <- split(regions, regions$sample.id, drop=TRUE)
@@ -19,4 +24,5 @@ PeakErrorSamples <- function(peaks, regions){
   err <- do.call(rbind, error.by.sample)
   rownames(err) <- NULL
   err
+### data.frame of error regions with sample.id.
 }

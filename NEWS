@@ -1,3 +1,8 @@
+2015.05.14
+
+real data sets where heuristic does not recover visually optimal
+segmentations.
+
 2015.05.05
 
 Squared hinge loss FISTA implementation.
