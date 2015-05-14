@@ -8,8 +8,7 @@ data(H3K36me3.TDH.other.chunk1)
 some.counts <-
   subset(H3K36me3.TDH.other.chunk1$counts,
          43379893 < chromEnd)
-profile.list <- split(some.counts, some.counts$sample.id)
-sample.peak.list <- list()
+profile.list <- ProfileList(some.counts)
 
 test_that("C loss/segment means are correct", {
   param.values <- c(2, 3, 5)
@@ -80,4 +79,11 @@ test_that("C loss/segment means are correct", {
       expect_equal(fit.seg3, expected.seg3)
     })
   }
+})
+
+test_that("C flat models for 2 bin.factors agree", {
+  fit2 <- PeakSegJointHeuristic(profile.list, 2)
+  fit3 <- PeakSegJointHeuristic(profile.list, 3)
+  expect_equal(fit2$sample_mean_vec, fit3$sample_mean_vec)
+  expect_equal(fit2$flat_loss_vec, fit3$flat_loss_vec)
 })
