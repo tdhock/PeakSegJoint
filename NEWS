@@ -1,7 +1,12 @@
 2015.05.14
 
-real data sets where heuristic does not recover visually optimal
+real data sets where buggy heuristic does not recover visually optimal
 segmentations.
+
+bugfix for heuristic optimization for cases where there is a solution
+with non-zero index (writes new cumsum vec) before a better solution
+with zero index (does not write a new cumsum vec, and was stuck with
+the old cumsum vec).
 
 2015.05.05
 

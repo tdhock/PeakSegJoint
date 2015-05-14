@@ -18,14 +18,13 @@ int PeakSegJointHeuristicStep1(
   struct PeakSegJointModelList *model_list
   ){
   int n_samples = profile_list->n_profiles;
-  int sample_i, coverage_i, 
-    chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
+  int chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
   struct Profile *profile, *samples = profile_list->profile_vec;
   struct PeakSegJointModel *model;
   profile = samples;
   unfilled_chromEnd = get_max_chromEnd(profile);
   unfilled_chromStart = get_min_chromStart(profile);
-  for(sample_i=1; sample_i < n_samples; sample_i++){
+  for(int sample_i=1; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
     chromStart = get_min_chromStart(profile);
     if(unfilled_chromStart < chromStart){
@@ -76,7 +75,7 @@ int PeakSegJointHeuristicStep1(
   int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *count_vec, *cumsum_vec, cumsum_value;
   int status;
-  for(sample_i=0; sample_i < n_samples; sample_i++){
+  for(int sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
     count_vec = sample_count_mat + n_bins*sample_i;
     //printf("initial sample_i=%d\n", sample_i);
@@ -126,7 +125,7 @@ int PeakSegJointHeuristicStep1(
   struct LossIndex *diff_index_vec = 
     (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
   int n_feasible;
-  for(sample_i=0; sample_i < n_samples; sample_i++){
+  for(int sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
     offset = n_bins * sample_i;
     count_vec = sample_count_mat + offset;
@@ -149,15 +148,15 @@ int PeakSegJointHeuristicStep1(
   }
   model_list->model_vec[0].loss[0] = flat_loss_total;
 
-  int seg1_LastIndex, seg2_LastIndex;
-  int model_i, diff_i, n_peaks;
+  int n_peaks;
+  int sample_i;
   double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
   double *peak_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
-  for(seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
-    for(sample_i=0; sample_i < n_samples; sample_i++){
+  for(int seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
+    for(int sample_i=0; sample_i < n_samples; sample_i++){
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
       cumsum_value = cumsum_vec[seg1_LastIndex];
       bases_value = (seg1_LastIndex+1)*bases_per_bin;
@@ -166,7 +165,7 @@ int PeakSegJointHeuristicStep1(
       loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
       seg1_loss_vec[sample_i] = loss_value;
     }
-    for(seg2_LastIndex=seg1_LastIndex+1; 
+    for(int seg2_LastIndex=seg1_LastIndex+1; 
 	seg2_LastIndex < n_bins-1; 
 	seg2_LastIndex++){
       n_feasible=0;
@@ -216,11 +215,11 @@ int PeakSegJointHeuristicStep1(
 	/* 	printf(" %f", diff_index_vec[sample_i].loss); */
 	/* } */
 	/* printf("\n"); */
-	for(model_i=0; model_i < n_feasible; model_i++){
+	for(int model_i=0; model_i < n_feasible; model_i++){
 	  // start from loss of all samples with 1 segment.
 	  loss_value = flat_loss_total;
 	  n_peaks = model_i + 1;
-	  for(diff_i=0; diff_i < n_peaks; diff_i++){
+	  for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	    sample_i = diff_index_vec[diff_i].sample_i;
 	    // subtract the loss of this sample with 1 segment.
 	    loss_value -= model_list->flat_loss_vec[sample_i];
@@ -234,7 +233,7 @@ int PeakSegJointHeuristicStep1(
 	      seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	    model->peak_start_end[1] = 
 	      seg1_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	    for(diff_i=0; diff_i < n_peaks; diff_i++){
+	    for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	      sample_i = diff_index_vec[diff_i].sample_i;
 	      cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
 	      model->samples_with_peaks_vec[diff_i] = sample_i;
@@ -383,7 +382,7 @@ PeakSegJointHeuristicStep2
 (struct ProfileList *profile_list,
  struct PeakSegJointModelList *model_list
   ){
-  int n_peaks, diff_i, sample_i, bin_i;
+  int n_peaks;
   int n_bins = model_list->bin_factor[0] * 2;
   int n_samples = model_list->n_models - 1;
   struct PeakSegJointModel *model;
@@ -402,21 +401,21 @@ PeakSegJointHeuristicStep2
   //printf("after malloc\n");
   double total_loss, loss_value, bases_value, mean_value;
   int *left_cumsum_vec, *right_cumsum_vec;
-  int seg1_LastIndex, seg2_LastIndex;
   int status;
   int left_cumsum_value, right_cumsum_value, cumsum_value;
   int peakStart, peakEnd;
-  int min_found;
+  int best_seg1, best_seg2, sample_i;
   for(n_peaks=1; n_peaks < model_list->n_models; n_peaks++){
     model = model_list->model_vec + n_peaks;
     if(model->loss[0] < INFINITY){
       bases_per_bin = model_list->bases_per_bin[0];
       while(1 < bases_per_bin){
-	min_found = 0;
+	best_seg1 = -1; // indicates no min found.
 	left_chromStart = model->peak_start_end[0] - bases_per_bin;
 	right_chromStart = model->peak_start_end[1] - bases_per_bin;
 	bases_per_bin /= model_list->bin_factor[0];
-	for(diff_i=0; diff_i < n_peaks; diff_i++){
+	printf("bases_per_bin=%d right cumsum before:\n", bases_per_bin);
+	for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	  sample_i = model->samples_with_peaks_vec[diff_i];
 	  profile = profile_list->profile_vec + sample_i;
 	  //printf("binSumLR sample_i=%d\n", sample_i);
@@ -442,33 +441,45 @@ PeakSegJointHeuristicStep2
 	  left_cumsum_value = model->left_cumsum_vec[diff_i];
 	  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
 	  right_cumsum_value = model->right_cumsum_vec[diff_i];
-	  for(bin_i=0; bin_i < n_bins; bin_i++){
+	  printf("%d ", right_cumsum_value);
+	  for(int bin_i=0; bin_i < n_bins; bin_i++){
 	    left_cumsum_value += left_bin_vec[bin_i];
 	    left_cumsum_vec[bin_i] = left_cumsum_value;
 	    right_cumsum_value += right_bin_vec[bin_i];
 	    right_cumsum_vec[bin_i] = right_cumsum_value;
 	  }
 	}//for(diff_i
+	printf("\n");
 
 	/* printf("left bases_per_bin=%d n_peaks=%d\n", bases_per_bin, n_peaks); */
 	/* for(diff_i=0;diff_i<n_peaks;diff_i++){ */
-	/* 	sample_i = model->samples_with_peaks_vec[diff_i]; */
-	/* 	left_cumsum_vec = left_cumsum_mat + n_bins*sample_i; */
-	/* 	for(bin_i=0;bin_i<n_bins;bin_i++){ */
-	/* 	  printf("%d ", left_cumsum_vec[bin_i]); */
-	/* 	} */
-	/* 	printf("\n"); */
+	/*   sample_i = model->samples_with_peaks_vec[diff_i]; */
+	/*   left_cumsum_vec = left_cumsum_mat + n_bins*sample_i; */
+	/*   for(bin_i=0;bin_i<n_bins;bin_i++){ */
+	/*     printf("%d ", left_cumsum_vec[bin_i]); */
+	/*   } */
+	/*   printf("\n"); */
 	/* } */
 	/* printf("\n"); */
+
+	printf("right bases_per_bin=%d n_peaks=%d\n", bases_per_bin, n_peaks);
+	for(int diff_i=0;diff_i<n_peaks;diff_i++){
+	  sample_i = model->samples_with_peaks_vec[diff_i];
+	  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+	  for(int bin_i=0;bin_i<n_bins;bin_i++){
+	    printf("%d ", right_cumsum_vec[bin_i]);
+	  }
+	  printf("\n");
+	}
 
 	/* 
 	   cumsum matrices have been computed, so now use them to
 	   compute the loss and feasibility of all models.
 	*/
-	for(seg1_LastIndex=0; seg1_LastIndex < n_bins; seg1_LastIndex++){
+	for(int seg1_LastIndex=0; seg1_LastIndex < n_bins; seg1_LastIndex++){
 	  peakStart = left_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	  //printf("[seg1last=%d] seg1 cumsum bases ", seg1_LastIndex);
-	  for(diff_i=0; diff_i < n_peaks; diff_i++){
+	  for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	    sample_i = model->samples_with_peaks_vec[diff_i];
 	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
 	    cumsum_value = left_cumsum_vec[seg1_LastIndex];
@@ -480,7 +491,7 @@ PeakSegJointHeuristicStep2
 	    seg1_loss_vec[sample_i] = loss_value;
 	  }
 	  //printf("\n");
-	  for(seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
+	  for(int seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
 	    peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
 	    /* printf("\npeaks=%d[%d,%d]bases_per_bin=%d\n",  */
 	    /* 	 n_peaks, peakStart, peakEnd, bases_per_bin); */
@@ -489,7 +500,7 @@ PeakSegJointHeuristicStep2
 	      total_loss = INFINITY;
 	    }
 	    //printf("[seg2last=%d]\n", seg2_LastIndex);
-	    for(diff_i=0; diff_i < n_peaks; diff_i++){
+	    for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	      sample_i = model->samples_with_peaks_vec[diff_i];
 	      left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
 	      right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
@@ -534,45 +545,51 @@ PeakSegJointHeuristicStep2
 	    }	  
 	    //printf("loss=%f\n", total_loss);
 	    if(total_loss < model->loss[0]){
-	      min_found = 1;
 	      model->loss[0] = total_loss;
 	      model->peak_start_end[0] = peakStart;
 	      model->peak_start_end[1] = peakEnd;
-	      /* printf("new best loss=%f [%d,%d]\n", */
-	      /* 	   total_loss, seg1_LastIndex, seg2_LastIndex); */
-	      for(diff_i=0; diff_i < n_peaks; diff_i++){
+	      printf("new best loss=%f [%d,%d]\n",
+	      	   total_loss, seg1_LastIndex, seg2_LastIndex);
+	      best_seg1 = seg1_LastIndex;
+	      best_seg2 = seg2_LastIndex;
+	      for(int diff_i=0; diff_i < n_peaks; diff_i++){
 		sample_i = model->samples_with_peaks_vec[diff_i];
-		if(seg1_LastIndex != 0){
-		  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-		  model->left_cumsum_vec[diff_i] = 
-		    left_cumsum_vec[seg1_LastIndex-1];
-		}
-		if(seg2_LastIndex != 0){
-		  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-		  model->right_cumsum_vec[diff_i] = 
-		    right_cumsum_vec[seg2_LastIndex-1];
-		}
 		model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
 		model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
 		model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
-	      }//diff_i
+	      }
 	    }//total_loss
 	  }//seg2_LastIndex
 	}//seg1_LastIndex
-	/* printf("n_peaks=%d bases_per_bin=%d [%d,%d] loss=%f\n", */
-	/* 	     n_peaks, bases_per_bin,  */
-	/* 	     model->peak_start_end[0], model->peak_start_end[1], */
-	/* 	     model->loss[0]); */
-	if(min_found == 0){
-	  //printf("no min found\n");
-	  for(diff_i=0; diff_i < n_peaks; diff_i++){
+	printf("n_peaks=%d bases_per_bin=%d [%d,%d] loss=%f\n",
+	       n_peaks, bases_per_bin,
+	       model->peak_start_end[0], model->peak_start_end[1],
+	       model->loss[0]);
+	if(best_seg1 == -1){
+	  printf("no min found\n");
+	  for(int diff_i=0; diff_i < n_peaks; diff_i++){
 	    sample_i = model->samples_with_peaks_vec[diff_i];
 	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
 	    model->left_cumsum_vec[diff_i] = left_cumsum_vec[0];
 	    right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
 	    model->right_cumsum_vec[diff_i] = right_cumsum_vec[0];
 	  }//diff_i
-	}//min_found
+	}else{
+	  for(int diff_i=0; diff_i < n_peaks; diff_i++){
+	    sample_i = model->samples_with_peaks_vec[diff_i];
+	    if(best_seg1 != 0){
+	      left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	      model->left_cumsum_vec[diff_i] = 
+		left_cumsum_vec[best_seg1-1];
+	    }
+	    if(best_seg2 != 0){
+	      right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+	      model->right_cumsum_vec[diff_i] = 
+		right_cumsum_vec[best_seg2-1];
+	    }
+	  }//diff_i
+	}
+	printf("\n");
       }//while(1 < bases_per_bin)
     }//if(loss < INFINITY
   }//for(n_peaks
