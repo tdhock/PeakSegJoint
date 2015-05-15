@@ -1,5 +1,9 @@
 2015.05.15
 
+PeakSegJointSeveral function for running the C solver using several
+suboptimality parameters, and taking the model with the min Poisson
+loss for each model size.
+
 rename seg_start_end to bin_start_end.
 
 2015.05.14
