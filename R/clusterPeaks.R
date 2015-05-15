@@ -7,7 +7,8 @@ clusterPeaks <- structure(function
   stopifnot(is.numeric(peaks$chromStart))
   stopifnot(is.numeric(peaks$chromEnd))
   stopifnot(nrow(peaks) > 0)
-  peaks <- peaks[order(peaks$chromStart), ]
+  peaks <- data.frame(peaks)[order(peaks$chromStart), ]
+  with(peaks, stopifnot(chromStart < chromEnd))
   res <- .C("clusterPeaks_interface",
             as.integer(peaks$chromStart),
             as.integer(peaks$chromEnd),
