@@ -13,3 +13,12 @@ int binSum
  int n_bins, 
  int bin_chromStart,
   int status_for_empty_bins);
+
+int oneBin
+(int *profile_chromStart, 
+ int *profile_chromEnd, 
+ int *profile_coverage, 
+ int n_profiles,
+ int *bin_total,
+ int bin_chromStart,
+ int bin_chromEnd);

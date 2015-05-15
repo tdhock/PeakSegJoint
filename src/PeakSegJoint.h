@@ -82,3 +82,8 @@ int PeakSegJointHeuristicStep2(
   struct ProfileList *,
   struct PeakSegJointModelList *
   );
+
+int PeakSegJointHeuristicStep3(
+  struct ProfileList *,
+  struct PeakSegJointModelList *
+  );

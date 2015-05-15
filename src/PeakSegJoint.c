@@ -391,7 +391,6 @@ PeakSegJointHeuristicStep2
 (struct ProfileList *profile_list,
  struct PeakSegJointModelList *model_list
   ){
-  int n_peaks;
   int n_bins = model_list->bin_factor[0] * 2;
   int n_samples = model_list->n_models - 1;
   struct PeakSegJointModel *model;
@@ -426,7 +425,7 @@ PeakSegJointHeuristicStep2
    * resolution, but we need to copy the cumsums from the following
    * index of left_right_vec: */
   int no_min_index = model_list->bin_factor[0] - 2;
-  for(n_peaks=1; n_peaks < model_list->n_models; n_peaks++){
+  for(int n_peaks=1; n_peaks < model_list->n_models; n_peaks++){
     model = model_list->model_vec + n_peaks;
     if(model->loss[0] < INFINITY){
       bases_per_bin = model_list->bases_per_bin[0];
@@ -625,5 +624,123 @@ PeakSegJointHeuristicStep2
   free(seg2_mean_vec);
   free(seg3_mean_vec);
   free(seg1_loss_vec);
+  return 0;
+}
+
+int PeakSegJointHeuristicStep3
+(struct ProfileList *profile_list,
+ struct PeakSegJointModelList *model_list
+  ){
+  struct PeakSegJointModel *model, *prev_model;
+  int n_samples = model_list->n_models - 1;
+  double flat_loss_total = model_list->model_vec[0].loss[0];
+  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  struct LossIndex *diff_index_vec = 
+    (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
+  int n_feasible, peakStart, peakEnd, status, total;
+  int dataStart = model_list->data_start_end[0];
+  int dataEnd = model_list->data_start_end[1];
+  double data_bases, mean_value, loss_value;
+  struct Profile *profile;
+  for(int n_peaks=2; n_peaks < model_list->n_models; n_peaks++){
+    n_feasible=0;
+    model = model_list->model_vec + n_peaks;
+    prev_model = model_list->model_vec + n_peaks - 1;
+    peakStart = prev_model->peak_start_end[0];
+    peakEnd = prev_model->peak_start_end[1];
+    for(int sample_i=0; sample_i < n_samples; sample_i++){
+      profile = profile_list->profile_vec + sample_i;
+      //segment 1.
+      status = oneBin(profile->chromStart, profile->chromEnd,
+		      profile->coverage, profile->n_entries,
+		      &total, dataStart, peakStart);
+      if(status != 0){
+	free(seg1_mean_vec);
+	free(seg2_mean_vec);
+	free(seg3_mean_vec);
+	free(diff_index_vec);
+	return status;
+      }
+      data_bases = peakStart - dataStart;
+      mean_value = total/data_bases;
+      seg1_mean_vec[sample_i] = mean_value;
+      loss_value = OptimalPoissonLoss(total, mean_value);
+      //segment 2.
+      status = oneBin(profile->chromStart, profile->chromEnd,
+		      profile->coverage, profile->n_entries,
+		      &total, peakStart, peakEnd);
+      if(status != 0){
+	free(seg1_mean_vec);
+	free(seg2_mean_vec);
+	free(seg3_mean_vec);
+	free(diff_index_vec);
+	return status;
+      }
+      data_bases = peakEnd - peakStart;
+      mean_value = total/data_bases;
+      seg2_mean_vec[sample_i] = mean_value;
+      loss_value += OptimalPoissonLoss(total, mean_value);
+      //segment 3.
+      status = oneBin(profile->chromStart, profile->chromEnd,
+		      profile->coverage, profile->n_entries,
+		      &total, peakEnd, dataEnd);
+      if(status != 0){
+	free(seg1_mean_vec);
+	free(seg2_mean_vec);
+	free(seg3_mean_vec);
+	free(diff_index_vec);
+	return status;
+      }
+      data_bases = dataEnd - peakEnd;
+      mean_value = total/data_bases;
+      seg3_mean_vec[sample_i] = mean_value;
+      loss_value += OptimalPoissonLoss(total, mean_value);
+      //if feasible, add to list of loss differences.
+      /* printf("n_peaks=%d %f %f %f", */
+      /* 	     n_peaks, seg1_mean_vec[sample_i], */
+      /* 	     seg2_mean_vec[sample_i], */
+      /* 	     seg3_mean_vec[sample_i]); */
+      if(1 || seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
+	 seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
+	//printf(" FEASIBLE");
+	diff_index_vec[n_feasible].sample_i = sample_i;
+	diff_index_vec[n_feasible].loss = 
+	  loss_value-model_list->flat_loss_vec[sample_i];
+	n_feasible++;
+      }
+      //printf("\n");
+    }//sample_i
+    if(n_peaks <= n_feasible){
+      qsort(diff_index_vec, n_feasible, sizeof(struct LossIndex), 
+	    LossIndex_compare);
+      loss_value = flat_loss_total;
+      for(int diff_i=0; diff_i < n_peaks; diff_i++){
+	// add loss difference.
+	loss_value += diff_index_vec[diff_i].loss;
+      }
+      /* printf("n_peaks=%d loss_value=%f model loss=%f",  */
+      /* 	     n_peaks, loss_value, model->loss[0]); */
+      if(loss_value < model->loss[0]){
+	//printf(" NEW OPTIMUM!");
+	model->loss[0] = loss_value;
+	model->peak_start_end[0] = peakStart;
+	model->peak_start_end[1] = peakEnd;
+	for(int diff_i=0; diff_i < n_peaks; diff_i++){
+	  int sample_i = diff_index_vec[diff_i].sample_i;
+	  model->samples_with_peaks_vec[diff_i] = sample_i;
+	  model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
+	  model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
+	  model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
+	}
+      }//if(loss_value < model->loss[0]
+      //printf("\n");
+    }//if(n_feasible)
+  }//for(n_peaks
+  free(seg1_mean_vec);
+  free(seg2_mean_vec);
+  free(seg3_mean_vec);
+  free(diff_index_vec);
   return 0;
 }

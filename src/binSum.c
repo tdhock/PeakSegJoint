@@ -4,6 +4,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+int oneBin
+(int *profile_chromStart, 
+ int *profile_chromEnd, 
+ int *profile_coverage, 
+ int n_profiles,
+ int *bin_total,
+ int bin_chromStart,
+ int bin_chromEnd){
+  return binSum(
+    profile_chromStart,
+    profile_chromEnd,
+    profile_coverage,
+    n_profiles,
+    bin_total,
+    bin_chromEnd - bin_chromStart,
+    1,
+    bin_chromStart,
+    EMPTY_AS_ZERO);
+}
+
 int binSum
 (int *profile_chromStart, 
  int *profile_chromEnd, 

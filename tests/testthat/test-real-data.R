@@ -9,6 +9,27 @@ test_that("all samples with peaks can be selected", {
   for(bp in c(2, 5)){
     fit <- PeakSegJointHeuristic(H3K4me3.PGP.immune.chunk2, bp)
     converted <- ConvertModelList(fit)
+    segs27 <- subset(converted$segments, peaks==27)
+    breaks27 <- subset(segs27, min(chromStart) < chromStart)
+    ggplot()+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(sample.id ~ ., labeller=function(var, val){
+        sub("McGill0", "", sub(" ", "\n", val))
+      }, scales="free")+
+      geom_step(aes(chromStart/1e3, count),
+                data=H3K4me3.PGP.immune.chunk2,
+                color="grey50")+
+      geom_segment(aes(chromStart/1e3, mean,
+                       xend=chromEnd/1e3, yend=mean),
+                   data=segs27,
+                   color="green",
+                   size=1)+
+      geom_vline(aes(xintercept=chromStart/1e3),
+                 data=breaks27,
+                 color="green",
+                 linetype="dashed")
+    
     ggplot()+
       geom_segment(aes(chromStart/1e3, peaks,
                        xend=chromEnd/1e3, yend=peaks),
