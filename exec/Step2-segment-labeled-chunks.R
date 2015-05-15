@@ -65,7 +65,7 @@ for(res.str in names(problems.by.res)){
                   problem$problemEnd < chromStart), ]
     profile.list <- ProfileList(problem.counts)
     problem.peaks <- tryCatch({
-      fit <- PeakSegJointHeuristic(profile.list)
+      fit <- PeakSegJointSeveral(profile.list)
       ConvertModelList(fit)$peaks
     }, error=function(e){
       NULL
@@ -213,7 +213,7 @@ for(res.str in names(problems.by.res)){
       
       tryCatch({
         profile.list <- ProfileList(problem.counts)
-        fit <- PeakSegJointHeuristic(profile.list)
+        fit <- PeakSegJointSeveral(profile.list)
         converted <- ConvertModelList(fit)
         prob.err.list <- PeakSegJointError(converted, problem.regions)
         step2.by.problem[[problem.name]] <-
