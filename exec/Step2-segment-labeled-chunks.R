@@ -114,12 +114,20 @@ for(res.str in names(problems.by.res)){
       }else{
         Inf
       }
-      problemStart <- as.integer(cluster.chromStart - half.bases)
+      problemStart <- as.integer(cluster.mid - half.bases)
+      if(cluster.chromStart < problemStart){
+        problemStart <- as.integer(cluster.chromStart - half.bases) #old
+        problemStart <- as.integer(cluster.chromStart - half.bases/2) 
+      }
       if(problemStart < chromEnd.before){
         problemStart <-
           as.integer((chromEnd.before+cluster.chromStart)/2)
       }
-      problemEnd <- as.integer(cluster.chromEnd + half.bases)
+      problemEnd <- as.integer(cluster.mid + half.bases)
+      if(problemEnd < cluster.chromEnd){
+        problemEnd <- as.integer(cluster.chromEnd + half.bases) #old
+        problemEnd <- as.integer(cluster.chromEnd + half.bases/2)
+      }
       if(chromStart.after < problemEnd){
         problemEnd <- as.integer((chromStart.after+cluster.chromEnd)/2)
       }
@@ -176,11 +184,11 @@ for(res.str in names(problems.by.res)){
       over.regions[,
                    .(problem.name=problem.name[which.max(overlapBases)]),
                    by=region.i]
-    stopifnot(nrow(region.i.problems) == nrow(regions))
+    stopifnot(nrow(region.i.problems) <= nrow(regions))
     setkey(regions, region.i)
     setkey(region.i.problems, region.i)
     assigned.regions <- regions[region.i.problems,]
-    stopifnot(nrow(assigned.regions) == nrow(regions))
+    stopifnot(nrow(assigned.regions) == nrow(region.i.problems))
     regions.by.problem <-
       split(assigned.regions, assigned.regions$problem.name, drop=TRUE)
     setkey(problems.dt, problem.name)
