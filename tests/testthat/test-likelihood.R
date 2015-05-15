@@ -106,3 +106,23 @@ test_that("C flat models for 2 bin.factors agree", {
     expect_equal(fit3$flat_loss_vec, loss.value)
   }
 })
+
+test_that("same mean if same chromStart/chromEnd", {
+  data(H3K36me3.TDH.other.chunk1)
+  lims <- c(43100000, 43205000)
+  some.counts <-
+    subset(H3K36me3.TDH.other.chunk1$counts,
+           lims[1] < chromEnd & chromStart < lims[2])
+
+  fit <- PeakSegJointSeveral(some.counts)
+  converted <- ConvertModelList(fit)
+
+  zoom.seg.list <- with(converted, split(segments, segments$peaks))
+
+  seg3 <- subset(zoom.seg.list[["3"]], sample.id=="McGill0016")
+  seg4 <- subset(zoom.seg.list[["4"]], sample.id=="McGill0016")
+
+  expect_identical(seg3$chromStart, seg4$chromStart)
+  expect_identical(seg3$chromEnd, seg4$chromEnd)
+  expect_equal(seg3$mean, seg4$mean)
+})
