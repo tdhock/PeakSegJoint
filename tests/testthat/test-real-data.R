@@ -38,6 +38,8 @@ test_that("all samples with peaks can be selected", {
     loss <- converted$loss
     loss$cummin <- cummin(loss$loss)
     with(loss, expect_equal(loss, cummin))
+    exact <- with(loss, exactModelSelection(loss, peaks, peaks))
+    expect_true(27 %in% exact$peaks)
   }
 })
 
