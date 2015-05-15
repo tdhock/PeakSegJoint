@@ -3,6 +3,14 @@ context("real data")
 
 library(PeakSegJoint)
 
+data(peak1.infeasible)
+
+test_that("peak1 infeasible does not corrupt bigger models", {
+  fit <- PeakSegJointHeuristic(peak1.infeasible, 2)
+  peak.mat <- sapply(fit$models[-1], "[[", "peak_start_end")
+  expect_true(all(peak.mat[,1] < peak.mat[,2]))
+})
+
 data(H3K4me3.PGP.immune.chunk2)
 
 test_that("all samples with peaks can be selected", {

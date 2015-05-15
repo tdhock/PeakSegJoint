@@ -1,5 +1,7 @@
 2015.05.15
 
+peak1.infeasible data set.
+
 Step3 looks for a peak in the same place as previous model, but does
 not enforce the seg1 < seg2 > seg3 constraint.
 
