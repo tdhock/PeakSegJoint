@@ -648,95 +648,97 @@ int PeakSegJointHeuristicStep3
     n_feasible=0;
     model = model_list->model_vec + n_peaks;
     prev_model = model_list->model_vec + n_peaks - 1;
-    peakStart = prev_model->peak_start_end[0];
-    peakEnd = prev_model->peak_start_end[1];
-    for(int sample_i=0; sample_i < n_samples; sample_i++){
-      profile = profile_list->profile_vec + sample_i;
-      //segment 1.
-      status = oneBin(profile->chromStart, profile->chromEnd,
-		      profile->coverage, profile->n_entries,
-		      &total, dataStart, peakStart);
-      if(status != 0){
-	free(seg1_mean_vec);
-	free(seg2_mean_vec);
-	free(seg3_mean_vec);
-	free(diff_index_vec);
-	return status;
-      }
-      data_bases = peakStart - dataStart;
-      mean_value = total/data_bases;
-      seg1_mean_vec[sample_i] = mean_value;
-      loss_value = OptimalPoissonLoss(total, mean_value);
-      //segment 2.
-      status = oneBin(profile->chromStart, profile->chromEnd,
-		      profile->coverage, profile->n_entries,
-		      &total, peakStart, peakEnd);
-      if(status != 0){
-	free(seg1_mean_vec);
-	free(seg2_mean_vec);
-	free(seg3_mean_vec);
-	free(diff_index_vec);
-	return status;
-      }
-      data_bases = peakEnd - peakStart;
-      mean_value = total/data_bases;
-      seg2_mean_vec[sample_i] = mean_value;
-      loss_value += OptimalPoissonLoss(total, mean_value);
-      //segment 3.
-      status = oneBin(profile->chromStart, profile->chromEnd,
-		      profile->coverage, profile->n_entries,
-		      &total, peakEnd, dataEnd);
-      if(status != 0){
-	free(seg1_mean_vec);
-	free(seg2_mean_vec);
-	free(seg3_mean_vec);
-	free(diff_index_vec);
-	return status;
-      }
-      data_bases = dataEnd - peakEnd;
-      mean_value = total/data_bases;
-      seg3_mean_vec[sample_i] = mean_value;
-      loss_value += OptimalPoissonLoss(total, mean_value);
-      //if feasible, add to list of loss differences.
-      /* printf("n_peaks=%d %f %f %f", */
-      /* 	     n_peaks, seg1_mean_vec[sample_i], */
-      /* 	     seg2_mean_vec[sample_i], */
-      /* 	     seg3_mean_vec[sample_i]); */
-      if(1 || seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
-	 seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
-	//printf(" FEASIBLE");
-	diff_index_vec[n_feasible].sample_i = sample_i;
-	diff_index_vec[n_feasible].loss = 
-	  loss_value-model_list->flat_loss_vec[sample_i];
-	n_feasible++;
-      }
-      //printf("\n");
-    }//sample_i
-    if(n_peaks <= n_feasible){
-      qsort(diff_index_vec, n_feasible, sizeof(struct LossIndex), 
-	    LossIndex_compare);
-      loss_value = flat_loss_total;
-      for(int diff_i=0; diff_i < n_peaks; diff_i++){
-	// add loss difference.
-	loss_value += diff_index_vec[diff_i].loss;
-      }
-      /* printf("n_peaks=%d loss_value=%f model loss=%f",  */
-      /* 	     n_peaks, loss_value, model->loss[0]); */
-      if(loss_value < model->loss[0]){
-	//printf(" NEW OPTIMUM!");
-	model->loss[0] = loss_value;
-	model->peak_start_end[0] = peakStart;
-	model->peak_start_end[1] = peakEnd;
-	for(int diff_i=0; diff_i < n_peaks; diff_i++){
-	  int sample_i = diff_index_vec[diff_i].sample_i;
-	  model->samples_with_peaks_vec[diff_i] = sample_i;
-	  model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
-	  model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
-	  model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
+    if(prev_model->loss[0] < INFINITY){
+      peakStart = prev_model->peak_start_end[0];
+      peakEnd = prev_model->peak_start_end[1];
+      for(int sample_i=0; sample_i < n_samples; sample_i++){
+	profile = profile_list->profile_vec + sample_i;
+	//segment 1.
+	status = oneBin(profile->chromStart, profile->chromEnd,
+			profile->coverage, profile->n_entries,
+			&total, dataStart, peakStart);
+	if(status != 0){
+	  free(seg1_mean_vec);
+	  free(seg2_mean_vec);
+	  free(seg3_mean_vec);
+	  free(diff_index_vec);
+	  return status;
 	}
-      }//if(loss_value < model->loss[0]
-      //printf("\n");
-    }//if(n_feasible)
+	data_bases = peakStart - dataStart;
+	mean_value = total/data_bases;
+	seg1_mean_vec[sample_i] = mean_value;
+	loss_value = OptimalPoissonLoss(total, mean_value);
+	//segment 2.
+	status = oneBin(profile->chromStart, profile->chromEnd,
+			profile->coverage, profile->n_entries,
+			&total, peakStart, peakEnd);
+	if(status != 0){
+	  free(seg1_mean_vec);
+	  free(seg2_mean_vec);
+	  free(seg3_mean_vec);
+	  free(diff_index_vec);
+	  return status;
+	}
+	data_bases = peakEnd - peakStart;
+	mean_value = total/data_bases;
+	seg2_mean_vec[sample_i] = mean_value;
+	loss_value += OptimalPoissonLoss(total, mean_value);
+	//segment 3.
+	status = oneBin(profile->chromStart, profile->chromEnd,
+			profile->coverage, profile->n_entries,
+			&total, peakEnd, dataEnd);
+	if(status != 0){
+	  free(seg1_mean_vec);
+	  free(seg2_mean_vec);
+	  free(seg3_mean_vec);
+	  free(diff_index_vec);
+	  return status;
+	}
+	data_bases = dataEnd - peakEnd;
+	mean_value = total/data_bases;
+	seg3_mean_vec[sample_i] = mean_value;
+	loss_value += OptimalPoissonLoss(total, mean_value);
+	//if feasible, add to list of loss differences.
+	/* printf("n_peaks=%d %f %f %f", */
+	/* 	     n_peaks, seg1_mean_vec[sample_i], */
+	/* 	     seg2_mean_vec[sample_i], */
+	/* 	     seg3_mean_vec[sample_i]); */
+	if(1 || seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
+	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
+	  //printf(" FEASIBLE");
+	  diff_index_vec[n_feasible].sample_i = sample_i;
+	  diff_index_vec[n_feasible].loss = 
+	    loss_value-model_list->flat_loss_vec[sample_i];
+	  n_feasible++;
+	}
+	//printf("\n");
+      }//sample_i
+      if(n_peaks <= n_feasible){
+	qsort(diff_index_vec, n_feasible, sizeof(struct LossIndex), 
+	      LossIndex_compare);
+	loss_value = flat_loss_total;
+	for(int diff_i=0; diff_i < n_peaks; diff_i++){
+	  // add loss difference.
+	  loss_value += diff_index_vec[diff_i].loss;
+	}
+	/* printf("n_peaks=%d loss_value=%f model loss=%f",  */
+	/* 	     n_peaks, loss_value, model->loss[0]); */
+	if(loss_value < model->loss[0]){
+	  //printf(" NEW OPTIMUM!");
+	  model->loss[0] = loss_value;
+	  model->peak_start_end[0] = peakStart;
+	  model->peak_start_end[1] = peakEnd;
+	  for(int diff_i=0; diff_i < n_peaks; diff_i++){
+	    int sample_i = diff_index_vec[diff_i].sample_i;
+	    model->samples_with_peaks_vec[diff_i] = sample_i;
+	    model->seg1_mean_vec[diff_i] = seg1_mean_vec[sample_i];
+	    model->seg2_mean_vec[diff_i] = seg2_mean_vec[sample_i];
+	    model->seg3_mean_vec[diff_i] = seg3_mean_vec[sample_i];
+	  }
+	}//if(loss_value < model->loss[0]
+	//printf("\n");
+      }//if(n_feasible)
+    }//if(prev_model->loss[0] < INFINITY
   }//for(n_peaks
   free(seg1_mean_vec);
   free(seg2_mean_vec);

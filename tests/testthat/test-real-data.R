@@ -6,9 +6,16 @@ library(PeakSegJoint)
 data(peak1.infeasible)
 
 test_that("peak1 infeasible does not corrupt bigger models", {
-  fit <- PeakSegJointHeuristic(peak1.infeasible, 2)
-  peak.mat <- sapply(fit$models[-1], "[[", "peak_start_end")
-  expect_true(all(peak.mat[,1] < peak.mat[,2]))
+  for(bp in 2:7){
+    fit <- PeakSegJointHeuristic(peak1.infeasible, bp)
+    peak.models <- fit$models[-1]
+    peak.mat <- sapply(peak.models, "[[", "peak_start_end")
+    peak.ok <- peak.mat[1,] < peak.mat[2,]
+    loss <- sapply(peak.models, "[[", "loss")
+    infinite.loss <- loss == Inf
+    is.ok <- infinite.loss | peak.ok
+    expect_true(all(is.ok))
+  }
 })
 
 data(H3K4me3.PGP.immune.chunk2)
