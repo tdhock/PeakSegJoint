@@ -81,8 +81,8 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
 
-  expect_identical(fit$seg_start_end[1], max.chromStart)
-  expect_identical(fit$seg_start_end[2], min.chromEnd)
+  expect_identical(fit$bin_start_end[1], max.chromStart)
+  expect_identical(fit$bin_start_end[2], min.chromEnd)
   
   ## Small bins are just for testing the computation of the loss
   ## function in the R implementation, and should not be ported to C
@@ -795,8 +795,8 @@ test_that("Step1 C result agrees with R", {
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
 
-  expect_identical(fit$seg_start_end[1], max.chromStart)
-  expect_identical(fit$seg_start_end[2], min.chromEnd)
+  expect_identical(fit$bin_start_end[1], max.chromStart)
+  expect_identical(fit$bin_start_end[2], min.chromEnd)
   
   ## Small bins are just for testing the computation of the loss
   ## function in the R implementation, and should not be ported to C

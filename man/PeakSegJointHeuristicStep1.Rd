@@ -36,7 +36,7 @@ norm.list <- list()
 for(sample.id in names(profile.list)){
   one <- profile.list[[sample.id]]
   max.count <- max(one$count)
-  bins <- binSum(one, fit$seg_start_end[1], fit$bases_per_bin, fit$n_bins)
+  bins <- binSum(one, fit$bin_start_end[1], fit$bases_per_bin, fit$n_bins)
   stopifnot(fit$n_bins == nrow(bins))
   bins$mean <- with(bins, count/(chromEnd-chromStart))
   bins$mean.norm <- bins$mean/max.count

@@ -58,14 +58,14 @@ Ralloc_model_struct
     model_list_names, flat_loss_sexp,
     model_vec_sexp, data_start_end_sexp,
     n_bins_sexp, bases_per_bin_sexp, bin_factor_sexp,
-    seg_start_end_sexp, sample_mean_sexp, last_cumsum_sexp;
+    bin_start_end_sexp, sample_mean_sexp, last_cumsum_sexp;
   int model_i;
   int n_profiles = model_list->n_models - 1;
   struct PeakSegJointModel *model;
 
   PROTECT(model_list_names = allocVector(STRSXP, 9));
   SET_STRING_ELT(model_list_names,0,mkChar("models"));
-  SET_STRING_ELT(model_list_names,1,mkChar("seg_start_end"));
+  SET_STRING_ELT(model_list_names,1,mkChar("bin_start_end"));
   SET_STRING_ELT(model_list_names,2,mkChar("sample_mean_vec"));
   SET_STRING_ELT(model_list_names,3,mkChar("last_cumsum_vec"));
   SET_STRING_ELT(model_list_names,4,mkChar("flat_loss_vec"));
@@ -77,7 +77,7 @@ Ralloc_model_struct
   UNPROTECT(1);
 
   PROTECT(model_vec_sexp = allocVector(VECSXP, model_list->n_models));
-  PROTECT(seg_start_end_sexp = allocVector(INTSXP, 2));
+  PROTECT(bin_start_end_sexp = allocVector(INTSXP, 2));
   PROTECT(sample_mean_sexp = allocVector(REALSXP, n_profiles));
   PROTECT(last_cumsum_sexp = allocVector(INTSXP, n_profiles));
   PROTECT(flat_loss_sexp = allocVector(REALSXP, n_profiles));
@@ -86,7 +86,7 @@ Ralloc_model_struct
   PROTECT(bin_factor_sexp = allocVector(INTSXP, 1));
   PROTECT(data_start_end_sexp = allocVector(INTSXP, 2));
   SET_VECTOR_ELT(model_list_sexp,0,model_vec_sexp);
-  SET_VECTOR_ELT(model_list_sexp,1,seg_start_end_sexp);
+  SET_VECTOR_ELT(model_list_sexp,1,bin_start_end_sexp);
   SET_VECTOR_ELT(model_list_sexp,2,sample_mean_sexp);
   SET_VECTOR_ELT(model_list_sexp, 3, last_cumsum_sexp);
   SET_VECTOR_ELT(model_list_sexp, 4, flat_loss_sexp);
@@ -94,7 +94,7 @@ Ralloc_model_struct
   SET_VECTOR_ELT(model_list_sexp, 6, bases_per_bin_sexp);
   SET_VECTOR_ELT(model_list_sexp, 7, bin_factor_sexp);
   SET_VECTOR_ELT(model_list_sexp, 8, data_start_end_sexp);
-  model_list->seg_start_end = INTEGER(seg_start_end_sexp);
+  model_list->bin_start_end = INTEGER(bin_start_end_sexp);
   model_list->sample_mean_vec = REAL(sample_mean_sexp);
   model_list->last_cumsum_vec = INTEGER(last_cumsum_sexp);
   model_list->flat_loss_vec = REAL(flat_loss_sexp);

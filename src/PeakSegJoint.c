@@ -68,9 +68,9 @@ int PeakSegJointHeuristicStep1(
   int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
-  model_list->seg_start_end[0] = seg1_chromStart;
-  model_list->seg_start_end[1] = seg3_chromEnd;
-  //printf("seg_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
+  model_list->bin_start_end[0] = seg1_chromStart;
+  model_list->bin_start_end[1] = seg3_chromEnd;
+  //printf("bin_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
   // sample_*_mat variables are matrices n_bins x n_samples (in
   // contrast to model_*_mat which are n_bins x n_segments=3).
   int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
@@ -411,8 +411,8 @@ PeakSegJointHeuristicStep2
   double total_loss, loss_value, mean_value;
   double bin_bases, data_bases;
   int extra_before = model_list->data_start_end[0] - 
-    model_list->seg_start_end[0];
-  int extra_after = model_list->seg_start_end[1] -
+    model_list->bin_start_end[0];
+  int extra_after = model_list->bin_start_end[1] -
     model_list->data_start_end[1];
   int *left_cumsum_vec, *right_cumsum_vec;
   int status;
@@ -505,7 +505,7 @@ PeakSegJointHeuristicStep2
 	    sample_i = model->samples_with_peaks_vec[diff_i];
 	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
 	    cumsum_value = left_cumsum_vec[seg1_LastIndex];
-	    bin_bases = peakStart - model_list->seg_start_end[0];
+	    bin_bases = peakStart - model_list->bin_start_end[0];
 	    data_bases = bin_bases - extra_before;
 	    mean_value = cumsum_value/data_bases;
 	    //printf("%d %f ", cumsum_value, bases_value);
@@ -547,7 +547,7 @@ PeakSegJointHeuristicStep2
 	      cumsum_value = 
 		model_list->last_cumsum_vec[sample_i]-
 		right_cumsum_vec[seg2_LastIndex];
-	      bin_bases = model_list->seg_start_end[1] - peakEnd;
+	      bin_bases = model_list->bin_start_end[1] - peakEnd;
 	      data_bases = bin_bases - extra_after;
 	      mean_value = cumsum_value/data_bases;
 	      seg3_mean_vec[sample_i] = mean_value;

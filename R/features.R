@@ -13,7 +13,7 @@ featureMatrix <- structure(function(profile.list){
     sample.counts <- profile.list[[sample.id]]
     loss <- tryCatch({
       fit <- PeakSegJointHeuristic(one.list)
-      seg.bases <- with(fit, seg_start_end[2] - seg_start_end[1])
+      seg.bases <- with(fit, bin_start_end[2] - bin_start_end[1])
       loss <- sapply(fit$models, "[[", "loss")/seg.bases
       if(!is.finite(loss[2])){
         loss[2] <- loss[1]

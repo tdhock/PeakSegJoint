@@ -63,7 +63,7 @@ PeakSegJointHeuristicStep1 <- structure(function
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
     max.count <- max(one$count)
-    bins <- binSum(one, fit$seg_start_end[1], fit$bases_per_bin, fit$n_bins)
+    bins <- binSum(one, fit$bin_start_end[1], fit$bases_per_bin, fit$n_bins)
     stopifnot(fit$n_bins == nrow(bins))
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
@@ -233,8 +233,8 @@ ConvertModelList <- function
 (model.list
 ### Value of PeakSegJointHeuristicStep1(...).
  ){
-  seg1.chromStart <- model.list$seg_start_end[1]
-  seg3.chromEnd <- model.list$seg_start_end[2]
+  seg1.chromStart <- model.list$data_start_end[1]
+  seg3.chromEnd <- model.list$data_start_end[2]
   seg.list <- list()
   loss.list <- list()
   peak.list <- list()
