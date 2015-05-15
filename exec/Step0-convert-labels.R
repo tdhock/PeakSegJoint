@@ -184,7 +184,13 @@ for(chunk.str in names(regions.by.chunk)){
                         problemSeq+bases.per.problem/2,
                         problemSeq+bases.per.problem*3/4,
                         problemSeq+bases.per.problem*1/4)))
-    problemEnd <- problemStart+bases.per.problem
+    bigSize <- bases.per.problem*2.5
+    bigSeq <- seq(0, max.chromEnd, by=bigSize)
+    bigStart <- as.integer(sort(c(bigSeq, bigSeq + bases.per.problem)))
+    bigEnd <- bigStart + bigSize
+    smallEnd <- problemSeq + bases.per.problem
+    problemStart <- c(problemSeq, bigStart)
+    problemEnd <- c(smallEnd, bigEnd)
     is.overlap <- min.chromStart < problemEnd &
       problemStart < max.chromEnd
     problem.name <- sprintf("%s:%d-%d", chrom, problemStart, problemEnd)
