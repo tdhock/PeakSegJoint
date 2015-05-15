@@ -6,16 +6,18 @@ library(PeakSegJoint)
 data(H3K4me3.PGP.immune.chunk2)
 
 test_that("all samples with peaks can be selected", {
-  fit <- PeakSegJointHeuristic(H3K4me3.PGP.immune.chunk2, 5)
-  converted <- ConvertModelList(fit)
-  ggplot()+
-    geom_segment(aes(chromStart/1e3, peaks,
-                     xend=chromEnd/1e3, yend=peaks),
-                 data=converted$peaks)+
-    scale_y_continuous(limits=c(1, 27), breaks=c(1, 27))
-  loss <- converted$loss
-  loss$cummin <- cummin(loss$loss)
-  with(loss, expect_equal(loss, cummin))
+  for(bp in c(2, 5)){
+    fit <- PeakSegJointHeuristic(H3K4me3.PGP.immune.chunk2, bp)
+    converted <- ConvertModelList(fit)
+    ggplot()+
+      geom_segment(aes(chromStart/1e3, peaks,
+                       xend=chromEnd/1e3, yend=peaks),
+                   data=converted$peaks)+
+      scale_y_continuous(limits=c(1, 27), breaks=c(1, 27))
+    loss <- converted$loss
+    loss$cummin <- cummin(loss$loss)
+    with(loss, expect_equal(loss, cummin))
+  }
 })
 
 data(H3K36me3.AM.immune.chunk21)
