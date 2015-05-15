@@ -46,7 +46,7 @@ test_that("all samples with peaks can be selected", {
 data(H3K36me3.AM.immune.chunk21)
 
 test_that("21 peak loss < 20 peak loss", {
-  fit <- PeakSegJointHeuristic(H3K36me3.AM.immune.chunk21)
+  fit <- PeakSegJointHeuristicStep2(H3K36me3.AM.immune.chunk21)
   converted <- ConvertModelList(fit)
   with(converted$loss, {
     expect_that(loss[22], is_less_than(loss[21]))
@@ -1138,7 +1138,7 @@ test_that("Step1 C result agrees with R", {
 data(H3K4me3.TDH.other.chunk8)
 
 test_that("8 peaks are feasible", {
-  fit <- PeakSegJointHeuristic(H3K4me3.TDH.other.chunk8, 3)
+  fit <- PeakSegJointHeuristicStep2(H3K4me3.TDH.other.chunk8, 3)
   converted <- ConvertModelList(fit)
 
   peaks <- unique(converted$peaks[, c("peaks", "chromStart", "chromEnd")])

@@ -4,7 +4,7 @@
 \description{Run the first step of the PeakSegJoint fast heuristic optimization
 algorithm. NB: this function is only for testing the C code
 against the R implementation. For real data see
-PeakSegJointHeuristic.}
+PeakSegJointSeveral.}
 \usage{PeakSegJointHeuristicStep1(profiles, bin.factor = 2L)}
 \arguments{
   \item{profiles}{List of data.frames with columns chromStart, chromEnd, count, or

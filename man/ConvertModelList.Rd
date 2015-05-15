@@ -6,7 +6,7 @@ from the C code to the repetitive format that is more useful for
 plotting.}
 \usage{ConvertModelList(model.list)}
 \arguments{
-  \item{model.list}{Value of PeakSegJointHeuristicStep1(...).}
+  \item{model.list}{Value of PeakSegJointHeuristic(...).}
 }
 
 \value{List of peaks, segments, loss.}

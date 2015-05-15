@@ -28,7 +28,7 @@ PeakSegJointHeuristicStep1 <- structure(function
 ### Run the first step of the PeakSegJoint fast heuristic optimization
 ### algorithm. NB: this function is only for testing the C code
 ### against the R implementation. For real data see
-### PeakSegJointHeuristic.
+### PeakSegJointSeveral.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -106,9 +106,36 @@ PeakSegJointHeuristicStep1 <- structure(function
     })
 })
 
+PeakSegJointHeuristicStep2 <- function
+### Run the first and second steps of the PeakSegJoint fast heuristic
+### optimization algorithm. Step2 is guaranteed to return feasible
+### segmentations (seg1 < seg2 > seg3). NB: this function is only for
+### testing the C code against the R implementation. For real data see
+### PeakSegJointSeveral.
+(profiles,
+### List of data.frames with columns chromStart, chromEnd, count, or
+### single data.frame with additional column sample.id.
+ bin.factor=2L
+### Size of bin pyramid. Bigger values result in slower computation.
+ ){
+  stopifnot(is.numeric(bin.factor))
+  stopifnot(length(bin.factor)==1)
+  profile.list <- ProfileList(profiles)
+  fit <- 
+    .Call("PeakSegJointHeuristicStep2_interface",
+          profile.list,
+          as.integer(bin.factor),
+          PACKAGE="PeakSegJoint")
+  fit$sample.id <- names(profile.list)
+  fit
+### List of model fit results, which can be passed to ConvertModelList
+### for easier interpretation.
+}
+
 PeakSegJointSeveral <- structure(function
-### Run PeakSegJoint with several different bin.factor values, keeping
-### only the models with lowest Poisson loss for each peak size.
+### Run the PeakSegJoint heuristic segmentation algorithm with several
+### different bin.factor values, keeping only the models with lowest
+### Poisson loss for each peak size. 
 (profiles,
 ### data.frame or list of them from ProfileList.
  bin.factors=c(2, 3, 5, 7)
@@ -182,7 +209,11 @@ PeakSegJointHeuristic <- structure(function
 ### gives an approximate solution to a multi-sample Poisson maximum
 ### likelihood segmentation problem. Given S samples, this function
 ### computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
-### samples with an overlapping peak (maximum of one peak per sample).
+### samples with an overlapping peak (maximum of one peak per
+### sample). This solver runs steps 1-3, and step3 is not guaranteed
+### to return a feasible segmentation (seg1 < seg2 > seg3). NB: this
+### function is mostly for internal testing purposes. For real data
+### use PeakSegJointSeveral.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -302,7 +333,7 @@ ConvertModelList <- function
 ### from the C code to the repetitive format that is more useful for
 ### plotting.
 (model.list
-### Value of PeakSegJointHeuristicStep1(...).
+### Value of PeakSegJointHeuristic(...).
  ){
   seg1.chromStart <- model.list$data_start_end[1]
   seg3.chromEnd <- model.list$data_start_end[2]

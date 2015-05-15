@@ -224,6 +224,53 @@ PeakSegJointHeuristicStep1_interface(
 }
 
 SEXP
+PeakSegJointHeuristicStep2_interface(
+  SEXP profile_list_sexp,
+  SEXP bin_factor
+  ){
+  int n_profiles = length(profile_list_sexp);
+  // malloc Profiles for input data.
+  struct ProfileList profile_list;
+  Ralloc_profile_list(profile_list_sexp, &profile_list);
+  // allocVector for outputs.
+  struct PeakSegJointModelList *model_list = 
+    malloc_PeakSegJointModelList(n_profiles+1);
+  SEXP model_list_sexp;
+  PROTECT(model_list_sexp = allocPeakSegJointModelList());
+
+  /* 
+     This calls allocVector and assigns the resulting pointers to the
+     elements of model_list.
+  */
+  Ralloc_model_struct(model_list_sexp, model_list);
+  
+  //printf("before step1\n");
+  int status;
+  status = PeakSegJointHeuristicStep1(
+    &profile_list, INTEGER(bin_factor)[0], model_list);
+  //printf("before step2\n");
+  if(status == 0){
+    status = PeakSegJointHeuristicStep2(&profile_list, model_list);
+  }
+  //printf("after step2 status=%d\n", status);
+  free_profile_list(&profile_list);
+  free_PeakSegJointModelList(model_list);
+  UNPROTECT(1); //model_list_sexp.
+  if(status != 0){
+    if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND)
+      error("chromStart not less than chromEnd");
+    if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)
+      error("chromStart[i] != chromEnd[i-1]");
+    if(status == ERROR_BIN_FACTOR_TOO_LARGE)
+      error("bin factor too large");
+    if(status == ERROR_EMPTY_BIN)
+      error("empty bin");
+    error("unrecognized error code %d", status);
+  }
+  return model_list_sexp;
+}
+
+SEXP
 PeakSegJointHeuristic_interface(
   SEXP profile_list_sexp,
   SEXP bin_factor
