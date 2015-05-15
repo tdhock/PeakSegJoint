@@ -3,6 +3,7 @@ require(ggplot2)
 require(xtable)
 require(PeakSegJoint)
 require(PeakError)
+require(parallel)
 
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
@@ -50,6 +51,30 @@ for(counts.RData.path in counts.RData.vec){
 }
 counts <- do.call(rbind, counts.by.sample)
 setkey(counts, chromStart, chromEnd)
+
+## TODO: run step1 and step2 problems in parallel?
+step1.problems.dt <- do.call(rbind, problems.by.res)
+Step1Problem <- function(problem.i){
+  problem <- step1.problems.dt[problem.i, ]
+  problem.name <- paste(problem$problem.name)
+  problem.counts <-
+    counts[! (chromEnd < problem$problemStart |
+                problem$problemEnd < chromStart), ]
+  profile.list <- ProfileList(problem.counts)
+  problem.peaks <- tryCatch({
+    fit <- PeakSegJointSeveral(profile.list)
+    ConvertModelList(fit)$peaks
+  }, error=function(e){
+    NULL
+  })
+  if(is.numeric(problem.peaks$peaks)){
+    peaks.by.peaks <- split(problem.peaks, problem.peaks$peaks)
+    peaks.num <- as.numeric(names(peaks.by.peaks))
+    peaks.df <- peaks.by.peaks[[which.max(peaks.num)]]
+    data.table(problem, peaks.df[1,])
+  }
+}
+##step1.results.list <- mclapply(1:nrow(step1.problems.dt), Step1Problem)
 
 step2.error.list <- list()
 step2.by.res <- list()
