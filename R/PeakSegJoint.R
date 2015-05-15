@@ -138,7 +138,7 @@ PeakSegJointSeveral <- structure(function
 ### Poisson loss for each peak size. 
 (profiles,
 ### data.frame or list of them from ProfileList.
- bin.factors=c(2, 3, 5, 7)
+ bin.factors=2:7
 ### integer vector of suboptimality parameters, bigger values are
 ### slower.
  ){

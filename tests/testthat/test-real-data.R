@@ -18,6 +18,13 @@ test_that("peak1 infeasible does not corrupt bigger models", {
   }
 })
 
+test_that("Several detects peaks", {
+  fit <- PeakSegJointSeveral(peak1.infeasible)
+  peak.models <- fit$models[-1]
+  loss <- sapply(peak.models, "[[", "loss")
+  expect_true(all(is.finite(loss)))
+})
+
 data(H3K4me3.PGP.immune.chunk2)
 
 test_that("all samples with peaks can be selected", {
