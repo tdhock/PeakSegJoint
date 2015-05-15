@@ -4,7 +4,7 @@
 \description{Run the PeakSegJoint heuristic segmentation algorithm with several
 different bin.factor values, keeping only the models with lowest
 Poisson loss for each peak size. }
-\usage{PeakSegJointSeveral(profiles, bin.factors = c(2, 3, 5, 7))}
+\usage{PeakSegJointSeveral(profiles, bin.factors = 2:7)}
 \arguments{
   \item{profiles}{data.frame or list of them from ProfileList.}
   \item{bin.factors}{integer vector of suboptimality parameters, bigger values are
