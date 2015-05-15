@@ -318,7 +318,7 @@ ConvertModelList <- function
     if(is.finite(loss)){
       sample.i.vec <- model$samples_with_peaks_vec + 1
       has.peak <- seq_along(model.list$sample.id) %in% sample.i.vec
-      samples.with.peaks <- model.list$sample.id[has.peak]
+      samples.with.peaks <- model.list$sample.id[sample.i.vec]
       samples.without.peaks <- model.list$sample.id[!has.peak]
       peakStart <- model$peak_start_end[1]
       peakEnd <- model$peak_start_end[2]
