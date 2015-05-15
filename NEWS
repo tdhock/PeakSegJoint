@@ -1,5 +1,8 @@
 2015.05.15
 
+Step3 looks for a peak in the same place as previous model, but does
+not enforce the seg1 < seg2 > seg3 constraint.
+
 ConvertModelList returns segments for model with 0 peaks.
 
 PeakSegJointSeveral function for running the C solver using several
