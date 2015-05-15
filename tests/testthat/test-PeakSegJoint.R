@@ -470,8 +470,8 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
                      samples.with.peaks,
                      drop=FALSE]
         stopifnot(nrow(seg1.mat) == seg1.bases)
-        stopifnot(all.equal(as.numeric(colMeans(seg1.mat)),
-                            as.numeric(seg1.means)))
+        ## stopifnot(all.equal(as.numeric(colMeans(seg1.mat)),
+        ##                     as.numeric(seg1.means)))
 
         cumsum.seg2.end <-
           cumsum.mats$right$count[model.row$right.cumsum.row, ]
@@ -675,7 +675,7 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     zoom.peak.list[[peaks.str]] <-
       data.frame(peaks, sample.id=samples.with.peaks,
                  chromStart=peakStart, chromEnd=peakEnd)
-  }
+  }#peaks.str
   zoom.peaks <- do.call(rbind, zoom.peak.list)
   zoom.loss <- do.call(rbind, zoom.loss.list)
   R.loss.vec <- as.numeric(zoom.loss$loss)
@@ -867,7 +867,7 @@ test_that("Step1 C result agrees with R", {
   seg.list <- list()
   best.loss.list <- list()
   flat.cumsums <- first.cumsums$count[n.bins, ]
-  flat.means <- flat.cumsums/bases
+  flat.means <- flat.cumsums/unfilled.bases
 
   expect_equal(fit$sample_mean_vec, as.numeric(flat.means))
   
@@ -880,7 +880,8 @@ test_that("Step1 C result agrees with R", {
     seg1.cumsums <- first.cumsums$count[seg1.last, ]
     seg1.bases <- seg1.last*bases.per.bin
     seg1.chromEnd <- seg1.bases + max.chromStart
-    seg1.means <- seg1.cumsums/seg1.bases
+    seg1.corrected <- seg1.bases - extra.before
+    seg1.means <- seg1.cumsums/seg1.corrected
     seg1.loss.vec <- OptimalPoissonLoss(seg1.means, seg1.cumsums)
     seg1.loss <- sum(seg1.loss.vec)
     for(seg2.last in (seg1.last+1):(n.bins-1)){
@@ -895,7 +896,8 @@ test_that("Step1 C result agrees with R", {
       
       seg3.cumsums <- first.cumsums$count[n.bins, ]-cumsum.seg2.end
       seg3.bases <- bases - seg12.bases
-      seg3.means <- seg3.cumsums/seg3.bases
+      seg3.corrected <- seg3.bases - extra.after
+      seg3.means <- seg3.cumsums/seg3.corrected
 
       mean.mat <- rbind(seg1.means, seg2.means, seg3.means)
 
