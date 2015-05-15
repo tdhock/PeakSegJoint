@@ -113,8 +113,8 @@ test_that("same mean if same chromStart/chromEnd", {
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
            lims[1] < chromEnd & chromStart < lims[2])
-
-  fit <- PeakSegJointSeveral(some.counts)
+  profile.list <- ProfileList(some.counts)
+  fit <- PeakSegJointSeveral(profile.list)
   converted <- ConvertModelList(fit)
 
   zoom.seg.list <- with(converted, split(segments, segments$peaks))
@@ -125,4 +125,36 @@ test_that("same mean if same chromStart/chromEnd", {
   expect_identical(seg3$chromStart, seg4$chromStart)
   expect_identical(seg3$chromEnd, seg4$chromEnd)
   expect_equal(seg3$mean, seg4$mean)
+
+  one <- profile.list$McGill0016
+
+  seg.bases <- with(seg3, chromEnd - chromStart)
+  expected.mean.list <- list()
+  for(seg.i in seq_along(seg.bases)){
+    bin.chromStart <- seg3$chromStart[[seg.i]]
+    bin.bases <- seg.bases[[seg.i]]
+    bin <- binSum(one, bin.chromStart, bin.bases, n.bins=1L)
+    expected.mean.list[[seg.i]] <- bin$mean
+  }
+  expected.mean <- do.call(c, expected.mean.list)
+  expect_equal(seg3$mean, expected.mean)
+  expect_equal(seg4$mean, expected.mean)
+
+  for(bf in c(2, 3, 5, 7)){
+    fit <- PeakSegJointHeuristic(profile.list, bf)
+    converted <- ConvertModelList(fit)
+    segs.by.sample <- with(converted, split(segments, segments$sample.id))
+    segs.one.sample <- segs.by.sample$McGill0016
+    segs.by.peaks <- split(segs.one.sample, segs.one.sample$peaks)
+    for(peaks.str in paste(3:4)){
+      segs <- segs.by.peaks[[peaks.str]]
+      same <-
+        c(segs$chromStart == seg3$chromStart,
+          segs$chromEnd == seg3$chromEnd)
+      if(all(same)){
+        cat(sprintf("bin.factor=%d peaks=%s\n", bf, peaks.str))
+        expect_equal(segs$mean, expected.mean)
+      }
+    }
+  }
 })
