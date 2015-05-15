@@ -14,7 +14,8 @@ argv <-
               package="PeakSegDP")
 
 argv <- "~/exampleData/PeakSegJoint-chunks/1"
-argv <- "PeakSegJoint-chunks/H3K36me3_AM_immune/21"
+argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K36me3_AM_immune/21"
+argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
