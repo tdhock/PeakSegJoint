@@ -317,8 +317,9 @@ ConvertModelList <- function
     loss.list[[peaks.str]] <- data.frame(peaks, loss)
     if(is.finite(loss)){
       sample.i.vec <- model$samples_with_peaks_vec + 1
-      samples.with.peaks <- model.list$sample.id[sample.i.vec]
-      samples.without.peaks <- model.list$sample.id[-sample.i.vec]
+      has.peak <- seq_along(model.list$sample.id) %in% sample.i.vec
+      samples.with.peaks <- model.list$sample.id[has.peak]
+      samples.without.peaks <- model.list$sample.id[!has.peak]
       peakStart <- model$peak_start_end[1]
       peakEnd <- model$peak_start_end[2]
       if(peaks > 0){
@@ -347,7 +348,7 @@ ConvertModelList <- function
                      sample.id=samples.without.peaks,
                      chromStart=seg1.chromStart,
                      chromEnd=seg3.chromEnd,
-                     mean=model.list$sample_mean_vec[-sample.i.vec])
+                     mean=model.list$sample_mean_vec[!has.peak])
       }
     }
   }
