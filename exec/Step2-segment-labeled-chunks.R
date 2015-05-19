@@ -201,11 +201,33 @@ for(res.str in names(problems.by.res)){
     setkey(regions, chromStart, chromEnd)
     over.regions <- foverlaps(regions, problems.dt, nomatch=0L)
     over.regions[,
-                 `:=`(overlapStart=ifelse(problemStart < chromStart,
-                        chromStart, problemStart),
-                      overlapEnd=ifelse(problemEnd < chromEnd,
-                        problemEnd, chromEnd))]
-    over.regions[, overlapBases := overlapEnd-overlapStart]
+    `:=`(overlapStart=ifelse(problemStart < chromStart,
+           chromStart, problemStart),
+         overlapEnd=ifelse(problemEnd < chromEnd,
+           problemEnd, chromEnd))]
+    over.regions[,
+      overlapBases := overlapEnd-overlapStart]
+    wrong.direction <- with(over.regions, {
+      (annotation=="peakEnd" & chromStart < problemStart) |
+        (annotation=="peakStart" & problemEnd < chromEnd)
+    })
+    wrong.regions <- over.regions[wrong.direction, .(problem.name, chromStart)]
+    setkey(over.regions, problem.name, chromStart)
+    over.regions[wrong.regions, overlapBases := 0]
+    ## ggplot()+
+    ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3),
+    ##                 data=over.regions,
+    ##                 fill="grey")+
+    ##   geom_text(aes(problemStart/1e3, factor(problem.i),
+    ##                 label=overlapBases),
+    ##             hjust=1,
+    ##             data=over.regions)+
+    ##   theme_bw()+
+    ##   theme(panel.margin=grid::unit(0, "cm"))+
+    ##   facet_grid(sample.id ~ ., scales="free")+
+    ##   geom_segment(aes(problemStart/1e3, factor(problem.i),
+    ##                    xend=problemEnd/1e3, yend=factor(problem.i)),
+    ##                data=over.regions)
     region.i.problems <-
       over.regions[,
                    .(problem.name=problem.name[which.max(overlapBases)]),
@@ -222,9 +244,13 @@ for(res.str in names(problems.by.res)){
     step2.by.problem <- list()
     step2.peak.list <- list()
     saved.problems.list <- list()
+    saved.regions.list <- list()
     saved.i <- 1
     for(problem.name in names(regions.by.problem)){
       problem.regions <- regions.by.problem[[problem.name]]
+      uniq.regions <- unique(problem.regions[, .(chromStart, chromEnd)])
+      saved.regions.list[[problem.name]] <-
+        data.frame(saved.i, uniq.regions)
       problem <- problems.dt[problem.name]
       problem$saved.i <- saved.i
       saved.i <- saved.i+1
@@ -270,6 +296,7 @@ for(res.str in names(problems.by.res)){
       })
     }#problem.name
     saved.problems <- do.call(rbind, saved.problems.list)
+    saved.regions <- do.call(rbind, saved.regions.list)
     pred.peaks <- do.call(rbind, peaks.by.problem)
     step2.peaks <- do.call(rbind, step2.peak.list)
     ## ggplot()+
@@ -295,7 +322,7 @@ for(res.str in names(problems.by.res)){
                           chromStart < limits$max,]
 
   label.df <-
-    data.frame(problemEnd=max(step1.peaks$problemEnd),
+    data.frame(problemEnd=max(error.regions$chromEnd),
                problem.i=1,
                label=paste(res.str, "bases/problem"),
                sample.id="step 1")
@@ -320,6 +347,11 @@ for(res.str in names(problems.by.res)){
                               "false positive"=1))+
       scale_x_continuous("position on chromosome (kilo bases = kb)")+
       coord_cartesian(xlim=lim.vec)+
+      geom_tallrect(aes(xmin=chromStart/1e3, 
+                       xmax=chromEnd/1e3),
+                   data=saved.regions,
+                   fill=NA,
+                   color="grey")+
       geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                         fill=annotation),
                     alpha=0.5,
@@ -328,7 +360,7 @@ for(res.str in names(problems.by.res)){
       scale_fill_manual(values=ann.colors)+
       geom_text(aes(problemEnd/1e3, problem.i, label=label),
                 data=label.df,
-                size=3,
+                size=4,
                 vjust=0,
                 hjust=1)+
       theme_bw()+
@@ -348,6 +380,11 @@ for(res.str in names(problems.by.res)){
       geom_segment(aes(problemStart/1e3, problem.i,
                        xend=problemEnd/1e3, yend=problem.i),
                    data=step1.peaks)+
+      geom_segment(aes(chromStart/1e3, saved.i,
+                       xend=chromEnd/1e3, yend=saved.i),
+                   data=data.frame(saved.regions, sample.id="step 2"),
+                   size=3,
+                   color="grey")+
       geom_segment(aes(problemStart/1e3, saved.i,
                        xend=problemEnd/1e3, yend=saved.i),
                    data=saved.problems)

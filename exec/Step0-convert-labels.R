@@ -182,6 +182,15 @@ for(chunk.str in names(regions.by.chunk)){
     res.str <- paste(bases.per.problem)
     problemSeq <- seq(0, max.chromEnd, by=bases.per.problem)
     
+    ## mix small and big problems for step 1?
+    bigSize <- bases.per.problem*1.5
+    bigSeq <- seq(0, max.chromEnd, by=bigSize)
+    bigStart <- as.integer(sort(c(bigSeq, bigSeq + bases.per.problem)))
+    bigEnd <- bigStart + bigSize
+    smallEnd <- problemSeq + bases.per.problem
+    problemStart <- c(problemSeq, bigStart)
+    problemEnd <- c(smallEnd, bigEnd)
+    
     ## overlapping problems of the same size?
     overlap.count <- 3
     overlap.list <- list()
@@ -192,15 +201,6 @@ for(chunk.str in names(regions.by.chunk)){
     problemStart <-
       as.integer(sort(do.call(c, overlap.list)))
     problemEnd <- problemStart + bases.per.problem
-    
-    ## mix small and big problems for step 1?
-    bigSize <- bases.per.problem*1.5
-    bigSeq <- seq(0, max.chromEnd, by=bigSize)
-    bigStart <- as.integer(sort(c(bigSeq, bigSeq + bases.per.problem)))
-    bigEnd <- bigStart + bigSize
-    smallEnd <- problemSeq + bases.per.problem
-    problemStart <- c(problemSeq, bigStart)
-    problemEnd <- c(smallEnd, bigEnd)
     
     is.overlap <- min.chromStart < problemEnd &
       problemStart < max.chromEnd
