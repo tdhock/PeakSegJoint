@@ -14,7 +14,7 @@ argv <-
                         "3"),
               package="PeakSegDP")
 
-argv <- "~/exampleData/PeakSegJoint-chunks/1"
+argv <- "~/exampleData/PeakSegJoint-chunks/3"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K36me3_AM_immune/21"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
@@ -211,7 +211,8 @@ for(res.str in names(problems.by.res)){
       (annotation=="peakEnd" & chromStart < problemStart) |
         (annotation=="peakStart" & problemEnd < chromEnd)
     })
-    wrong.regions <- over.regions[wrong.direction, .(problem.name, chromStart)]
+    wrong.regions <-
+      unique(over.regions[wrong.direction, .(problem.name, chromStart)])
     setkey(over.regions, problem.name, chromStart)
     over.regions[wrong.regions, overlapBases := 0]
     ## ggplot()+
