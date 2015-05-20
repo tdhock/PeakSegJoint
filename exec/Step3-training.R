@@ -9,13 +9,14 @@ argv <-
               package="PeakSegDP")
 
 argv <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
+argv <- "~/exampleData/PeakSegJoint-chunks"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
 if(length(argv) != 1){
-  stop("usage: Step2.R path/to/PeakSegJoint-chunks")
+  stop("usage: Step3.R path/to/PeakSegJoint-chunks")
 }
 
 chunks.dir <- normalizePath(argv[1])
@@ -32,16 +33,16 @@ for(chunk.i in seq_along(problems.RData.vec)){
   index.html <-
     file.path("..", chunk.id, "figure-train-errors", "index.html")
   objs <- load(problems.RData)
-  err.vec <- step2.error$errors
-  min.df <- subset(step2.error, errors==min(errors))
-  min.errors <- min(step2.error$errors)
+  err.vec <- res.error$errors
+  min.df <- subset(res.error, errors==min(errors))
+  min.errors <- min(res.error$errors)
   bpp.list[[chunk.id]] <- min.df$bases.per.problem
   href <- sprintf('<a href="%s">%s</a>', index.html, chunk.id)
   chunk.best.list[[chunk.id]] <-
     data.frame(chunk.id=href,
                min.errors,
-               regions=step2.error$regions[1])
-  names(err.vec) <- rownames(step2.error)
+               regions=res.error$regions[1])
+  names(err.vec) <- res.error$bases.per.problem
   err.mat.list[[chunk.i]] <- err.vec
 }
 chunk.best <- do.call(rbind, chunk.best.list)
@@ -106,17 +107,24 @@ problems.by.chunk <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
   objs <- load(problems.RData)
-  chunk.problems <- step2.by.res[[res.str]]
-  for(problem.name in names(chunk.problems)){
-    info <- chunk.problems[[problem.name]]
-    target <- info$error$target
-    n.finite <- sum(is.finite(target))
-    if(n.finite > 0){
-      problems.by.chunk[[paste(chunk.i)]][[problem.name]] <-
-        list(features=info$features,
-             target=target)
+  if(! "step2.data.list" %in% objs){
+    stop("step.data.list not found in ", problems.RData)
+  }
+  res.data <- step2.data.list[[res.str]]
+  for(problem.name in names(res.data$regions)){
+    target <- step2.error.list[[problem.name]]$problem$target
+    if(is.numeric(target)){
+      n.finite <- sum(is.finite(target))
+      if(n.finite > 0){
+        problems.by.chunk[[problems.RData]][[problem.name]] <-
+          list(features=step2.model.list[[problem.name]]$features,
+               target=target)
+      }
     }
   }
 }
 
-print("TODO IntervalRegressionProblems")
+train.problem.counts <- sapply(problems.by.chunk, length)
+print(train.problem.counts)
+
+stopifnot(sum(train.problem.counts) > 0)

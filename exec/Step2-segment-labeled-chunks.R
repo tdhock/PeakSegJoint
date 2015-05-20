@@ -285,7 +285,11 @@ ResError <- function(res.str){
   for(problem.name in problems.with.regions$problem.name){
     pred.peaks.list[[problem.name]] <- step2.error.list[[problem.name]]$peaks
   }
-  pred.peaks <- do.call(rbind, pred.peaks.list)
+  pred.peaks <- if(length(pred.peaks.list) == 0){
+    Peaks()
+  }else{
+    do.call(rbind, pred.peaks.list)
+  }
   res.regions <- do.call(rbind, res.data$regions)
   error.regions <- PeakErrorSamples(pred.peaks, res.regions)
   with(error.regions, {
@@ -303,8 +307,9 @@ print(res.error)
 ## Save results for this chunk/resolution.
 problems.RData <- file.path(chunk.dir, "problems.RData")
 save(step1.results,
-     step2.problems,
-     regions.by.problem,
+     ##step2.problems,
+     ##regions.by.problem,
+     step2.data.list,
      step2.model.list,
      step2.error.list,
      res.error,
