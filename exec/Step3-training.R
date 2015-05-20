@@ -48,11 +48,13 @@ for(chunk.i in seq_along(problems.RData.vec)){
 chunk.best <- do.call(rbind, chunk.best.list)
 err.mat <- do.call(rbind, err.mat.list)
 err.vec <- colSums(err.mat)
-err.df <- data.frame(bases.per.problem=as.integer(names(err.vec)),
-                     errors=err.vec)
-chosen.i <- which.min(err.vec)
+train.errors <-
+  data.frame(bases.per.problem=as.integer(names(err.vec)),
+             errors=err.vec,
+             regions=sum(chunk.best$regions))
+chosen.i <- pick.best.index(err.vec)
 res.str <- names(err.vec)[chosen.i]
-chosen.df <- err.df[chosen.i, ]
+train.errors.picked <- train.errors[chosen.i, ]
 
 chunk.best$selected.errors <- err.mat[, res.str]
 chunk.best$bases.per.problem <- NA
@@ -69,11 +71,11 @@ chunk.ordered <-
 resCurve <- 
 ggplot()+
   geom_line(aes(bases.per.problem, errors),
-            data=err.df)+
+            data=train.errors)+
   scale_x_log10()+
   ggtitle(paste(res.str, "bases/problem"))+
   geom_point(aes(bases.per.problem, errors),
-             data=chosen.df,
+             data=train.errors.picked,
              pch=1)
 
 png.name <-
@@ -84,7 +86,7 @@ png(png.name, width=400, h=200, units="px")
 print(resCurve)
 dev.off()
 
-res.xt <- xtable(err.df)
+res.xt <- xtable(train.errors)
 res.html <-
   print(res.xt, type="html",
         include.rownames=FALSE)
@@ -128,3 +130,9 @@ train.problem.counts <- sapply(problems.by.chunk, length)
 print(train.problem.counts)
 
 stopifnot(sum(train.problem.counts) > 0)
+
+print("TODO: train it!")
+
+trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
+save(train.errors, train.errors.picked,
+     file=trained.model.RData)

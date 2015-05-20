@@ -24,7 +24,8 @@ if(length(argv) != 1){
   stop("usage: Step2.R path/to/PeakSegJoint-chunks/012354")
 }
 
-print(options(mc.cores=detectCores()))
+options(mc.cores=detectCores())
+print(options("mc.cores"))
 
 chunk.dir <- argv[1]
 chunk.id <- basename(chunk.dir)
@@ -34,12 +35,6 @@ regions.RData <- file.path(chunk.dir, "regions.RData")
 objs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
-
-ann.colors <-
-  c(noPeaks="#f6f4bf",
-    peakStart="#ffafaf",
-    peakEnd="#ff4c4c",
-    peaks="#a445ee")
 
 counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
 
