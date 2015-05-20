@@ -3,6 +3,8 @@ require(PeakSegJoint)
 require(PeakError)
 require(parallel)
 
+options(mc.cores=detectCores())
+
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
 
