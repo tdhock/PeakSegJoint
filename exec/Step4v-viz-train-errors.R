@@ -96,18 +96,21 @@ prob.labels$problem.i <- max(prob.labels$problems)
 prob.labels$chromStart <- limits$chromStart
 
 facet.rows <- length(counts.by.sample)+1
+dvec <- diff(log(res.error$bases.per.problem))
+dval <- exp(mean(dvec))
+dval2 <- (dval-1)/2 + 1
 viz <-
   list(coverage=ggplot()+
          geom_text(aes(chromStart/1e3, problem.i,
                        showSelected=bases.per.problem,
-                       label=sprintf("%d problems mean size %d bases",
-                         problems, mean.bases)),
+                       label=sprintf("%d problems mean size %.1f kb",
+                         problems, mean.bases/1e3)),
                    data=prob.labels,
                    hjust=0)+
-       geom_segment(aes(problemStart/1e3, problem.i,
-                        showSelected=bases.per.problem,
-                        xend=problemEnd/1e3, yend=problem.i),
-                    data=step2.problems)+
+         geom_segment(aes(problemStart/1e3, problem.i,
+                          showSelected=bases.per.problem,
+                          xend=problemEnd/1e3, yend=problem.i),
+                      data=step2.problems)+
          scale_y_continuous("aligned read coverage",
                             breaks=function(limits){
                               floor(limits[2])
@@ -138,27 +141,25 @@ viz <-
          }, scales="free")+
          geom_line(aes(base/1e3, count),
                    data=some.counts,
-                   color="grey50"))
+                   color="grey50"),
 
-dvec <- diff(log(res.error$bases.per.problem))
-dval <- exp(mean(dvec))
-dval2 <- (dval-1)/2 + 1
-viz$resError <-
-  ggplot()+
-  geom_tallrect(aes(xmin=bases.per.problem/dval2,
-                    xmax=bases.per.problem*dval2,
-                    clickSelects=bases.per.problem),
-             alpha=0.5,
-             data=res.error)+
-  scale_x_log10()+
-  geom_line(aes(bases.per.problem, errors/regions*100,
-                color=chunks, size=chunks),
-            data=data.frame(res.error, chunks="this"))+
-  geom_line(aes(bases.per.problem, errors/regions*100,
-                color=chunks, size=chunks),
-            data=data.frame(train.errors, chunks="all"))
+       resError=ggplot()+
+           geom_tallrect(aes(xmin=bases.per.problem/dval2,
+                             xmax=bases.per.problem*dval2,
+                             clickSelects=bases.per.problem),
+                         alpha=0.5,
+                         data=res.error)+
+           scale_x_log10()+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(res.error, chunks="this"))+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(train.errors, chunks="all")),
+                     
+       title=chunk.dir,
 
-viz$title <- chunk.dir
+       first=list(bases.per.problem=train.errors.picked$bases.per.problem))
 
 animint.dir <- file.path(chunk.dir, "figure-train-errors")
 animint2dir(viz, animint.dir)
