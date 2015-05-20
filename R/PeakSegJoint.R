@@ -147,10 +147,19 @@ PeakSegJointSeveral <- structure(function
   profile.list <- ProfileList(profiles)
   fit.list <- list()
   for(bf in bin.factors){
-    fit.list[[paste(bf)]] <-
+    fit.list[[paste(bf)]] <- tryCatch({
       PeakSegJointHeuristic(profile.list, bf)
+    }, error=function(e){
+      NULL
+    })
+  }
+  if(length(fit.list) == 0){
+    stop("No computable models")
   }
   best.fit <- fit.list[[1]]
+  if(length(fit.list) == 1){
+    return(best.fit)
+  }
   for(model.i in seq_along(best.fit$models)){
     for(fit in fit.list[-1]){
       model <- fit$models[[model.i]]
