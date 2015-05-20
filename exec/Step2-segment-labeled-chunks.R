@@ -3,8 +3,6 @@ require(PeakSegJoint)
 require(PeakError)
 require(parallel)
 
-options(mc.cores=detectCores())
-
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
 
@@ -25,6 +23,8 @@ print(argv)
 if(length(argv) != 1){
   stop("usage: Step2.R path/to/PeakSegJoint-chunks/012354")
 }
+
+print(options(mc.cores=detectCores()))
 
 chunk.dir <- argv[1]
 chunk.id <- basename(chunk.dir)
