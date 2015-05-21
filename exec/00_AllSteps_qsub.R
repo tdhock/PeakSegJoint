@@ -85,7 +85,8 @@ for(step.name in names(cmd.list)){
     last.base <- basename(last.file)
     last.dir <- dirname(last.file)
     prefix.only <- sub("[.].*?$", "", last.base)
-    prefix <- file.path(last.dir, prefix.only)
+    prefix.nostep <- file.path(last.dir, prefix.only)
+    prefix <- paste0(prefix.nostep, "-", step.name)
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
