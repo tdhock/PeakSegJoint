@@ -82,6 +82,7 @@ modelSelection.by.problem <- list()
 peaks.by.problem <- list()
 first.selection.list <-
   list(bases.per.problem=train.errors.picked$bases.per.problem)
+regions.by.problem <- list()
 for(res.str in names(step2.data.list)){
   res.data <- step2.data.list[[res.str]]
   step2.problems.by.res[[res.str]] <- 
@@ -113,6 +114,16 @@ for(res.str in names(step2.data.list)){
     }
     modelSelection.by.problem[[problem.dot]] <-
       data.table(problem, ms)
+    if(is.list(error$problem$error.regions)){
+      regions.by.peaks <- list()
+      for(peaks.str in names(error$problem$error.regions)){
+        regions.df <- error$problem$error.regions[[peaks.str]]
+        regions.df[[problem.dot]] <- as.integer(peaks.str)
+        regions.by.peaks[[peaks.str]] <-
+          data.table(problem, regions.df)
+      }
+      regions.by.problem[[problem.dot]] <- do.call(rbind, regions.by.peaks)
+    }    
   }
 }
 step2.problems <- do.call(rbind, step2.problems.by.res)
@@ -196,6 +207,29 @@ penalty.range <-
   with(all.modelSelection, c(min(max.log.lambda), max(min.log.lambda)))
 penalty.mid <- mean(penalty.range)
 for(problem.dot in names(modelSelection.by.problem)){
+  regions.dt <- regions.by.problem[[problem.dot]]
+  if(!is.null(regions.dt)){
+    prob.regions.names <-
+      c("bases.per.problem", "problem.i", "problem.name",
+        "chromStart", "chromEnd")
+    prob.regions <- unique(data.frame(regions.dt)[, prob.regions.names])
+    prob.regions$sample.id <- "problems"
+    a.regions <- 
+      aes_string(xmin="chromStart/1e3",
+                 xmax="chromEnd/1e3",
+                 linetype="status",
+                 showSelected=problem.dot,
+                 showSelected2="bases.per.problem")
+    viz$coverage <- viz$coverage+
+      geom_segment(aes(chromStart/1e3, problem.i,
+                       xend=chromEnd/1e3, yend=problem.i,
+                       showSelected=bases.per.problem,
+                       clickSelects=problem.name),
+                   data=prob.regions)+
+      geom_tallrect(a.regions, data=data.frame(regions.dt),
+                    fill=NA,
+                    color="black")
+  }
   if(problem.dot %in% names(peaks.by.problem)){
     peaks <- peaks.by.problem[[problem.dot]]
     peaks[[problem.dot]] <- peaks$peaks
@@ -205,10 +239,10 @@ for(problem.dot in names(modelSelection.by.problem)){
                  clickSelects="problem.name",
                  showSelected=problem.dot,
                  showSelected2="bases.per.problem")
-    prob.names <-
+    prob.peaks.names <-
       c("bases.per.problem", "problem.i", "problem.name",
         "chromStart", "chromEnd", problem.dot)
-    prob.peaks <- unique(data.frame(peaks)[, prob.names])
+    prob.peaks <- unique(data.frame(peaks)[, prob.peaks.names])
     prob.peaks$sample.id <- "problems"
     a.problems <-
       aes_string("chromStart/1e3", "problem.i",
