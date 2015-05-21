@@ -12,7 +12,7 @@ argv <-
                         "3"),
               package="PeakSegDP")
 
-argv <- "~/exampleData/PeakSegJoint-chunks/3"
+argv <- "~/exampleData/PeakSegJoint-chunks/1"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K36me3_AM_immune/21"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
@@ -25,6 +25,9 @@ if(length(argv) != 1){
 }
 
 options(mc.cores=detectCores())
+ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
+if(!is.finite(ppn))ppn <- 2
+options(mc.cores=ppn)
 print(options("mc.cores"))
 
 chunk.dir <- argv[1]
