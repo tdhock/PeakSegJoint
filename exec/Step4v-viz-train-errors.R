@@ -1,7 +1,7 @@
 library(animint)
 require(data.table)
 
-argv <- "~/exampleData/PeakSegJoint-chunks/1"
+argv <- "~/exampleData/PeakSegJoint-chunks/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -57,7 +57,7 @@ fake.points <- data.frame(x,y)
 ##   geom_point(aes(x, y), data=fake.points)
 
 ## Read and subsample count data to plot width.
-width.pixels <- 1000
+width.pixels <- 1500
 counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
 counts.by.sample <- list()
 for(counts.RData.path in counts.RData.vec){
@@ -97,33 +97,37 @@ for(res.str in names(step2.data.list)){
   for(problem.i in 1:nrow(res.data$problems)){
     problem <- res.data$problems[problem.i, ]
     problem.name <- paste(problem$problem.name)
-    problem.dot <- gsub("[:-]", ".", problem.name)
+    problem.dot <- paste0(gsub("[:-]", ".", problem.name), "peaks")
     error <- step2.error.list[[problem.name]]
     model <- step2.model.list[[problem.name]]
-    if(is.data.frame(model$peaks)){
-      peaks.by.problem[[problem.dot]] <- data.table(problem, model$peaks)
-    }
-    if(is.null(error$peaks)){
-      ms <-
+    if(!is.null(model)){
+      if(is.data.frame(model$peaks)){
+        peaks.by.problem[[problem.dot]] <- data.table(problem, model$peaks)
+      }
+      if(is.null(error$peaks)){
+        first.selection.list[[problem.dot]] <- 0
+      }else{
+        ms <- 
+        first.selection.list[[problem.dot]] <- error$peaks$peaks[1]
+      }
+      
+      ms <- if(is.list(error$problem$error.regions)){
+        regions.by.peaks <- list()
+        for(peaks.str in names(error$problem$error.regions)){
+          regions.df <- error$problem$error.regions[[peaks.str]]
+          regions.df[[problem.dot]] <- as.integer(peaks.str)
+          regions.by.peaks[[peaks.str]] <-
+            data.table(problem, regions.df)
+        }
+        regions.by.problem[[problem.dot]] <- do.call(rbind, regions.by.peaks)
+        error$problem$modelSelection
+      }else{
         data.frame(model$modelSelection,
                    errors=NA)
-      first.selection.list[[problem.dot]] <- 0
-    }else{
-      ms <- error$problem$modelSelection
-      first.selection.list[[problem.dot]] <- error$peaks$peaks[1]
+      }      
+      modelSelection.by.problem[[problem.dot]] <-
+        data.table(problem, ms)
     }
-    modelSelection.by.problem[[problem.dot]] <-
-      data.table(problem, ms)
-    if(is.list(error$problem$error.regions)){
-      regions.by.peaks <- list()
-      for(peaks.str in names(error$problem$error.regions)){
-        regions.df <- error$problem$error.regions[[peaks.str]]
-        regions.df[[problem.dot]] <- as.integer(peaks.str)
-        regions.by.peaks[[peaks.str]] <-
-          data.table(problem, regions.df)
-      }
-      regions.by.problem[[problem.dot]] <- do.call(rbind, regions.by.peaks)
-    }    
   }
 }
 step2.problems <- do.call(rbind, step2.problems.by.res)
@@ -131,150 +135,187 @@ prob.labels <- do.call(rbind, prob.labels.by.res)
 prob.labels$problem.i <- max(prob.labels$problems)
 prob.labels$chromStart <- limits$chromStart
 
-facet.rows <- length(counts.by.sample)+1
-dvec <- diff(log(res.error$bases.per.problem))
-dval <- exp(mean(dvec))
-dval2 <- (dval-1)/2 + 1
-viz <-
-  list(coverage=ggplot()+
-         geom_text(aes(chromStart/1e3, problem.i,
-                       showSelected=bases.per.problem,
-                       label=sprintf("%d problems mean size %.1f kb",
-                         problems, mean.bases/1e3)),
-                   data=prob.labels,
-                   hjust=0)+
-         geom_segment(aes(problemStart/1e3, problem.i,
-                          showSelected=bases.per.problem,
-                          clickSelects=problem.name,
-                          xend=problemEnd/1e3, yend=problem.i),
-                      size=5,
-                      data=step2.problems)+
-         scale_y_continuous("aligned read coverage",
-                            breaks=function(limits){
-                              floor(limits[2])
-                            })+
-         scale_linetype_manual("error type",
-                               limits=c("correct", 
-                                 "false negative",
-                                 "false positive"
-                                        ),
-                               values=c(correct=0,
-                                 "false negative"=3,
-                                 "false positive"=1))+
-         scale_x_continuous(paste("position on",
-                                  chrom,
-                                  "(kilo bases = kb)"))+
-         coord_cartesian(xlim=lim.vec)+
-         geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-                           fill=annotation),
-                       alpha=0.5,
-                       color="grey",
-                       data=regions)+
-         scale_fill_manual(values=ann.colors)+
-         theme_bw()+
-         theme_animint(width=width.pixels, height=facet.rows*100)+
-         theme(panel.margin=grid::unit(0, "cm"))+
-         facet_grid(sample.id ~ ., labeller=function(var, val){
-           sub("McGill0", "", sub(" ", "\n", val))
-         }, scales="free")+
-         geom_line(aes(base/1e3, count),
-                   data=some.counts,
-                   color="grey50"),
-
-       resError=ggplot()+
-         ylab("minimum percent incorrect regions")+
-         geom_tallrect(aes(xmin=bases.per.problem/dval2,
-                           xmax=bases.per.problem*dval2,
-                           clickSelects=bases.per.problem),
-                       alpha=0.5,
-                       data=res.error)+
-         scale_x_log10()+
-         geom_line(aes(bases.per.problem, errors/regions*100,
-                       color=chunks, size=chunks),
-                   data=data.frame(res.error, chunks="this"))+
-         geom_line(aes(bases.per.problem, errors/regions*100,
-                       color=chunks, size=chunks),
-                   data=data.frame(train.errors, chunks="all")),
-
-       modelSelection=ggplot(),
-       
-       title=chunk.dir,
-
-       first=first.selection.list)
-
 all.modelSelection <- do.call(rbind, modelSelection.by.problem)
 penalty.range <-
   with(all.modelSelection, c(min(max.log.lambda), max(min.log.lambda)))
 penalty.mid <- mean(penalty.range)
-for(problem.dot in names(modelSelection.by.problem)){
-  regions.dt <- regions.by.problem[[problem.dot]]
-  if(!is.null(regions.dt)){
-    prob.regions.names <-
-      c("bases.per.problem", "problem.i", "problem.name",
-        "chromStart", "chromEnd")
-    prob.regions <- unique(data.frame(regions.dt)[, prob.regions.names])
-    prob.regions$sample.id <- "problems"
-    a.regions <- 
-      aes_string(xmin="chromStart/1e3",
-                 xmax="chromEnd/1e3",
-                 linetype="status",
-                 showSelected=problem.dot,
+
+facet.rows <- length(counts.by.sample)+1
+dvec <- diff(log(res.error$bases.per.problem))
+dval <- exp(mean(dvec))
+dval2 <- (dval-1)/2 + 1
+
+cat("constructing data viz\n")
+print(system.time({
+  viz <-
+    list(coverage=ggplot()+
+           ggtitle("select problem")+
+           geom_text(aes(chromStart/1e3, problem.i,
+                         showSelected=bases.per.problem,
+                         label=sprintf("%d problems mean size %.1f kb",
+                           problems, mean.bases/1e3)),
+                     data=prob.labels,
+                     hjust=0)+
+           geom_segment(aes(problemStart/1e3, problem.i,
+                            showSelected=bases.per.problem,
+                            clickSelects=problem.name,
+                            xend=problemEnd/1e3, yend=problem.i),
+                        size=5,
+                        data=step2.problems)+
+           scale_y_continuous("aligned read coverage",
+                              breaks=function(limits){
+                                floor(limits[2])
+                              })+
+           scale_linetype_manual("error type",
+                                 limits=c("correct", 
+                                   "false negative",
+                                   "false positive"
+                                          ),
+                                 values=c(correct=0,
+                                   "false negative"=3,
+                                   "false positive"=1))+
+           scale_x_continuous(paste("position on",
+                                    chrom,
+                                    "(kilo bases = kb)"))+
+           coord_cartesian(xlim=lim.vec)+
+           geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                             fill=annotation),
+                         alpha=0.5,
+                         color="grey",
+                         data=regions)+
+           scale_fill_manual(values=ann.colors)+
+           theme_bw()+
+           theme_animint(width=width.pixels, height=facet.rows*100)+
+           theme(panel.margin=grid::unit(0, "cm"))+
+           facet_grid(sample.id ~ ., labeller=function(var, val){
+             sub("McGill0", "", sub(" ", "\n", val))
+           }, scales="free")+
+           geom_line(aes(base/1e3, count),
+                     data=some.counts,
+                     color="grey50"),
+
+         resError=ggplot()+
+           ggtitle("select problem size")+
+           ylab("minimum percent incorrect regions")+
+           geom_tallrect(aes(xmin=bases.per.problem/dval2,
+                             xmax=bases.per.problem*dval2,
+                             clickSelects=bases.per.problem),
+                         alpha=0.5,
+                         data=res.error)+
+           scale_x_log10()+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(res.error, chunks="this"))+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(train.errors, chunks="all")),
+
+         modelSelection=ggplot()+
+           ggtitle("select number of samples with 1 peak")+
+           ylab("")+
+           facet_grid(what ~ ., scales="free"),
+         
+         title=chunk.dir,
+
+         first=first.selection.list)
+
+  ## For every problem there is a selector (called problem.dot) for the
+  ## number of peaks in that problem. So in this for loop we add a few
+  ## layers with aes_string(clickSelects=problem.dot) or
+  ## aes_string(showSelected=problem.dot) to the coverage and
+  ## modelSelection plots.
+  for(problem.dot in names(modelSelection.by.problem)){
+    regions.dt <- regions.by.problem[[problem.dot]]
+    if(!is.null(regions.dt)){
+      prob.regions.names <-
+        c("bases.per.problem", "problem.i", "problem.name",
+          "chromStart", "chromEnd")
+      prob.regions <- unique(data.frame(regions.dt)[, prob.regions.names])
+      prob.regions$sample.id <- "problems"
+      a.regions <- 
+        aes_string(xmin="chromStart/1e3",
+                   xmax="chromEnd/1e3",
+                   linetype="status",
+                   showSelected=problem.dot,
+                   showSelected2="bases.per.problem")
+      viz$coverage <- viz$coverage+
+        geom_segment(aes(chromStart/1e3, problem.i,
+                         xend=chromEnd/1e3, yend=problem.i,
+                         showSelected=bases.per.problem,
+                         clickSelects=problem.name),
+                     data=prob.regions)+
+        geom_tallrect(a.regions, data=data.frame(regions.dt),
+                      fill=NA,
+                      color="black")
+    }
+    if(problem.dot %in% names(peaks.by.problem)){
+      peaks <- peaks.by.problem[[problem.dot]]
+      peaks[[problem.dot]] <- peaks$peaks
+      a.samples <-
+        aes_string("chromStart/1e3", "0",
+                   xend="chromEnd/1e3", yend="0",
+                   clickSelects="problem.name",
+                   showSelected=problem.dot,
+                   showSelected2="bases.per.problem")
+      prob.peaks.names <-
+        c("bases.per.problem", "problem.i", "problem.name",
+          "chromStart", "chromEnd", problem.dot)
+      prob.peaks <- unique(data.frame(peaks)[, prob.peaks.names])
+      prob.peaks$sample.id <- "problems"
+      a.problems <-
+        aes_string("chromStart/1e3", "problem.i",
+                   xend="chromEnd/1e3", yend="problem.i",
+                   clickSelects="problem.name",
+                   showSelected=problem.dot,
+                   showSelected2="bases.per.problem")
+      viz$coverage <- viz$coverage +
+        geom_segment(a.samples, data=peaks, size=7, color="deepskyblue")+
+        geom_segment(a.problems, data=prob.peaks, size=7, color="deepskyblue")
+    }
+    modelSelection.a <-
+      aes_string(xmin="min.log.lambda", 
+                 xmax="max.log.lambda", 
+                 clickSelects=problem.dot,
+                 showSelected="problem.name",
                  showSelected2="bases.per.problem")
-    viz$coverage <- viz$coverage+
-      geom_segment(aes(chromStart/1e3, problem.i,
-                       xend=chromEnd/1e3, yend=problem.i,
-                       showSelected=bases.per.problem,
-                       clickSelects=problem.name),
-                   data=prob.regions)+
-      geom_tallrect(a.regions, data=data.frame(regions.dt),
-                    fill=NA,
-                    color="black")
+    modelSelection.dt <- modelSelection.by.problem[[problem.dot]]
+    problem <-
+      modelSelection.dt[1, list(problem.name,
+                                bases.per.problem, problemStart, problemEnd)]
+    modelSelection.dt[[problem.dot]] <- modelSelection.dt$peaks
+    label.df <- 
+      data.table(problem, min.log.lambda=penalty.mid,
+                 peaks=max(all.modelSelection$peaks)+0.5)
+    if(any(!is.na(modelSelection.dt$errors))){
+      viz$modelSelection <- viz$modelSelection+
+        geom_segment(aes(min.log.lambda, as.integer(errors),
+                         xend=max.log.lambda, yend=as.integer(errors),
+                         showSelected=problem.name,
+                         showSelected2=bases.per.problem),
+                     data=data.frame(modelSelection.dt, what="errors"),
+                     size=5)
+    }      
+    viz$modelSelection <- viz$modelSelection+
+      geom_segment(aes(min.log.lambda, peaks,
+                       xend=max.log.lambda, yend=peaks,
+                       showSelected=problem.name,
+                       showSelected2=bases.per.problem),
+                   data=data.frame(modelSelection.dt, what="peaks"),
+                   size=5)+
+      geom_text(aes(min.log.lambda, peaks,
+                    showSelected=problem.name,
+                    showSelected2=bases.per.problem,
+                    label=sprintf("%.1f kb in problem %s",
+                      (problemEnd-problemStart)/1e3, problem.name)),
+                data=data.frame(label.df, what="peaks"))+
+      geom_tallrect(modelSelection.a, data=modelSelection.dt, alpha=0.5)
   }
-  if(problem.dot %in% names(peaks.by.problem)){
-    peaks <- peaks.by.problem[[problem.dot]]
-    peaks[[problem.dot]] <- peaks$peaks
-    a.samples <-
-      aes_string("chromStart/1e3", "0",
-                 xend="chromEnd/1e3", yend="0",
-                 clickSelects="problem.name",
-                 showSelected=problem.dot,
-                 showSelected2="bases.per.problem")
-    prob.peaks.names <-
-      c("bases.per.problem", "problem.i", "problem.name",
-        "chromStart", "chromEnd", problem.dot)
-    prob.peaks <- unique(data.frame(peaks)[, prob.peaks.names])
-    prob.peaks$sample.id <- "problems"
-    a.problems <-
-      aes_string("chromStart/1e3", "problem.i",
-                 xend="chromEnd/1e3", yend="problem.i",
-                 clickSelects="problem.name",
-                 showSelected=problem.dot,
-                 showSelected2="bases.per.problem")
-    viz$coverage <- viz$coverage +
-      geom_segment(a.samples, data=peaks, size=7, color="deepskyblue")+
-      geom_segment(a.problems, data=prob.peaks, size=7, color="deepskyblue")
-  }
-  a <- aes_string("min.log.lambda", "peaks",
-                  xend="max.log.lambda", yend="peaks",
-                  clickSelects=problem.dot,
-                  showSelected="problem.name",
-                  showSelected2="bases.per.problem")
-  dt <- modelSelection.by.problem[[problem.dot]]
-  problem <-
-    dt[1, list(problem.name, bases.per.problem, problemStart, problemEnd)]
-  dt[[problem.dot]] <- dt$peaks
-  label.df <- 
-    data.table(problem, min.log.lambda=penalty.mid, peaks=-0.5)
-  viz$modelSelection <- viz$modelSelection+
-    geom_segment(a, data=dt, size=5)+
-    geom_text(aes(min.log.lambda, peaks,
-                  showSelected=problem.name,
-                  showSelected2=bases.per.problem,
-                  label=sprintf("%.1f kb in problem %s",
-                    (problemEnd-problemStart)/1e3, problem.name)),
-              data=label.df)
-}
-stopifnot(length(first.selection.list) == length(viz$modelSelection$layers)/2+1)
+}))
+
 animint.dir <- file.path(chunk.dir, "figure-train-errors")
-animint2dir(viz, animint.dir)
+
+cat("compiling data viz\n")
+print(system.time({
+  animint2dir(viz, animint.dir)
+}))
 
