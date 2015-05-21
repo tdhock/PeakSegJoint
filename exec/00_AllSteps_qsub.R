@@ -34,13 +34,9 @@ Step1 <-
               mustWork=TRUE,
               package="PeakSegJoint")
 bedGraph.path.vec <- Sys.glob(file.path(data.dir, "*", "*.bedGraph"))
-Step1.list <- list()
-for(bedGraph.i in seq_along(bedGraph.path.vec)){
-  bedGraph.path <- bedGraph.path.vec[[bedGraph.i]]
-  Step1.list[[basename(bedGraph.path)]] <-
-    paste(Rscript, Step1, bedGraph.path)
-}
-cmd.list$Step1 <- do.call(c, Step1.list)
+cmd.list$Step1 <-
+  structure(paste(Rscript, Step1, bedGraph.path.vec),
+            names=basename(bedGraph.path.vec))
 
 Step2 <-
   system.file(file.path("exec", "Step2-segment-labeled-chunks.R"),
@@ -48,15 +44,10 @@ Step2 <-
               package="PeakSegJoint")
 regions.RData.vec <-
   Sys.glob(file.path(data.dir, "PeakSegJoint-chunks", "*", "regions.RData"))
-Step2.list <- list()
-for(chunk.i in seq_along(regions.RData.vec)){
-  regions.RData <- regions.RData.vec[[chunk.i]]
-  chunk.dir <- dirname(regions.RData)
-  chunk.str <- paste0("chunk", basename(chunk.dir))
-  Step2.list[[chunk.str]] <-
-    paste(Rscript, Step2, chunk.dir)
-}
-cmd.list$Step2 <- do.call(c, Step2.list)
+chunk.dir.vec <- dirname(regions.RData.vec)
+cmd.list$Step2 <-
+  structure(paste(Rscript, Step2, chunk.dir.vec),
+            names=paste0("chunk", basename(chunk.dir.vec)))
 
 Step3 <- 
   system.file(file.path("exec", "Step3-training.R"),
@@ -65,6 +56,14 @@ Step3 <-
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
 cmd.list$Step3 <-
   c(training=paste(Rscript, Step3, chunks.dir))
+
+Step4v <-
+  system.file(file.path("exec", "Step4v-viz-train-errors.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+cmd.list$Step4 <-
+  structure(paste(Rscript, Step4v, chunk.dir.vec),
+            names=paste0("chunk", basename(chunk.dir.vec), "viz"))
 
 qsub <- "echo 1 && bash"
 qsub <- "qsub"
@@ -107,6 +106,8 @@ for(step.name in names(cmd.list)){
         cmd.name, " ",
         "submitted as job ",
         qsub.id, "\n", sep="")
-    depend.list[[cmd.name]] <- qsub.id
+    if(!grepl("viz", cmd.name)){
+      depend.list[[cmd.name]] <- qsub.id
+    }
   }
 }
