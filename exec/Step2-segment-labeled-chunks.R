@@ -30,6 +30,16 @@ if(!is.finite(ppn))ppn <- 2
 options(mc.cores=ppn)
 print(options("mc.cores"))
 
+my.mclapply <- function(...){
+  result.list <- mclapply(...)
+  is.error <- sapply(result.list, inherits, "try-error")
+  if(any(is.error)){
+    print(result.list[is.error])
+    stop("errors in mclapply")
+  }
+  result.list
+}
+
 chunk.dir <- argv[1]
 chunk.id <- basename(chunk.dir)
 
@@ -70,7 +80,7 @@ Step1Problem <- function(problem.i){
     data.table(problem, t(peak.vec))
   }
 }
-step1.results.list <- mclapply(1:nrow(step1.problems.dt), Step1Problem)
+step1.results.list <- my.mclapply(1:nrow(step1.problems.dt), Step1Problem)
 step1.results <- do.call(rbind, step1.results.list)
 setkey(step1.results, chromStart, chromEnd)
 
@@ -209,7 +219,7 @@ Step1Step2 <- function(res.str){
   list(problems=problems.dt,
        regions=regions.by.problem)
 }
-step2.data.list <- mclapply(names(step1.by.res), Step1Step2)
+step2.data.list <- my.mclapply(names(step1.by.res), Step1Step2)
 regions.by.problem <-
   do.call(c, lapply(step2.data.list, "[[", "regions"))
 step2.problems <-
@@ -254,7 +264,7 @@ SegmentStep2 <- function(row.i){
   })
   info
 }
-step2.model.list <- mclapply(1:nrow(step2.problems), SegmentStep2)
+step2.model.list <- my.mclapply(1:nrow(step2.problems), SegmentStep2)
 names(step2.model.list) <- step2.problems$problem.name
 
 setkey(step2.problems, problem.name)
@@ -274,7 +284,7 @@ ProblemError <- function(problem.name){
   list(problem=prob.err.list,
        peaks=pred.peaks)
 }
-step2.error.list <- mclapply(names(regions.by.problem), ProblemError)
+step2.error.list <- my.mclapply(names(regions.by.problem), ProblemError)
 names(step2.error.list) <- names(regions.by.problem)
 
 ResError <- function(res.str){
@@ -300,7 +310,7 @@ ResError <- function(res.str){
                regions=length(fp))
   })
 }
-res.error.list <- mclapply(names(step2.data.list), ResError)
+res.error.list <- my.mclapply(names(step2.data.list), ResError)
 res.error <- do.call(rbind, res.error.list)
 print(res.error)
 
