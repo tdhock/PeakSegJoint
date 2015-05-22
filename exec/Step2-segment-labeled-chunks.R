@@ -272,17 +272,17 @@ ProblemError <- function(problem.name){
   problem <- step2.problems[problem.name]
   problem.regions <- regions.by.problem[[problem.name]]
   converted <- step2.model.list[[problem.name]]
-  pred.peaks <- if(!is.null(converted)){
+  if(!is.null(converted)){
     prob.err.list <- PeakSegJointError(converted, problem.regions)
     best.models <-
       subset(prob.err.list$modelSelection, errors==min(errors))
     peaks.num <- min(best.models$peaks)
-    if(peaks.num > 0){
+    pred.peaks <- if(peaks.num > 0){
       subset(converted$peaks, peaks == peaks.num)
     }
+    list(problem=prob.err.list,
+         peaks=pred.peaks)
   }
-  list(problem=prob.err.list,
-       peaks=pred.peaks)
 }
 step2.error.list <- my.mclapply(names(regions.by.problem), ProblemError)
 names(step2.error.list) <- names(regions.by.problem)
