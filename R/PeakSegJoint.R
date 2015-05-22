@@ -177,7 +177,7 @@ PeakSegJointSeveral <- structure(function
     list(several=PeakSegJointSeveral(H3K4me3.TDH.other.chunk8, bf.vec))
   for(bf in bf.vec){
     fit.list[[paste(bf)]] <-
-      PeakSegJointHeuristic(H3K4me3.TDH.other.chunk8, bf)
+      PeakSegJointHeuristicStep2(H3K4me3.TDH.other.chunk8, bf)
   }
   loss.list <- list()
   segs.list <- list()

@@ -10,7 +10,7 @@ squared hinge loss]].
   install.packages("devtools")
   devtools::install_github("tdhock/PeakSegJoint")
   library(PeakSegJoint)
-  example(PeakSegJointHeuristic) #segmentation algo.
-  example(largestContinuousMinimum)
+  example(PeakSegJointSeveral) #segmentation algo.
+  example(PeakSegJointError) #TODO
   example(IntervalRegressionProblems) #fista interval regression algo.
 #+END_SRC
