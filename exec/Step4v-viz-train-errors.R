@@ -1,7 +1,7 @@
 library(animint)
 require(data.table)
 
-argv <- "~/exampleData/PeakSegJoint-chunks/2"
+argv <- "~/exampleData/PeakSegJoint-chunks/1"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -115,7 +115,7 @@ for(res.str in names(step2.data.list)){
         regions.by.peaks <- list()
         for(peaks.str in names(error$problem$error.regions)){
           regions.df <- error$problem$error.regions[[peaks.str]]
-          regions.df[[problem.dot]] <- as.integer(peaks.str)
+          regions.df$peaks <- as.integer(peaks.str)
           regions.by.peaks[[peaks.str]] <-
             data.table(problem, regions.df)
         }
@@ -135,7 +135,17 @@ prob.labels <- do.call(rbind, prob.labels.by.res)
 prob.labels$problem.i <- max(prob.labels$problems)
 prob.labels$chromStart <- limits$chromStart
 
+## prob.regions are the black segments that show which regions are
+## mapped to which segmentation problems.
+all.regions <- do.call(rbind, regions.by.problem)
+prob.regions.names <-
+  c("bases.per.problem", "problem.i", "problem.name",
+    "chromStart", "chromEnd")
+prob.regions <- unique(data.frame(all.regions)[, prob.regions.names])
+prob.regions$sample.id <- "problems"
+
 all.modelSelection <- do.call(rbind, modelSelection.by.problem)
+modelSelection.errors <- all.modelSelection[!is.na(errors), ]
 penalty.range <-
   with(all.modelSelection, c(min(max.log.lambda), max(min.log.lambda)))
 penalty.mid <- mean(penalty.range)
@@ -144,11 +154,28 @@ facet.rows <- length(counts.by.sample)+1
 dvec <- diff(log(res.error$bases.per.problem))
 dval <- exp(mean(dvec))
 dval2 <- (dval-1)/2 + 1
+res.error$min.bases.per.problem <- res.error$bases.per.problem/dval2
+res.error$max.bases.per.problem <- res.error$bases.per.problem*dval2
+
+modelSelection.labels <-
+  unique(all.modelSelection[, {
+    list(problem.name=problem.name,
+         bases.per.problem=bases.per.problem,
+         problemStart=problemStart,
+         problemEnd=problemEnd,
+         min.log.lambda=penalty.mid,
+         peaks=max(peaks)+0.5)
+  }])
 
 cat("constructing data viz\n")
 print(system.time({
   viz <-
     list(coverage=ggplot()+
+           geom_segment(aes(chromStart/1e3, problem.i,
+                            xend=chromEnd/1e3, yend=problem.i,
+                            showSelected=bases.per.problem,
+                            clickSelects=problem.name),
+                        data=prob.regions)+
            ggtitle("select problem")+
            geom_text(aes(chromStart/1e3, problem.i,
                          showSelected=bases.per.problem,
@@ -197,8 +224,8 @@ print(system.time({
          resError=ggplot()+
            ggtitle("select problem size")+
            ylab("minimum percent incorrect regions")+
-           geom_tallrect(aes(xmin=bases.per.problem/dval2,
-                             xmax=bases.per.problem*dval2,
+           geom_tallrect(aes(xmin=min.bases.per.problem,
+                             xmax=max.bases.per.problem,
                              clickSelects=bases.per.problem),
                          alpha=0.5,
                          data=res.error)+
@@ -211,6 +238,24 @@ print(system.time({
                      data=data.frame(train.errors, chunks="all")),
 
          modelSelection=ggplot()+
+           geom_segment(aes(min.log.lambda, peaks,
+                            xend=max.log.lambda, yend=peaks,
+                            showSelected=problem.name,
+                            showSelected2=bases.per.problem),
+                        data=data.frame(all.modelSelection, what="peaks"),
+                        size=5)+
+           geom_text(aes(min.log.lambda, peaks,
+                         showSelected=problem.name,
+                         showSelected2=bases.per.problem,
+                         label=sprintf("%.1f kb in problem %s",
+                           (problemEnd-problemStart)/1e3, problem.name)),
+                     data=data.frame(modelSelection.labels, what="peaks"))+
+           geom_segment(aes(min.log.lambda, as.integer(errors),
+                            xend=max.log.lambda, yend=as.integer(errors),
+                            showSelected=problem.name,
+                            showSelected2=bases.per.problem),
+                        data=data.frame(modelSelection.errors, what="errors"),
+                        size=5)+
            ggtitle("select number of samples with 1 peak")+
            ylab("")+
            facet_grid(what ~ ., scales="free"),
@@ -226,12 +271,8 @@ print(system.time({
   ## modelSelection plots.
   for(problem.dot in names(modelSelection.by.problem)){
     regions.dt <- regions.by.problem[[problem.dot]]
+    regions.dt[[problem.dot]] <- regions.dt$peaks
     if(!is.null(regions.dt)){
-      prob.regions.names <-
-        c("bases.per.problem", "problem.i", "problem.name",
-          "chromStart", "chromEnd")
-      prob.regions <- unique(data.frame(regions.dt)[, prob.regions.names])
-      prob.regions$sample.id <- "problems"
       a.regions <- 
         aes_string(xmin="chromStart/1e3",
                    xmax="chromEnd/1e3",
@@ -239,11 +280,6 @@ print(system.time({
                    showSelected=problem.dot,
                    showSelected2="bases.per.problem")
       viz$coverage <- viz$coverage+
-        geom_segment(aes(chromStart/1e3, problem.i,
-                         xend=chromEnd/1e3, yend=problem.i,
-                         showSelected=bases.per.problem,
-                         clickSelects=problem.name),
-                     data=prob.regions)+
         geom_tallrect(a.regions, data=data.frame(regions.dt),
                       fill=NA,
                       color="black")
@@ -279,35 +315,8 @@ print(system.time({
                  showSelected="problem.name",
                  showSelected2="bases.per.problem")
     modelSelection.dt <- modelSelection.by.problem[[problem.dot]]
-    problem <-
-      modelSelection.dt[1, list(problem.name,
-                                bases.per.problem, problemStart, problemEnd)]
     modelSelection.dt[[problem.dot]] <- modelSelection.dt$peaks
-    label.df <- 
-      data.table(problem, min.log.lambda=penalty.mid,
-                 peaks=max(all.modelSelection$peaks)+0.5)
-    if(any(!is.na(modelSelection.dt$errors))){
-      viz$modelSelection <- viz$modelSelection+
-        geom_segment(aes(min.log.lambda, as.integer(errors),
-                         xend=max.log.lambda, yend=as.integer(errors),
-                         showSelected=problem.name,
-                         showSelected2=bases.per.problem),
-                     data=data.frame(modelSelection.dt, what="errors"),
-                     size=5)
-    }      
     viz$modelSelection <- viz$modelSelection+
-      geom_segment(aes(min.log.lambda, peaks,
-                       xend=max.log.lambda, yend=peaks,
-                       showSelected=problem.name,
-                       showSelected2=bases.per.problem),
-                   data=data.frame(modelSelection.dt, what="peaks"),
-                   size=5)+
-      geom_text(aes(min.log.lambda, peaks,
-                    showSelected=problem.name,
-                    showSelected2=bases.per.problem,
-                    label=sprintf("%.1f kb in problem %s",
-                      (problemEnd-problemStart)/1e3, problem.name)),
-                data=data.frame(label.df, what="peaks"))+
       geom_tallrect(modelSelection.a, data=modelSelection.dt, alpha=0.5)
   }
 }))
