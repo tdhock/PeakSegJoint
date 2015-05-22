@@ -392,8 +392,21 @@ ConvertModelList <- function
       }
     }
   }
-  list(peaks=do.call(rbind, peak.list),
-       segments=do.call(rbind, seg.list),
-       loss=do.call(rbind, loss.list))
-### List of peaks, segments, loss.
+  info <- 
+    list(peaks=do.call(rbind, peak.list),
+         segments=do.call(rbind, seg.list),
+         loss=do.call(rbind, loss.list))
+  info$loss$cummin <- cummin(info$loss$loss)
+  some.loss <- subset(info$loss, loss == cummin)
+  ## what to do when models have the same loss but different number of
+  ## peaks? keep the model with min peaks:
+  cummin.reduced <- c(TRUE, diff(some.loss$cummin) < 0)
+  ## keep the model with max peaks:
+  cummin.reduced <- rev(c(TRUE, diff(rev(some.loss$cummin)) > 0))
+  decreasing.loss <- some.loss[cummin.reduced, ]
+  info$modelSelection <- with(decreasing.loss, {
+    exactModelSelection(loss, peaks, peaks)
+  })
+  info
+### List of peaks, segments, loss, modelSelection.
 }  

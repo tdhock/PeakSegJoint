@@ -46,10 +46,7 @@ PeakSegJointError <- function
     })
   }#peaks.str
   error.totals <- do.call(rbind, error.by.peaks)
-  loss <- converted$loss
-  loss$cummin <- cummin(loss$loss)
-  some.loss <- subset(loss, loss == cummin)
-  exact <- with(some.loss, exactModelSelection(loss, peaks, peaks))
+  exact <- converted$modelSelection
   exact$errors <- error.totals[paste(exact$peaks), "errors"]
   indices <- with(exact, {
     largestContinuousMinimum(errors, max.log.lambda-min.log.lambda)
