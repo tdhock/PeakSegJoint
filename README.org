@@ -14,3 +14,30 @@ squared hinge loss]].
   example(PeakSegJointError) #TODO
   example(IntervalRegressionProblems) #fista interval regression algo.
 #+END_SRC
+
+** Run PeakSegJoint on a cluster with qsub
+
+First, plot several data sets (in [[%20https://www.broadinstitute.org/igv/][IGV]] or on [[http://genome.ucsc.edu/cgi-bin/hgGateway][UCSC]]) and visually
+identify several regions with and without peaks, saving those labels
+to a file. [[https://github.com/tdhock/PeakSegDP/tree/master/inst/exampleData/manually_annotated_region_labels.txt][Example]]: there are two samples each for two cell types,
+bcell and tcell. Note about file formats:
+- for the labels file, use only [[http://cbio.ensmp.fr/~thocking/chip-seq-chunk-db/][peakStart, peakEnd, noPeaks, and peaks]]
+  labels.
+- for the .bedGraph files, use [[http://bedtools.readthedocs.org/en/latest/content/tools/genomecov.html#bga-reporting-genome-coverage-for-all-positions-in-bedgraph-format][coverageBed -bga]] to get a file that has
+  lines for 0 aligned read coverage.
+
+Then, put that label file in the same directory as several
+subdirectories that have names that match the labels file. [[https://github.com/tdhock/PeakSegDP/tree/master/inst/exampleData/][Example]]:
+the tcell subdirectory contains two bedGraph files, and the bcell
+subdirectory contains two bedGraph files.
+
+Then, download and run the pipeline R script, which requires a cluster
+with qsub.
+
+#+BEGIN_SRC shell
+wget https://raw.githubusercontent.com/tdhock/PeakSegJoint/master/exec/00_AllSteps_qsub.R
+## Edit to reflect your cluster configuration!
+Rscript 00_AllSteps_qsub.R path/to/labels.txt
+#+END_SRC
+
+Otherwise, run the [[file:exec/][steps]] individually.
