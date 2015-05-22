@@ -279,6 +279,7 @@ print(system.time({
                                  linetype="status",
                                  showSelected=problem.dot,
                                  showSelected2="bases.per.problem"),
+                      chunk_vars=character(),
                       data=data.frame(regions.dt),
                       fill=NA,
                       color="black")
@@ -297,12 +298,14 @@ print(system.time({
                                 clickSelects="problem.name",
                                 showSelected=problem.dot,
                                 showSelected2="bases.per.problem"),
+                     chunk_vars=character(),
                      data=peaks, size=7, color="deepskyblue")+
         geom_segment(aes_string("chromStart/1e3", "problem.i",
                                 xend="chromEnd/1e3", yend="problem.i",
                                 clickSelects="problem.name",
                                 showSelected=problem.dot,
                                 showSelected2="bases.per.problem"),
+                     chunk_vars=character(),
                      data=prob.peaks, size=7, color="deepskyblue")
     }
     modelSelection.dt <- modelSelection.by.problem[[problem.dot]]
@@ -313,6 +316,7 @@ print(system.time({
                                clickSelects=problem.dot,
                                showSelected="problem.name",
                                showSelected2="bases.per.problem"),
+                    chunk_vars=character(),
                     data=modelSelection.dt, alpha=0.5)
   }
 }))
