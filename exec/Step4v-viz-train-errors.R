@@ -273,51 +273,47 @@ print(system.time({
     regions.dt <- regions.by.problem[[problem.dot]]
     regions.dt[[problem.dot]] <- regions.dt$peaks
     if(!is.null(regions.dt)){
-      a.regions <- 
-        aes_string(xmin="chromStart/1e3",
-                   xmax="chromEnd/1e3",
-                   linetype="status",
-                   showSelected=problem.dot,
-                   showSelected2="bases.per.problem")
       viz$coverage <- viz$coverage+
-        geom_tallrect(a.regions, data=data.frame(regions.dt),
+        geom_tallrect(aes_string(xmin="chromStart/1e3",
+                                 xmax="chromEnd/1e3",
+                                 linetype="status",
+                                 showSelected=problem.dot,
+                                 showSelected2="bases.per.problem"),
+                      data=data.frame(regions.dt),
                       fill=NA,
                       color="black")
     }
     if(problem.dot %in% names(peaks.by.problem)){
       peaks <- peaks.by.problem[[problem.dot]]
       peaks[[problem.dot]] <- peaks$peaks
-      a.samples <-
-        aes_string("chromStart/1e3", "0",
-                   xend="chromEnd/1e3", yend="0",
-                   clickSelects="problem.name",
-                   showSelected=problem.dot,
-                   showSelected2="bases.per.problem")
       prob.peaks.names <-
         c("bases.per.problem", "problem.i", "problem.name",
           "chromStart", "chromEnd", problem.dot)
       prob.peaks <- unique(data.frame(peaks)[, prob.peaks.names])
       prob.peaks$sample.id <- "problems"
-      a.problems <-
-        aes_string("chromStart/1e3", "problem.i",
-                   xend="chromEnd/1e3", yend="problem.i",
-                   clickSelects="problem.name",
-                   showSelected=problem.dot,
-                   showSelected2="bases.per.problem")
       viz$coverage <- viz$coverage +
-        geom_segment(a.samples, data=peaks, size=7, color="deepskyblue")+
-        geom_segment(a.problems, data=prob.peaks, size=7, color="deepskyblue")
+        geom_segment(aes_string("chromStart/1e3", "0",
+                                xend="chromEnd/1e3", yend="0",
+                                clickSelects="problem.name",
+                                showSelected=problem.dot,
+                                showSelected2="bases.per.problem"),
+                     data=peaks, size=7, color="deepskyblue")+
+        geom_segment(aes_string("chromStart/1e3", "problem.i",
+                                xend="chromEnd/1e3", yend="problem.i",
+                                clickSelects="problem.name",
+                                showSelected=problem.dot,
+                                showSelected2="bases.per.problem"),
+                     data=prob.peaks, size=7, color="deepskyblue")
     }
-    modelSelection.a <-
-      aes_string(xmin="min.log.lambda", 
-                 xmax="max.log.lambda", 
-                 clickSelects=problem.dot,
-                 showSelected="problem.name",
-                 showSelected2="bases.per.problem")
     modelSelection.dt <- modelSelection.by.problem[[problem.dot]]
     modelSelection.dt[[problem.dot]] <- modelSelection.dt$peaks
     viz$modelSelection <- viz$modelSelection+
-      geom_tallrect(modelSelection.a, data=modelSelection.dt, alpha=0.5)
+      geom_tallrect(aes_string(xmin="min.log.lambda", 
+                               xmax="max.log.lambda", 
+                               clickSelects=problem.dot,
+                               showSelected="problem.name",
+                               showSelected2="bases.per.problem"),
+                    data=modelSelection.dt, alpha=0.5)
   }
 }))
 
