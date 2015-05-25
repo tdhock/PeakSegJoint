@@ -346,15 +346,24 @@ ConvertModelList <- function
  ){
   seg1.chromStart <- model.list$data_start_end[1]
   seg3.chromEnd <- model.list$data_start_end[2]
+  bases <- seg3.chromEnd - seg1.chromStart
   seg.list <- list()
   loss.list <- list()
   peak.list <- list()
+  n.samples <- length(model.list$sample.id)
   for(model.i in seq_along(model.list$models)){
     model <- model.list$models[[model.i]]
     peaks <- model.i-1
     peaks.str <- paste(peaks)
     loss <- model$loss
-    loss.list[[peaks.str]] <- data.frame(peaks, loss)
+    segments.vec <- rep(1, n.samples)
+    if(0 < peaks){
+      segments.vec[1:peaks] <- 3
+    }
+    under.sqrt <- 1.1 + log(bases/segments.vec)
+    in.square <- 1 + 4 * sqrt(under.sqrt)
+    model.complexity <- sum(segments.vec * in.square * in.square)
+    loss.list[[peaks.str]] <- data.frame(peaks, loss, model.complexity)
     if(is.finite(loss)){
       sample.i.vec <- model$samples_with_peaks_vec + 1
       has.peak <- seq_along(model.list$sample.id) %in% sample.i.vec
@@ -405,7 +414,7 @@ ConvertModelList <- function
   cummin.reduced <- rev(c(TRUE, diff(rev(some.loss$cummin)) > 0))
   decreasing.loss <- some.loss[cummin.reduced, ]
   info$modelSelection <- with(decreasing.loss, {
-    exactModelSelection(loss, peaks, peaks)
+    exactModelSelection(loss, model.complexity, peaks)
   })
   info
 ### List of peaks, segments, loss, modelSelection.
