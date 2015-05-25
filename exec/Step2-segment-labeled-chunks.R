@@ -255,13 +255,6 @@ SegmentStep2 <- function(row.i){
   }
   info <- ConvertModelList(fit)
   info$features <- featureMatrix(profile.list)
-  loss <- info$loss
-  loss$cummin <- cummin(loss$loss)
-  cummin.reduced <- c(TRUE, diff(loss$cummin) < 0)
-  some.loss <- loss[cummin.reduced, ]
-  info$modelSelection <- with(some.loss, {
-    exactModelSelection(loss, peaks, peaks)
-  })
   info
 }
 step2.model.list <- my.mclapply(1:nrow(step2.problems), SegmentStep2)
