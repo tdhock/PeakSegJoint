@@ -310,7 +310,11 @@ IntervalRegressionMatrix <- function
   stopping.crit <- threshold
   last.iterate <- this.iterate <- y <- initial.param.vec
   this.t <- 1
-  while(stopping.crit >= threshold){
+  while({
+    ##browser(expr=is.na(stopping.crit))
+    ##str(stopping.crit)
+    stopping.crit >= threshold
+  }){
     ## here we implement the FISTA method with constant step size, as
     ## described by in the Beck and Tebolle paper.
     last.iterate <- this.iterate
@@ -337,6 +341,14 @@ IntervalRegressionMatrix <- function
       Lipschitz <- Lipschitz * 1.5
       iterate.count <- 1
       cat(max.iterations," iterations, increasing Lipschitz.\n")
+    }
+    if(any(!is.finite(this.iterate))){
+      cat("infinite parameter, restarting with bigger Lipschitz.\n")
+      iterate.count <- 1
+      stopping.crit <- threshold
+      last.iterate <- this.iterate <- y <- initial.param.vec
+      this.t <- 1
+      Lipschitz <- Lipschitz * 1.5
     }
   }
   this.iterate
