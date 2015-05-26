@@ -7,8 +7,8 @@ IntervalRegressionProblems <- structure(function
 ### coefficients. We first scale the input features and then
 ### repeatedly call IntervalRegressionMatrix, using warm restarts.
 (problem.list,
-### List of problems with features (numeric matrix) and target
-### (numeric vector of length 2).
+### List of problems with features (numeric matrix), target (numeric
+### vector of length 2), and optionally weight (numeric length 1).
  initial.regularization=0.001,
 ### Initial regularization parameter.
  factor.regularization=1.5,
@@ -26,7 +26,7 @@ IntervalRegressionProblems <- structure(function
   stopifnot(is.numeric(factor.regularization))
   stopifnot(length(factor.regularization) == 1)
   stopifnot(factor.regularization > 1)
-  
+  stopifnot(length(problem.list) > 0)
   n.input.features <- ncol(problem.list[[1]]$features)
 
   featureSum.list <- list()
@@ -92,31 +92,42 @@ IntervalRegressionProblems <- structure(function
 
   regularization <- initial.regularization
   n.features <- ncol(norm.featureSum.mat)
-  weight.vec <- rep(0, n.features)
+  param.vec <- rep(0, n.features)
   n.nonzero <- n.features
+
+  weight.vec <- sapply(problem.list[nontrivial.i.vec], function(p){
+    if(is.numeric(p$weight)){
+      p$weight[1]
+    }else{
+      1
+    }
+  })
+  total.weight <- sum(weight.vec)
+  norm.weight.vec <- weight.vec/total.weight
   
-  weight.vec.list <- list()
+  param.vec.list <- list()
   regularization.vec.list <- list()
   while(n.nonzero > 1){
-    weight.vec <-
+    param.vec <-
       IntervalRegressionMatrix(norm.featureSum.mat, targets.mat,
-                               weight.vec,
+                               param.vec,
                                regularization,
                                verbose=verbose,
+                               weight.vec=norm.weight.vec,
                                ...)
-    n.zero <- sum(weight.vec == 0)
-    n.nonzero <- sum(weight.vec != 0)
-    l1.norm <- sum(abs(weight.vec[-1]))
+    n.zero <- sum(param.vec == 0)
+    n.nonzero <- sum(param.vec != 0)
+    l1.norm <- sum(abs(param.vec[-1]))
     if(verbose >= 1){
       cat(sprintf("regularization=%8.4f L1norm=%8.4f zeros=%d\n",
                   regularization, l1.norm, n.zero))
     }
-    weight.vec.list[[paste(regularization)]] <- weight.vec
+    param.vec.list[[paste(regularization)]] <- param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
     regularization <- regularization * factor.regularization
   }
-  weight.mat <- do.call(cbind, weight.vec.list)
-  list(weight.mat=weight.mat,
+  param.mat <- do.call(cbind, param.vec.list)
+  list(param.mat=param.mat,
        regularization.vec=do.call(c, regularization.vec.list),
        mean.vec=mean.vec,
        sd.vec=sd.vec,
@@ -131,12 +142,12 @@ IntervalRegressionProblems <- structure(function
          sd.mat <- matrix(sd.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
          norm.mat <- (raw.mat-mean.mat)/sd.mat
          intercept.mat <- cbind("(Intercept)"=1, norm.mat)
-         colSums(intercept.mat %*% weight.mat)
+         colSums(intercept.mat %*% param.mat)
        })
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a predicted log penalty
 ### value. The mean.vec and sd.vec were used for scaling the training
-### data matrices. The weight.mat is the n.features * n.regularization
+### data matrices. The param.mat is the n.features * n.regularization
 ### numeric matrix of optimal coefficients.
 }, ex=function(){
   library(PeakSegJoint)
@@ -172,7 +183,7 @@ IntervalRegressionProblems <- structure(function
   min.validation <- 
     subset(set.error.list$validation,
            percent.error==min(percent.error))
-  best.models <- fit$weight.mat[, rownames(min.validation)]
+  best.models <- fit$param.mat[, rownames(min.validation)]
   best.nonzero <- best.models[apply(best.models!=0, 1, any), ]
   print(best.nonzero)
   ##TODO: lasso plot, tallrect for optimal coef range?
@@ -198,7 +209,7 @@ IntervalRegressionMatrix <- function
 ### column/feature should be all ones and will not be regularized.
  targets,
 ### Numeric target matrix (problems x 2).
- initial.weight.vec,
+ initial.param.vec,
 ### initial guess for weight vector (features).
  regularization,
 ### Degree of L1-regularization.
@@ -208,6 +219,8 @@ IntervalRegressionMatrix <- function
  max.iterations=1e4,
 ### Error if the algorithm has not found an optimal solution after
 ### this many iterations.
+ weight.vec=NULL,
+### A numeric vector of weights for each training example.
  Lipschitz=NULL,
 ### A numeric scalar or NULL, which means to compute Lipschitz as the
 ### mean of the squared L2-norms of the rows of the feature matrix.
@@ -223,8 +236,14 @@ IntervalRegressionMatrix <- function
   stopifnot(nrow(targets) == n.problems)
   stopifnot(ncol(targets) == 2)
 
+  if(is.null(weight.vec)){
+    weight.vec <- rep(1, n.problems)
+  }
+  stopifnot(is.numeric(weight.vec))
+  stopifnot(length(weight.vec) == n.problems)
+
   if(is.null(Lipschitz)){
-    Lipschitz <- mean(rowSums(features * features))
+    Lipschitz <- mean(rowSums(features * features) * weight.vec)
   }
   stopifnot(is.numeric(Lipschitz))
   stopifnot(length(Lipschitz) == 1)
@@ -235,8 +254,8 @@ IntervalRegressionMatrix <- function
   stopifnot(is.numeric(threshold))
   stopifnot(length(threshold) == 1)
 
-  stopifnot(is.numeric(initial.weight.vec))
-  stopifnot(length(initial.weight.vec) == n.features)
+  stopifnot(is.numeric(initial.param.vec))
+  stopifnot(length(initial.param.vec) == n.features)
 
   ## Return 0 for a negative number and the same value otherwise.
   positive.part <- function(x){
@@ -252,13 +271,15 @@ IntervalRegressionMatrix <- function
     linear.predictor <- as.numeric(features %*% x)
     left.term <- squared.hinge(linear.predictor-targets[,1])
     right.term <- squared.hinge(targets[,2]-linear.predictor)
-    mean(left.term+right.term)
+    both.terms <- left.term+right.term
+    weighted.loss.vec <- both.terms * weight.vec
+    mean(weighted.loss.vec)
   }
   calc.grad <- function(x){
     linear.predictor <- as.numeric(features %*% x)
     left.term <- squared.hinge.deriv(linear.predictor-targets[,1])
     right.term <- squared.hinge.deriv(targets[,2]-linear.predictor)
-    full.grad <- features * (left.term-right.term)
+    full.grad <- features * (left.term-right.term) * weight.vec
     colSums(full.grad)/nrow(full.grad)
   }    
   calc.penalty <- function(x){
@@ -287,7 +308,7 @@ IntervalRegressionMatrix <- function
 
   iterate.count <- 1
   stopping.crit <- threshold
-  last.iterate <- this.iterate <- y <- initial.weight.vec
+  last.iterate <- this.iterate <- y <- initial.param.vec
   this.t <- 1
   while(stopping.crit >= threshold){
     ## here we implement the FISTA method with constant step size, as
