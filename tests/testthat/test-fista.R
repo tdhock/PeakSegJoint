@@ -75,8 +75,8 @@ test_that("coefficients satisfy subdifferential optimality", {
   expect_true(all(abs(computed.diff-expected.diff) < 1e-10))
   for(regularization.i in seq_along(fit$regularization.vec)){
     regularization <- fit$regularization.vec[[regularization.i]]
-    weight.vec <- fit$weight.mat[, regularization.i]
-    crit <- get.crit(weight.vec)
+    param.vec <- fit$param.mat[, regularization.i]
+    crit <- get.crit(param.vec)
     expect_that(crit, is_less_than(thresh))
   }
 })

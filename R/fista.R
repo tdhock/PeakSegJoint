@@ -103,7 +103,7 @@ IntervalRegressionProblems <- structure(function
     }
   })
   total.weight <- sum(weight.vec)
-  norm.weight.vec <- weight.vec/total.weight
+  norm.weight.vec <- weight.vec/total.weight * length(weight.vec)
   
   param.vec.list <- list()
   regularization.vec.list <- list()
