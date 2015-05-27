@@ -64,7 +64,13 @@ int binSum
     profile_i ++;
   }
   int count_until, bases, bin_add, profile_add;
-  int begin_count_after = bin_chromStart;
+  int begin_count_after;
+  int first_chromStart = profile_chromStart[profile_i];
+  if(bin_chromStart < first_chromStart){
+    begin_count_after = first_chromStart;
+  }else{
+    begin_count_after = bin_chromStart;
+  }
   int bin_end = bin_chromStart + bin_size;
   while(bin_i < n_bins && profile_i < n_profiles){
     // at this point there are two cases.
