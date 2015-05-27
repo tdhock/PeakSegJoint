@@ -9,7 +9,7 @@ plotting.}
   \item{model.list}{Value of PeakSegJointHeuristic(...).}
 }
 
-\value{List of peaks, segments, loss.}
+\value{List of peaks, segments, loss, modelSelection.}
 
 \author{Toby Dylan Hocking}
 

@@ -11,8 +11,8 @@ repeatedly call IntervalRegressionMatrix, using warm restarts.}
 \usage{IntervalRegressionProblems(problem.list, initial.regularization = 0.001, 
     factor.regularization = 1.5, verbose = 1, ...)}
 \arguments{
-  \item{problem.list}{List of problems with features (numeric matrix) and target
-(numeric vector of length 2).}
+  \item{problem.list}{List of problems with features (numeric matrix), target (numeric
+vector of length 2), and optionally weight (numeric length 1).}
   \item{initial.regularization}{Initial regularization parameter.}
   \item{factor.regularization}{Increase regularization by this factor after finding an optimal
 solution.}
@@ -23,7 +23,7 @@ solution.}
 \value{List representing fit model. You can do
 fit$predict(feature.matrix) to get a predicted log penalty
 value. The mean.vec and sd.vec were used for scaling the training
-data matrices. The weight.mat is the n.features * n.regularization
+data matrices. The param.mat is the n.features * n.regularization
 numeric matrix of optimal coefficients.}
 
 \author{Toby Dylan Hocking}
@@ -65,7 +65,7 @@ for(set.name in names(sets)){
 min.validation <- 
   subset(set.error.list$validation,
          percent.error==min(percent.error))
-best.models <- fit$weight.mat[, rownames(min.validation)]
+best.models <- fit$param.mat[, rownames(min.validation)]
 best.nonzero <- best.models[apply(best.models!=0, 1, any), ]
 print(best.nonzero)
 ##TODO: lasso plot, tallrect for optimal coef range?
