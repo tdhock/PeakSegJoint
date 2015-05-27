@@ -1,5 +1,17 @@
 context("binSum")
 
+test_that("binSum with negative chromStart", {
+  chromEnd <- 1:10
+  profile <- data.frame(chromStart=chromEnd-1L,
+                        chromEnd,
+                        count=1L)
+  bins <- binSum(profile,
+                 bin.chromStart=-1L,
+                 bin.size=3L,
+                 n.bins=5L)
+  expect_equal(bins$count, c(2, 3, 3, 2))
+})
+
 test_that("binSum 1bp with constant 1 profile", {
   profile <- data.frame(chromStart=0L,
                         chromEnd=10000L,
