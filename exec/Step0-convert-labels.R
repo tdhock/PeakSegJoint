@@ -1,5 +1,5 @@
-if(!require(data.table))
-  install.packages("data.table")
+library(data.table)
+library(PeakSegJoint)
 
 argv <-
   system.file(file.path("exampleData", "manually_annotated_region_labels.txt"),
@@ -180,36 +180,11 @@ for(chunk.str in names(regions.by.chunk)){
   problems.by.res <- list()
   for(bases.per.problem in bases.per.problem.vec){
     res.str <- paste(bases.per.problem)
-    problemSeq <- seq(0, max.chromEnd, by=bases.per.problem)
-    
-    ## mix small and big problems for step 1?
-    bigSize <- bases.per.problem*1.5
-    bigSeq <- seq(0, max.chromEnd, by=bigSize)
-    bigStart <- as.integer(sort(c(bigSeq, bigSeq + bases.per.problem)))
-    bigEnd <- bigStart + bigSize
-    smallEnd <- problemSeq + bases.per.problem
-    problemStart <- c(problemSeq, bigStart)
-    problemEnd <- c(smallEnd, bigEnd)
-    
-    ## overlapping problems of the same size?
-    overlap.count <- 3
-    overlap.list <- list()
-    for(overlap.i in 1:overlap.count){
-      offset <- bases.per.problem*(overlap.i-1)/overlap.count
-      overlap.list[[overlap.i]] <- problemSeq + offset
-    }
-    problemStart <-
-      as.integer(sort(do.call(c, overlap.list)))
-    problemEnd <- problemStart + bases.per.problem
-    
-    is.overlap <- min.chromStart < problemEnd &
-      problemStart < max.chromEnd
-    problem.name <- sprintf("%s:%d-%d", chrom, problemStart, problemEnd)
-    res.problems <- 
-      data.table(problem.name, 
-                 bases.per.problem, problemStart, problemEnd)[is.overlap,]
-    setkey(res.problems, problemStart, problemEnd)
-    problems.by.res[[res.str]] <- res.problems
+
+    chunk.problems <-
+      getProblems(chrom, min.chromStart, max.chromEnd, bases.per.problem)
+    setkey(chunk.problems, problemStart, problemEnd)
+    problems.by.res[[res.str]] <- chunk.problems
   }
 
   problems <- do.call(rbind, problems.by.res)

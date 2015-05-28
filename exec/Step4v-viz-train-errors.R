@@ -1,5 +1,5 @@
 library(animint)
-require(data.table)
+library(data.table)
 
 argv <- "~/exampleData/PeakSegJoint-chunks/1"
 

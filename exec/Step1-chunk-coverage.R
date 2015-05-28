@@ -1,5 +1,4 @@
-if(!require(data.table))
-  install.packages("data.table")
+library(data.table)
 
 ## Read one sample.bedGraph file and save the coverage profile for
 ## each labeled chunk.
@@ -23,6 +22,10 @@ bedGraph.file <- argv[1]
 coverage <- fread(bedGraph.file)
 setnames(coverage, c("chrom", "chromStart", "chromEnd", "count"))
 setkey(coverage, chrom, chromStart, chromEnd)
+chrom.ranges <-
+  coverage[, .(min.chromStart=min(chromStart),
+               max.chromEnd=max(chromEnd)),
+           by=chrom]
 
 bedGraph.base <- basename(bedGraph.file)
 RData.base <- sub("bedGraph$", "RData", bedGraph.base)
@@ -43,5 +46,5 @@ for(RData.path in RData.path.vec){
       sep="")
   out.dir <- dirname(out.RData)
   dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
-  save(counts, file=out.RData)
+  save(counts, chrom.ranges, file=out.RData)
 }

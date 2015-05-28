@@ -1,7 +1,7 @@
-require(data.table)
-require(PeakSegJoint)
-require(PeakError)
-require(parallel)
+library(data.table)
+library(PeakSegJoint)
+library(PeakError)
+library(parallel)
 
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
