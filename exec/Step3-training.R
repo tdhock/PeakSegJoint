@@ -150,8 +150,8 @@ max.rows.per.sample <- max.megabytes.per.sample * rows.per.megabyte
 max.bases.per.sample <- max.rows.per.sample * bases.per.row
 hg19.bases <- 3137161264
 bases.per.job <- as.integer(max.bases.per.sample)
-(estimated.jobs <- hg19.bases/bases.per.job)
-(problems.per.job <- bases.per.job/bases.per.problem)
+estimated.jobs <- hg19.bases/bases.per.job
+problems.per.job <- bases.per.job/bases.per.problem
 problems.by.chrom <- list()
 jobs.by.chrom <- list()
 for(chrom.i in 1:nrow(chrom.ranges)){
