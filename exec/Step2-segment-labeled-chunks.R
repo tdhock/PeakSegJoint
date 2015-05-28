@@ -68,16 +68,22 @@ Step1Problem <- function(problem.i){
     counts[! (chromEnd < problem$problemStart |
                 problem$problemEnd < chromStart), ]
   profile.list <- ProfileList(problem.counts)
-  fit <- PeakSegJointSeveral(profile.list)
-  models <- fit$models[-1]
-  loss.vec <- sapply(models, "[[", "loss")
-  is.feasible <- is.finite(loss.vec)
-  peak.mat <- sapply(models, "[[", "peak_start_end")
-  rownames(peak.mat) <- c("chromStart", "chromEnd")  
-  feasible.mat <- peak.mat[, is.feasible]
-  if(ncol(feasible.mat) > 0){
-    peak.vec <- feasible.mat[, ncol(feasible.mat)]
-    data.table(problem, t(peak.vec))
+  fit <- tryCatch({
+    PeakSegJointSeveral(profile.list)
+  }, error=function(e){
+    NULL
+  })
+  if(!is.null(fit)){
+    models <- fit$models[-1]
+    loss.vec <- sapply(models, "[[", "loss")
+    is.feasible <- is.finite(loss.vec)
+    peak.mat <- sapply(models, "[[", "peak_start_end")
+    rownames(peak.mat) <- c("chromStart", "chromEnd")  
+    feasible.mat <- peak.mat[, is.feasible]
+    if(ncol(feasible.mat) > 0){
+      peak.vec <- feasible.mat[, ncol(feasible.mat)]
+      data.table(problem, t(peak.vec))
+    }
   }
 }
 step1.results.list <- my.mclapply(1:nrow(step1.problems.dt), Step1Problem)
