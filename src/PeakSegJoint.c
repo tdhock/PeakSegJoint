@@ -56,6 +56,14 @@ int PeakSegJointHeuristicStep1(
     bases_per_bin *= bin_factor;
   }
   int n_bins = unfilled_bases / bases_per_bin;
+  /*
+    MaxBinSize() from line 1 of the JointZoom algorithm of the
+    PeakSegJoint paper returns the value of the C variable
+    bases_per_bin.
+
+    Little b in the text of the section that describes the JointZoom
+    algorithm is the C variable n_bins.
+  */
   if(unfilled_bases % bases_per_bin != 0){
     n_bins ++ ;
   }
@@ -155,6 +163,10 @@ int PeakSegJointHeuristicStep1(
   double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
   double *peak_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
+  /*
+    The for loops below implement the GridSearch() function mentioned
+    on line 2 of the JointZoom algorithm in the PeakSegJoint paper.
+  */
   for(int seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
     for(int sample_i=0; sample_i < n_samples; sample_i++){
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
@@ -429,10 +441,19 @@ PeakSegJointHeuristicStep2
     model = model_list->model_vec + n_peaks;
     if(model->loss[0] < INFINITY){
       bases_per_bin = model_list->bases_per_bin[0];
+      /*
+	The while loop below corresponds to line 3 of the JointZoom
+	algorithm from the PeakSegJoint paper.
+      */
       while(1 < bases_per_bin){
 	best_seg1 = -1; // indicates no min found.
 	left_chromStart = model->peak_start_end[0] - bases_per_bin;
 	right_chromStart = model->peak_start_end[1] - bases_per_bin;
+	/*
+	  Below in the C code we decrease the value of bases_per_bin,
+	  as in line 4 of the JointZoom algorithm in the PeakSegJoint
+	  paper.
+	*/
 	bases_per_bin /= model_list->bin_factor[0];
 	//printf("bases_per_bin=%d left cumsum before:\n", bases_per_bin);
 	for(int diff_i=0; diff_i < n_peaks; diff_i++){
@@ -496,6 +517,9 @@ PeakSegJointHeuristicStep2
 	/* 
 	   cumsum matrices have been computed, so now use them to
 	   compute the loss and feasibility of all models.
+
+	   The for loops below correspond to SearchNearPeak() on line
+	   5 of the JointZoom algorithm in the PeakSegJoint paper.
 	*/
 	for(int seg1_LastIndex=0; seg1_LastIndex < n_bins; seg1_LastIndex++){
 	  peakStart = left_chromStart + (seg1_LastIndex+1)*bases_per_bin;
