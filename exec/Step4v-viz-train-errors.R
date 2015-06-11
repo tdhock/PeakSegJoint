@@ -174,13 +174,74 @@ prob.peaks.names <-
 problem.peaks <- unique(data.frame(sample.peaks)[, prob.peaks.names])
 problem.peaks$sample.id <- "problems"
 
+max.height.pixels <- 1000
+ideal.pixels.per.facet <- 100
+ideal.height <- facet.rows * ideal.pixels.per.facet
+height.pixels <- as.integer(if(max.height.pixels < ideal.height){
+  max.height.pixels / facet.rows
+}else{
+  ideal.height
+})
+
 peakvar <- function(position){
   paste0(gsub("[-:]", ".", position), "peaks")
 }
 cat("constructing data viz with .variable .value\n")
 print(system.time({
   viz <-
-    list(coverage=ggplot()+
+    list(title=paste("PeakSegJoint model train errors for",
+           chunk.dir),
+
+         resError=ggplot()+
+           ggtitle("select problem size")+
+           ylab("minimum percent incorrect regions")+
+           geom_tallrect(aes(xmin=min.bases.per.problem,
+                             xmax=max.bases.per.problem,
+                             clickSelects=bases.per.problem),
+                         alpha=0.5,
+                         data=res.error)+
+           theme_animint(height=300)+
+           scale_x_log10()+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(res.error, chunks="this"))+
+           geom_line(aes(bases.per.problem, errors/regions*100,
+                         color=chunks, size=chunks),
+                     data=data.frame(train.errors, chunks="all")),
+
+         modelSelection=ggplot()+
+           theme_animint(height=300)+
+           geom_segment(aes(min.log.lambda, peaks,
+                            xend=max.log.lambda, yend=peaks,
+                            showSelected=problem.name,
+                            showSelected2=bases.per.problem),
+                        data=data.frame(all.modelSelection, what="peaks"),
+                        size=5)+
+           geom_text(aes(min.log.lambda, peaks,
+                         showSelected=problem.name,
+                         showSelected2=bases.per.problem,
+                         label=sprintf("%.1f kb in problem %s",
+                           (problemEnd-problemStart)/1e3, problem.name)),
+                     data=data.frame(modelSelection.labels, what="peaks"))+
+           geom_segment(aes(min.log.lambda, as.integer(errors),
+                            xend=max.log.lambda, yend=as.integer(errors),
+                            showSelected=problem.name,
+                            showSelected2=bases.per.problem),
+                        data=data.frame(modelSelection.errors, what="errors"),
+                        size=5)+
+           ggtitle("select number of samples with 1 peak")+
+           ylab("")+
+           geom_tallrect(aes(xmin=min.log.lambda, 
+                             xmax=max.log.lambda, 
+                             clickSelects.variable=
+                               peakvar(problem.name),
+                             clickSelects.value=peaks,
+                             showSelected=problem.name,
+                             showSelected2=bases.per.problem),
+                         data=all.modelSelection, alpha=0.5)+
+           facet_grid(what ~ ., scales="free"),
+         
+         coverage=ggplot()+
            geom_segment(aes(chromStart/1e3, problem.i,
                             xend=chromEnd/1e3, yend=problem.i,
                             showSelected=bases.per.problem,
@@ -221,7 +282,7 @@ print(system.time({
                          data=regions)+
            scale_fill_manual(values=ann.colors)+
            theme_bw()+
-           theme_animint(width=width.pixels, height=facet.rows*100)+
+           theme_animint(width=width.pixels, height=height.pixels)+
            theme(panel.margin=grid::unit(0, "cm"))+
            facet_grid(sample.id ~ ., labeller=function(var, val){
              sub("McGill0", "", sub(" ", "\n", val))
@@ -252,56 +313,6 @@ print(system.time({
                             showSelected.value=peaks,
                             showSelected2=bases.per.problem),
                         data=problem.peaks, size=7, color="deepskyblue"),
-
-         resError=ggplot()+
-           ggtitle("select problem size")+
-           ylab("minimum percent incorrect regions")+
-           geom_tallrect(aes(xmin=min.bases.per.problem,
-                             xmax=max.bases.per.problem,
-                             clickSelects=bases.per.problem),
-                         alpha=0.5,
-                         data=res.error)+
-           scale_x_log10()+
-           geom_line(aes(bases.per.problem, errors/regions*100,
-                         color=chunks, size=chunks),
-                     data=data.frame(res.error, chunks="this"))+
-           geom_line(aes(bases.per.problem, errors/regions*100,
-                         color=chunks, size=chunks),
-                     data=data.frame(train.errors, chunks="all")),
-
-         modelSelection=ggplot()+
-           geom_segment(aes(min.log.lambda, peaks,
-                            xend=max.log.lambda, yend=peaks,
-                            showSelected=problem.name,
-                            showSelected2=bases.per.problem),
-                        data=data.frame(all.modelSelection, what="peaks"),
-                        size=5)+
-           geom_text(aes(min.log.lambda, peaks,
-                         showSelected=problem.name,
-                         showSelected2=bases.per.problem,
-                         label=sprintf("%.1f kb in problem %s",
-                           (problemEnd-problemStart)/1e3, problem.name)),
-                     data=data.frame(modelSelection.labels, what="peaks"))+
-           geom_segment(aes(min.log.lambda, as.integer(errors),
-                            xend=max.log.lambda, yend=as.integer(errors),
-                            showSelected=problem.name,
-                            showSelected2=bases.per.problem),
-                        data=data.frame(modelSelection.errors, what="errors"),
-                        size=5)+
-           ggtitle("select number of samples with 1 peak")+
-           ylab("")+
-           geom_tallrect(aes(xmin=min.log.lambda, 
-                             xmax=max.log.lambda, 
-                             clickSelects.variable=
-                               peakvar(problem.name),
-                             clickSelects.value=peaks,
-                             showSelected=problem.name,
-                             showSelected2=bases.per.problem),
-                         data=all.modelSelection, alpha=0.5)+
-           facet_grid(what ~ ., scales="free"),
-         
-         title=paste("PeakSegJoint model train errors for",
-           chunk.dir),
 
          first=first.selection.list)
 
@@ -376,9 +387,9 @@ just.samples <-
                      showSelected.variable=peakvar(problem.name),
                      showSelected.value=peaks,
                      showSelected2=bases.per.problem),
-                 data=peaks.not.na, size=7, color="deepskyblue")
+                 data=peaks.not.na, size=4, color="deepskyblue")
 
 png.name <- paste0(animint.dir, ".png")
-png(png.name, width=1000, h=(facet.rows+1)*50, units="px")
+png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
 print(just.samples)
 dev.off()
