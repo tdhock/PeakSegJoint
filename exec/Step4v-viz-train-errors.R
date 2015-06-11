@@ -167,7 +167,17 @@ modelSelection.labels <-
          peaks=max(peaks)+0.5)
   }])
 
-cat("constructing data viz\n")
+sample.peaks <- do.call(rbind, peaks.by.problem)
+prob.peaks.names <-
+  c("bases.per.problem", "problem.i", "problem.name", "peaks",
+    "chromStart", "chromEnd")
+problem.peaks <- unique(data.frame(sample.peaks)[, prob.peaks.names])
+problem.peaks$sample.id <- "problems"
+
+peakvar <- function(position){
+  paste0(gsub("[-:]", ".", position), "peaks")
+}
+cat("constructing data viz with .variable .value\n")
 print(system.time({
   viz <-
     list(coverage=ggplot()+
@@ -201,8 +211,7 @@ print(system.time({
                                  values=c(correct=0,
                                    "false negative"=3,
                                    "false positive"=1))+
-           scale_x_continuous(paste("position on",
-                                    chrom,
+           scale_x_continuous(paste("position on chr11",
                                     "(kilo bases = kb)"))+
            coord_cartesian(xlim=lim.vec)+
            geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
@@ -212,14 +221,37 @@ print(system.time({
                          data=regions)+
            scale_fill_manual(values=ann.colors)+
            theme_bw()+
-           theme_animint(width=width.pixels, height=facet.rows*100)+
+           theme_animint(width=1500, height=facet.rows*100)+
            theme(panel.margin=grid::unit(0, "cm"))+
            facet_grid(sample.id ~ ., labeller=function(var, val){
              sub("McGill0", "", sub(" ", "\n", val))
            }, scales="free")+
            geom_line(aes(base/1e3, count),
                      data=some.counts,
-                     color="grey50"),
+                     color="grey50")+
+           geom_tallrect(aes(xmin=chromStart/1e3,
+                             xmax=chromEnd/1e3,
+                             linetype=status,
+                             showSelected.value=peaks,
+                             showSelected.variable=peakvar(problem.name),
+                             showSelected2=bases.per.problem),
+                         data=all.regions,
+                         fill=NA,
+                         color="black")+
+           geom_segment(aes(chromStart/1e3, 0,
+                            xend=chromEnd/1e3, yend=0,
+                            clickSelects=problem.name,
+                            showSelected.variable=peakvar(problem.name),
+                            showSelected.value=peaks,
+                            showSelected2=bases.per.problem),
+                        data=sample.peaks, size=7, color="deepskyblue")+
+           geom_segment(aes(chromStart/1e3, problem.i,
+                            xend=chromEnd/1e3, yend=problem.i,
+                            clickSelects=problem.name,
+                            showSelected.variable=peakvar(problem.name),
+                            showSelected.value=peaks,
+                            showSelected2=bases.per.problem),
+                        data=problem.peaks, size=7, color="deepskyblue"),
 
          resError=ggplot()+
            ggtitle("select problem size")+
@@ -258,73 +290,29 @@ print(system.time({
                         size=5)+
            ggtitle("select number of samples with 1 peak")+
            ylab("")+
+           geom_tallrect(aes(xmin=min.log.lambda, 
+                             xmax=max.log.lambda, 
+                             clickSelects.variable=
+                               peakvar(problem.name),
+                             clickSelects.value=peaks,
+                             showSelected=problem.name,
+                             showSelected2=bases.per.problem),
+                         data=all.modelSelection, alpha=0.5)+
            facet_grid(what ~ ., scales="free"),
          
-         title=chunk.dir,
+         title="Animint compiler with .variable .value aesthetics",
 
          first=first.selection.list)
 
-  ## For every problem there is a selector (called problem.dot) for the
-  ## number of peaks in that problem. So in this for loop we add a few
-  ## layers with aes_string(clickSelects=problem.dot) or
-  ## aes_string(showSelected=problem.dot) to the coverage and
-  ## modelSelection plots.
-  for(problem.dot in names(modelSelection.by.problem)){
-    regions.dt <- regions.by.problem[[problem.dot]]
-    regions.dt[[problem.dot]] <- regions.dt$peaks
-    if(!is.null(regions.dt)){
-      viz$coverage <- viz$coverage+
-        geom_tallrect(aes_string(xmin="chromStart/1e3",
-                                 xmax="chromEnd/1e3",
-                                 linetype="status",
-                                 showSelected=problem.dot,
-                                 showSelected2="bases.per.problem"),
-                      chunk_vars=character(),
-                      data=data.frame(regions.dt),
-                      fill=NA,
-                      color="black")
-    }
-    if(problem.dot %in% names(peaks.by.problem)){
-      peaks <- peaks.by.problem[[problem.dot]]
-      peaks[[problem.dot]] <- peaks$peaks
-      prob.peaks.names <-
-        c("bases.per.problem", "problem.i", "problem.name",
-          "chromStart", "chromEnd", problem.dot)
-      prob.peaks <- unique(data.frame(peaks)[, prob.peaks.names])
-      prob.peaks$sample.id <- "problems"
-      viz$coverage <- viz$coverage +
-        geom_segment(aes_string("chromStart/1e3", "0",
-                                xend="chromEnd/1e3", yend="0",
-                                clickSelects="problem.name",
-                                showSelected=problem.dot,
-                                showSelected2="bases.per.problem"),
-                     chunk_vars=character(),
-                     data=peaks, size=7, color="deepskyblue")+
-        geom_segment(aes_string("chromStart/1e3", "problem.i",
-                                xend="chromEnd/1e3", yend="problem.i",
-                                clickSelects="problem.name",
-                                showSelected=problem.dot,
-                                showSelected2="bases.per.problem"),
-                     chunk_vars=character(),
-                     data=prob.peaks, size=7, color="deepskyblue")
-    }
-    modelSelection.dt <- modelSelection.by.problem[[problem.dot]]
-    modelSelection.dt[[problem.dot]] <- modelSelection.dt$peaks
-    viz$modelSelection <- viz$modelSelection+
-      geom_tallrect(aes_string(xmin="min.log.lambda", 
-                               xmax="max.log.lambda", 
-                               clickSelects=problem.dot,
-                               showSelected="problem.name",
-                               showSelected2="bases.per.problem"),
-                    chunk_vars=character(),
-                    data=modelSelection.dt, alpha=0.5)
-  }
+  ## For every problem there is a selector (called problem.name) for
+  ## the number of peaks in that problem. There is also a selection
+  ## variable for every unique value of clickSelects.variable and
+  ## showSelected.variable.
 }))
 
 animint.dir <- file.path(chunk.dir, "figure-train-errors")
 
 cat("compiling data viz\n")
 print(system.time({
-  animint2dir(viz, animint.dir)
+  animint2dir(viz, out.dir=animint.dir)
 }))
-
