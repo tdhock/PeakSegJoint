@@ -98,11 +98,12 @@ for(res.str in names(step2.data.list)){
     problem <- res.data$problems[problem.i, ]
     problem.name <- paste(problem$problem.name)
     problem.dot <- paste0(gsub("[:-]", ".", problem.name), "peaks")
-    error <- step2.error.list[[problem.name]]
+    error <- step2.error.list[[paste(res.str, problem.name)]]
     model <- step2.model.list[[problem.name]]
     if(!is.null(model)){
       if(is.data.frame(model$peaks)){
-        peaks.by.problem[[problem.dot]] <- data.table(problem, model$peaks)
+        peaks.by.problem[[paste(res.str, problem.dot)]] <-
+          data.table(problem, model$peaks)
       }
       if(is.null(error$peaks)){
         first.selection.list[[problem.dot]] <- 0
@@ -119,16 +120,17 @@ for(res.str in names(step2.data.list)){
           regions.by.peaks[[peaks.str]] <-
             data.table(problem, regions.df)
         }
-        regions.by.problem[[problem.dot]] <- do.call(rbind, regions.by.peaks)
+        regions.by.problem[[paste(res.str, problem.dot)]] <-
+          do.call(rbind, regions.by.peaks)
         error$problem$modelSelection
       }else{
         data.frame(model$modelSelection,
                    errors=NA)
       }      
-      modelSelection.by.problem[[problem.dot]] <-
+      modelSelection.by.problem[[paste(res.str, problem.dot)]] <-
         data.table(problem, ms)
-    }
-  }
+    }#if(is.null(model
+  }#for(problem.i
 }
 step2.problems <- do.call(rbind, step2.problems.by.res)
 prob.labels <- do.call(rbind, prob.labels.by.res)
@@ -339,7 +341,8 @@ first.dt <- data.table(selector.name=names(some.first),
 first.peaks <- first.peaks.all[first.dt, ]
 peaks.not.na <- first.peaks[!is.na(sample.id),]
 all.regions[, selector.name := peakvar(problem.name)]
-setkey(all.regions, selector.name, peaks)
+setkey(all.regions, selector.name, peaks, bases.per.problem)
+first.dt$bases.per.problem <- first.selection.list$bases.per.problem
 first.regions <- all.regions[first.dt, ]
 regions.not.na <- first.regions[!is.na(sample.id), ]
 stopifnot(nrow(regions.not.na) == nrow(regions))

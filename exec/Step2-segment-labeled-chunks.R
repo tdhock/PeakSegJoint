@@ -86,7 +86,8 @@ Step1Problem <- function(problem.i){
     }
   }
 }
-step1.results.list <- my.mclapply(1:nrow(step1.problems.dt), Step1Problem)
+step1.results.list <-
+  my.mclapply(seq_along(step1.problems.dt$problem.name), Step1Problem)
 step1.results <- do.call(rbind, step1.results.list)
 setkey(step1.results, chromStart, chromEnd)
 
@@ -226,13 +227,21 @@ Step1Step2 <- function(res.str){
        regions=regions.by.problem)
 }
 step2.data.list <- my.mclapply(names(step1.by.res), Step1Step2)
-regions.by.problem <-
-  do.call(c, lapply(step2.data.list, "[[", "regions"))
-step2.problems <-
-  do.call(rbind, lapply(step2.data.list, "[[", "problems"))
-## Careful to set names after, so that the previous lapply calls get
-## correct names.
 names(step2.data.list) <- names(step1.by.res)
+
+step2.problems.list <- list()
+problems.with.regions.list <- list()
+for(res.str in names(step2.data.list)){
+  res.data <- step2.data.list[[res.str]]
+  problems.dt <- res.data$problems[, .(problem.name, problemStart, problemEnd)]
+  problems.by.name <- split(problems.dt, problems.dt$problem.name)
+  step2.problems.list[names(problems.by.name)] <- problems.by.name
+  problems.with.regions.list[[res.str]] <- 
+    data.table(bases.per.problem=as.integer(res.str),
+               problem.name=names(res.data$regions))
+}
+step2.problems <- do.call(rbind, step2.problems.list)
+problems.with.regions <- do.call(rbind, problems.with.regions.list)
 
 SegmentStep2 <- function(row.i){
   problem <- step2.problems[row.i, ]
@@ -263,13 +272,21 @@ SegmentStep2 <- function(row.i){
   info$features <- featureMatrix(profile.list)
   info
 }
-step2.model.list <- my.mclapply(1:nrow(step2.problems), SegmentStep2)
+step2.model.list <-
+  my.mclapply(seq_along(step2.problems$problem.name), SegmentStep2)
+## It is OK to index the model list on problem name (even though the
+## same problem could occur in several resolutions), since anyways the
+## model should not change between resolutions.
 names(step2.model.list) <- step2.problems$problem.name
+stopifnot(table(names(step2.model.list)) == 1)
 
 setkey(step2.problems, problem.name)
-ProblemError <- function(problem.name){
+ProblemError <- function(row.i){
+  prob.meta <- problems.with.regions[row.i, ]
+  one.res <- step2.data.list[[paste(prob.meta$bases.per.problem)]]
+  problem.name <- paste(prob.meta$problem.name)
+  problem.regions <- one.res$regions[[problem.name]]
   problem <- step2.problems[problem.name]
-  problem.regions <- regions.by.problem[[problem.name]]
   converted <- step2.model.list[[problem.name]]
   if(!is.null(converted)){
     prob.err.list <- PeakSegJointError(converted, problem.regions)
@@ -283,16 +300,21 @@ ProblemError <- function(problem.name){
          peaks=pred.peaks)
   }
 }
-step2.error.list <- my.mclapply(names(regions.by.problem), ProblemError)
-names(step2.error.list) <- names(regions.by.problem)
+step2.error.list <-
+  my.mclapply(seq_along(problems.with.regions$problem.name), ProblemError)
+names(step2.error.list) <- with(problems.with.regions, {
+  paste(bases.per.problem, problem.name)
+})
 
 ResError <- function(res.str){
   res.data <- step2.data.list[[res.str]]
-  problems.with.regions <-
-    res.data$problems[problem.name %in% names(step2.error.list), ]
+  error.row.name.vec <- with(problems.with.regions.list[[res.str]], {
+    paste(bases.per.problem, problem.name)
+  })
   pred.peaks.list <- list()
-  for(problem.name in problems.with.regions$problem.name){
-    pred.peaks.list[[problem.name]] <- step2.error.list[[problem.name]]$peaks
+  for(error.row.name in error.row.name.vec){
+    error.info <- step2.error.list[[error.row.name]]
+    pred.peaks.list[[error.row.name]] <- error.info$peaks
   }
   pred.peaks <- if(length(pred.peaks.list) == 0){
     Peaks()
@@ -309,7 +331,7 @@ ResError <- function(res.str){
                regions=length(fp))
   })
 }
-res.error.list <- my.mclapply(names(step2.data.list), ResError)
+res.error.list <- my.mclapply(names(problems.with.regions.list), ResError)
 res.error <- do.call(rbind, res.error.list)
 print(res.error)
 
