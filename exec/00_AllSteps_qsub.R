@@ -62,9 +62,9 @@ Step4v <-
               mustWork=TRUE,
               package="PeakSegJoint")
 
-## cmd.list$Step4 <-
-##   structure(paste(Rscript, Step4v, chunk.dir.vec),
-##             names=paste0("chunk", basename(chunk.dir.vec), "viz"))
+cmd.list$Step4 <-
+  structure(paste(Rscript, Step4v, chunk.dir.vec),
+            names=paste0("chunk", basename(chunk.dir.vec), "viz"))
 
 qsub <- "echo 1 && bash"
 qsub <- "qsub"
