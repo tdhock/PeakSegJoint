@@ -178,7 +178,7 @@ max.height.pixels <- 1000
 ideal.pixels.per.facet <- 100
 ideal.height <- facet.rows * ideal.pixels.per.facet
 height.pixels <- as.integer(if(max.height.pixels < ideal.height){
-  max.height.pixels / facet.rows
+  max.height.pixels
 }else{
   ideal.height
 })
