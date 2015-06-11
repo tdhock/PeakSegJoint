@@ -211,7 +211,7 @@ print(system.time({
                                  values=c(correct=0,
                                    "false negative"=3,
                                    "false positive"=1))+
-           scale_x_continuous(paste("position on chr11",
+           scale_x_continuous(paste("position on", chrom,
                                     "(kilo bases = kb)"))+
            coord_cartesian(xlim=lim.vec)+
            geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
@@ -221,7 +221,7 @@ print(system.time({
                          data=regions)+
            scale_fill_manual(values=ann.colors)+
            theme_bw()+
-           theme_animint(width=1500, height=facet.rows*100)+
+           theme_animint(width=width.pixels, height=facet.rows*100)+
            theme(panel.margin=grid::unit(0, "cm"))+
            facet_grid(sample.id ~ ., labeller=function(var, val){
              sub("McGill0", "", sub(" ", "\n", val))
@@ -316,3 +316,68 @@ cat("compiling data viz\n")
 print(system.time({
   animint2dir(viz, out.dir=animint.dir)
 }))
+
+first.peaks.all <-
+  sample.peaks[bases.per.problem == first.selection.list$bases.per.problem, ]
+first.peaks.all[, selector.name := peakvar(problem.name) ]
+setkey(first.peaks.all, selector.name, peaks)
+some.first <- first.selection.list[unique(first.peaks.all$selector.name)]
+first.dt <- data.table(selector.name=names(some.first),
+                       peaks=unlist(some.first))
+first.peaks <- first.peaks.all[first.dt, ]
+peaks.not.na <- first.peaks[!is.na(sample.id),]
+all.regions[, selector.name := peakvar(problem.name)]
+setkey(all.regions, selector.name, peaks)
+first.regions <- all.regions[first.dt, ]
+regions.not.na <- first.regions[!is.na(sample.id), ]
+stopifnot(nrow(regions.not.na) == nrow(regions))
+
+just.samples <- 
+  ggplot()+
+    ggtitle(animint.dir)+
+    scale_y_continuous("aligned read coverage",
+                       breaks=function(limits){
+                         floor(limits[2])
+                       })+
+    scale_x_continuous(paste("position on", chrom,
+                             "(kilo bases = kb)"))+
+    coord_cartesian(xlim=lim.vec)+
+    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                      fill=annotation),
+                  alpha=0.5,
+                  color="grey",
+                  data=regions)+
+           scale_linetype_manual("error type",
+                                 values=c(correct=0,
+                                   "false negative"=3,
+                                   "false positive"=1))+
+    scale_fill_manual(values=ann.colors)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., labeller=function(var, val){
+      sub("McGill0", "", sub(" ", "\n", val))
+    }, scales="free")+
+    geom_line(aes(base/1e3, count),
+              data=some.counts,
+              color="grey50")+
+    geom_tallrect(aes(xmin=chromStart/1e3,
+                      xmax=chromEnd/1e3,
+                      linetype=status,
+                      showSelected.value=peaks,
+                      showSelected.variable=peakvar(problem.name),
+                      showSelected2=bases.per.problem),
+                  data=regions.not.na,
+                  fill=NA,
+                  color="black")+
+    geom_segment(aes(chromStart/1e3, 0,
+                     xend=chromEnd/1e3, yend=0,
+                     clickSelects=problem.name,
+                     showSelected.variable=peakvar(problem.name),
+                     showSelected.value=peaks,
+                     showSelected2=bases.per.problem),
+                 data=peaks.not.na, size=7, color="deepskyblue")
+
+png.name <- paste0(animint.dir, ".png")
+png(png.name, width=1000, h=(facet.rows+1)*50, units="px")
+print(just.samples)
+dev.off()

@@ -32,15 +32,19 @@ for(chunk.i in seq_along(problems.RData.vec)){
   chunk.id <- basename(chunk.dir)
   index.html <-
     file.path("..", chunk.id, "figure-train-errors", "index.html")
+  first.png <-
+    file.path("..", chunk.id, "figure-train-errors.png")
   objs <- load(problems.RData)
   err.vec <- res.error$errors
   min.df <- subset(res.error, errors==min(errors))
-  min.errors <- min(res.error$errors)
+  best.errors <- min(res.error$errors)
   bpp.list[[chunk.id]] <- min.df$bases.per.problem
-  href <- sprintf('<a href="%s">%s</a>', index.html, chunk.id)
+  href <- sprintf('<a href="%s">
+  <img src="%s" alt="chunk%s" />
+</a>', index.html, first.png, chunk.id)
   chunk.best.list[[chunk.id]] <-
-    data.frame(chunk.id=href,
-               min.errors,
+    data.frame(selected.model=href,
+               best.errors,
                regions=res.error$regions[1])
   names(err.vec) <- res.error$bases.per.problem
   err.mat.list[[chunk.i]] <- err.vec
@@ -58,12 +62,12 @@ bases.per.problem <- as.integer(res.str)
 train.errors.picked <- train.errors[chosen.i, ]
 
 chunk.best$selected.errors <- err.mat[, res.str]
-chunk.best$bases.per.problem <- NA
+chunk.best$best.bases.per.problem <- NA
 for(chunk.i in seq_along(bpp.list)){
   bpp <- bpp.list[[chunk.i]]
   bpp[bpp == res.str] <-
     paste0("<b>", bpp[bpp==res.str], "</b>")
-  chunk.best$bases.per.problem[chunk.i] <- paste0(bpp, collapse="<br />")
+  chunk.best$best.bases.per.problem[chunk.i] <- paste0(bpp, collapse="<br />")
 }
 
 chunk.ordered <-
@@ -74,6 +78,7 @@ ggplot()+
   geom_line(aes(bases.per.problem, errors),
             data=train.errors)+
   scale_x_log10()+
+  ylab("minimum incorrect labels (train error)")+
   ggtitle(paste(res.str, "bases/problem"))+
   geom_point(aes(bases.per.problem, errors),
              data=train.errors.picked,
@@ -83,7 +88,7 @@ png.name <-
   file.path(chunks.dir, "figure-train-errors", "figure-train-errors.png")
 png.dir <- dirname(png.name)
 dir.create(png.dir, showWarnings=FALSE, recursive=TRUE)
-png(png.name, width=400, h=200, units="px")
+png(png.name, width=400, h=300, units="px")
 print(resCurve)
 dev.off()
 
@@ -98,8 +103,12 @@ html.table <-
         include.rownames=FALSE,
         sanitize.text.function=identity)
 html.out <-
-  paste(res.html,
-        '<br /> <img src="figure-train-errors.png" /> <br />',
+  paste("<h1>Train error totals per problem size</h1>",
+        "<table><tr>",
+        '<td> <img src="figure-train-errors.png" /> </td>',
+        "<td>", res.html, "</td>",
+        "</tr></table>",
+        "<h1>Train error details for each chunk of labels</h1>",
         html.table)
 
 out.file <- file.path(chunks.dir, "figure-train-errors", "index.html")
