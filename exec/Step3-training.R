@@ -124,7 +124,7 @@ for(chunk.i in seq_along(problems.RData.vec)){
   }
   res.data <- step2.data.list[[res.str]]
   for(problem.name in names(res.data$regions)){
-    target <- step2.error.list[[problem.name]]$problem$target
+    target <- step2.error.list[[paste(res.str, problem.name)]]$problem$target
     if(is.numeric(target)){
       n.finite <- sum(is.finite(target))
       if(n.finite > 0){
