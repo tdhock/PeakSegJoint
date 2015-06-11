@@ -300,7 +300,8 @@ print(system.time({
                          data=all.modelSelection, alpha=0.5)+
            facet_grid(what ~ ., scales="free"),
          
-         title="Animint compiler with .variable .value aesthetics",
+         title=paste("PeakSegJoint model train errors for",
+           chunk.dir),
 
          first=first.selection.list)
 
