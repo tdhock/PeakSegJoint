@@ -1,10 +1,16 @@
 PeakSegJoint is an R package with [[file:src/PeakSegJoint.c][C code that implements the fast
-heuristic JointZoom algorithm]] described in the [[https://github.com/tdhock/PeakSegJoint-paper][PeakSegJoint
-paper]]. It also contains [[file:R/fista.R][an R implementation of a
-Fast Iterative Shinkage-Thresholding Algorithm (FISTA) for
-L1-regularized interval regression with the squared hinge loss]].
+heuristic JointZoom algorithm]] described in the [[https://github.com/tdhock/PeakSegJoint-paper][PeakSegJoint paper]]. It
+also contains [[file:R/fista.R][an R implementation of a Fast Iterative
+Shinkage-Thresholding Algorithm (FISTA) for L1-regularized interval
+regression with the squared hinge loss]]. 
 
 [[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
+
+** Example output
+
+[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-train-errors/][Train error data viz, four samples of H3K4me3 data]].
+
+** R installation instructions
 
 #+BEGIN_SRC R
   install.packages("devtools")
