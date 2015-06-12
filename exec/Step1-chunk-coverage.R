@@ -21,7 +21,8 @@ bedGraph.file <- argv[1]
 
 coverage <- fread(bedGraph.file)
 setnames(coverage, c("chrom", "chromStart", "chromEnd", "count"))
-setkey(coverage, chrom, chromStart, chromEnd)
+coverage[, chromStart1 := chromStart + 1L]
+setkey(coverage, chrom, chromStart1, chromEnd)
 chrom.ranges <-
   coverage[, .(min.chromStart=min(chromStart),
                max.chromEnd=max(chromEnd)),
@@ -37,8 +38,10 @@ RData.path.vec <- Sys.glob(file.path(chunks.dir, "*", "regions.RData"))
 for(RData.path in RData.path.vec){
   objs <- load(RData.path)
   stopifnot("chunk" %in% objs)
-  counts <- foverlaps(coverage, chunk, nomatch=0L)
-  setkey(counts, chromStart, chromEnd)
+  chunk[, chunkStart1 := chunkStart + 1L]
+  setkey(chunk, chrom, chunkStart1, chunkEnd)
+  counts.all <- foverlaps(coverage, chunk, nomatch=0L)
+  counts <- counts.all[, .(chrom, chromStart, chromEnd, count)]
   chunk.dir <- dirname(RData.path)
   out.RData <- file.path(chunk.dir, cell.type, RData.base)
   cat("Writing ", nrow(counts),
