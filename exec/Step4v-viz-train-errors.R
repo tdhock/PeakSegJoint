@@ -27,13 +27,32 @@ robjs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
-## Filter counts by limits (area around regions).
-limits <- regions[, .(chromStart=min(chromStart),
-                      chromEnd=max(chromEnd))]
-limits[, bases := chromEnd - chromStart ]
-limits[, expand := as.integer(bases/10) ]
-limits[, min := chromStart - expand]
-limits[, max := chromEnd + expand]
+counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
+limits.by.sample <- list()
+for(counts.RData.path in counts.RData.vec){
+  objs <- load(counts.RData.path)
+  sample.id <- sub(".RData$", "", basename(counts.RData.path))
+  limits.by.sample[[sample.id]] <- with(counts, {
+    data.table(sample.id,
+               min.chromStart=min(chromStart),
+               max.chromEnd=max(chromEnd))
+  })
+}
+region.limits <- regions[, .(chromStart=min(chromStart),
+                             chromEnd=max(chromEnd))]
+region.limits[, bases := chromEnd - chromStart ]
+region.limits[, expand := as.integer(bases/10) ]
+region.limits[, min := chromStart - expand]
+region.limits[, max := chromEnd + expand]
+limits.by.sample[["regions"]] <- with(region.limits, {
+  data.table(sample.id="regions",
+             min.chromStart=min,
+             max.chromEnd=max)
+})
+sample.limits <- do.call(rbind, limits.by.sample)
+
+limits <- sample.limits[, .(min=max(min.chromStart),
+                            max=min(max.chromEnd))]
 lim.vec <- with(limits, c(min, max))/1e3
 
 mobjs <- load(trained.model.RData)
@@ -58,7 +77,6 @@ fake.points <- data.frame(x,y)
 
 ## Read and subsample count data to plot width.
 width.pixels <- 1500
-counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
 counts.by.sample <- list()
 for(counts.RData.path in counts.RData.vec){
   objs <- load(counts.RData.path)
@@ -135,7 +153,7 @@ for(res.str in names(step2.data.list)){
 step2.problems <- do.call(rbind, step2.problems.by.res)
 prob.labels <- do.call(rbind, prob.labels.by.res)
 prob.labels$problem.i <- max(prob.labels$problems)
-prob.labels$chromStart <- limits$chromStart
+prob.labels$chromStart <- region.limits$chromStart
 
 ## prob.regions are the black segments that show which regions are
 ## mapped to which segmentation problems.
@@ -308,6 +326,12 @@ print(system.time({
                             showSelected.value=peaks,
                             showSelected2=bases.per.problem),
                         data=sample.peaks, size=7, color="deepskyblue")+
+           geom_point(aes(chromStart/1e3, 0,
+                          clickSelects=problem.name,
+                          showSelected.variable=peakvar(problem.name),
+                          showSelected.value=peaks,
+                          showSelected2=bases.per.problem),
+                      data=sample.peaks, size=3, color="deepskyblue")+
            geom_segment(aes(chromStart/1e3, problem.i,
                             xend=chromEnd/1e3, yend=problem.i,
                             clickSelects=problem.name,
@@ -383,6 +407,7 @@ just.samples <-
                       showSelected2=bases.per.problem),
                   data=regions.not.na,
                   fill=NA,
+                  ##fill="grey50",
                   color="black")+
     geom_segment(aes(chromStart/1e3, 0,
                      xend=chromEnd/1e3, yend=0,
@@ -390,7 +415,13 @@ just.samples <-
                      showSelected.variable=peakvar(problem.name),
                      showSelected.value=peaks,
                      showSelected2=bases.per.problem),
-                 data=peaks.not.na, size=4, color="deepskyblue")
+                 data=peaks.not.na, size=4, color="deepskyblue")+
+    geom_point(aes(chromStart/1e3, 0,
+                   clickSelects=problem.name,
+                   showSelected.variable=peakvar(problem.name),
+                   showSelected.value=peaks,
+                   showSelected2=bases.per.problem),
+               data=peaks.not.na, size=4, color="deepskyblue")
 
 png.name <- paste0(animint.dir, ".png")
 png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
