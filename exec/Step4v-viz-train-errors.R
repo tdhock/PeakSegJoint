@@ -230,6 +230,7 @@ print(system.time({
                      data=data.frame(train.errors, chunks="all")),
 
          modelSelection=ggplot()+
+           ggtitle("select number of samples with 1 peak")+
            theme_animint(height=300)+
            geom_segment(aes(min.log.lambda, peaks,
                             xend=max.log.lambda, yend=peaks,
@@ -249,8 +250,8 @@ print(system.time({
                             showSelected2=bases.per.problem),
                         data=data.frame(modelSelection.errors, what="errors"),
                         size=5)+
-           ggtitle("select number of samples with 1 peak")+
            ylab("")+
+           xlab("penalty log.lambda")+
            geom_tallrect(aes(xmin=min.log.lambda, 
                              xmax=max.log.lambda, 
                              clickSelects.variable=
@@ -262,12 +263,12 @@ print(system.time({
            facet_grid(what ~ ., scales="free"),
          
          coverage=ggplot()+
+           ggtitle("select problem")+
            geom_segment(aes(chromStart/1e3, problem.i,
                             xend=chromEnd/1e3, yend=problem.i,
                             showSelected=bases.per.problem,
                             clickSelects=problem.name),
                         data=prob.regions)+
-           ggtitle("select problem")+
            geom_text(aes(chromStart/1e3, problem.i,
                          showSelected=bases.per.problem,
                          label=sprintf("%d problems mean size %.1f kb",
