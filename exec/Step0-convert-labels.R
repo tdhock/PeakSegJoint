@@ -183,7 +183,7 @@ for(chunk.str in names(regions.by.chunk)){
 
     chunk.problems <-
       getProblems(chrom, min.chromStart, max.chromEnd, bases.per.problem)
-    setkey(chunk.problems, problemStart, problemEnd)
+
     problems.by.res[[res.str]] <- chunk.problems
   }
 
