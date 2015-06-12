@@ -48,6 +48,7 @@ regions.RData <- file.path(chunk.dir, "regions.RData")
 objs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
+regions[, chromStart1 := chromStart + 1L]
 
 counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
 
@@ -58,7 +59,8 @@ for(counts.RData.path in counts.RData.vec){
   counts.by.sample[[sample.id]] <- data.table(sample.id, counts)
 }
 counts <- do.call(rbind, counts.by.sample)
-setkey(counts, chromStart, chromEnd)
+counts[, chromStart1 := chromStart + 1L]
+setkey(counts, chromStart1, chromEnd)
 
 step1.problems.dt <- do.call(rbind, problems.by.res)
 Step1Problem <- function(problem.i){
@@ -179,8 +181,9 @@ Step1Step2 <- function(res.str){
   ##                data=data.frame(step2.problems, what="corrected"))
 
   problems.dt <- data.table(bases.per.problem, step2.problems)
-  setkey(problems.dt, problemStart, problemEnd)
-  setkey(regions, chromStart, chromEnd)
+  problems.dt[, problemStart1 := problemStart + 1L]
+  setkey(problems.dt, problemStart1, problemEnd)
+  setkey(regions, chromStart1, chromEnd)
   over.regions <- foverlaps(regions, problems.dt, nomatch=0L)
   over.regions[,
                `:=`(overlapStart=ifelse(problemStart < chromStart,
@@ -243,21 +246,61 @@ for(res.str in names(step2.data.list)){
 step2.problems <- do.call(rbind, step2.problems.list)
 problems.with.regions <- do.call(rbind, problems.with.regions.list)
 
+blank <- unique(counts[, .(sample.id)])
 SegmentStep2 <- function(row.i){
   problem <- step2.problems[row.i, ]
-  setkey(problem, problemStart, problemEnd)
+  problem[, problemStart1 := problemStart + 1L]
+  setkey(problem, problemStart1, problemEnd)
   problem.counts <-
-    foverlaps(counts, problem, nomatch=0L, type="within")
+    foverlaps(counts, problem, nomatch=0L, type="any")
+  problem.counts[, .(chromStart=min(chromStart),
+                     chromEnd=max(chromEnd)),
+                 by=sample.id]
+  problem.counts[, `:=`(
+    chromStart=ifelse(chromStart < problemStart, problemStart, chromStart),
+    chromEnd=ifelse(problemEnd < chromEnd, problemEnd, chromEnd)
+    )]
+  coverage.limits <- 
+    problem.counts[, .(chromStart=min(chromStart),
+                       chromEnd=max(chromEnd)),
+                   by=sample.id]
+  with(coverage.limits, {
+    stopifnot(problem$problemStart <= chromStart)
+    stopifnot(chromEnd <= problem$problemEnd)
+  })
+  with(problem.counts, stopifnot(chromStart < chromEnd))
 
+  ## counts.by.sample <- table(problem.counts$sample.id)
+  ## is.segment <- counts.by.sample == 1
+  ## is.step <- !is.segment
+  ## step.ids <- names(counts.by.sample)[is.step]
+  ## segment.ids <- names(counts.by.sample)[is.segment]
+  ## setkey(problem.counts, sample.id)
+  ## segment.dt <- problem.counts[segment.ids]
+  ## step.dt <- problem.counts[step.ids]
   ## ggplot()+
   ##   theme_bw()+
   ##   theme(panel.margin=grid::unit(0, "cm"))+
   ##   facet_grid(sample.id ~ ., labeller=function(var, val){
   ##     sub("McGill0", "", sub(" ", "\n", val))
   ##   }, scales="free")+
-  ##   geom_step(aes(chromStart/1e3, count),
-  ##             data=problem.counts,
-  ##             color="grey50")
+  ##   geom_segment(aes((problemStart+0.5)/1e3, 0,
+  ##                    xend=problemEnd/1e3, yend=0),
+  ##                data=problem,
+  ##                color="black",
+  ##                size=1)+
+  ##   geom_segment(aes((chromStart+0.5)/1e3, count,
+  ##                    xend=chromEnd/1e3, yend=count),
+  ##                data=problem.counts,
+  ##                color="grey50")+
+  ##   ## geom_segment(aes((chromStart+0.5)/1e3, count,
+  ##   ##                  xend=chromEnd/1e3, yend=count),
+  ##   ##              data=segment.dt,
+  ##   ##              color="grey50")+
+  ##   ## geom_step(aes((chromStart+0.5)/1e3, count),
+  ##   ##           data=step.dt,
+  ##   ##           color="grey50")+
+  ##   geom_blank(data=blank)
 
   profile.list <- ProfileList(problem.counts)
   fit <- tryCatch({
@@ -288,7 +331,10 @@ ProblemError <- function(row.i){
   problem.regions <- one.res$regions[[problem.name]]
   problem <- step2.problems[problem.name]
   converted <- step2.model.list[[problem.name]]
-  if(!is.null(converted)){
+  if(is.null(converted)){
+    pred.peaks <- Peaks()
+    prob.err.list <- PeakSegJointError(list(peaks=NULL), problem.regions)
+  }else{
     prob.err.list <- PeakSegJointError(converted, problem.regions)
     best.models <-
       subset(prob.err.list$modelSelection, errors==min(errors))
@@ -296,9 +342,9 @@ ProblemError <- function(row.i){
     pred.peaks <- if(peaks.num > 0){
       subset(converted$peaks, peaks == peaks.num)
     }
-    list(problem=prob.err.list,
-         peaks=pred.peaks)
   }
+  list(problem=prob.err.list,
+       peaks=pred.peaks)
 }
 step2.error.list <-
   my.mclapply(seq_along(problems.with.regions$problem.name), ProblemError)
