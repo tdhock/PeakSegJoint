@@ -27,6 +27,7 @@ chrom.ranges <-
   coverage[, .(min.chromStart=min(chromStart),
                max.chromEnd=max(chromEnd)),
            by=chrom]
+gc()
 
 bedGraph.base <- basename(bedGraph.file)
 RData.base <- sub("bedGraph$", "RData", bedGraph.base)
@@ -41,6 +42,7 @@ for(RData.path in RData.path.vec){
   chunk[, chunkStart1 := chunkStart + 1L]
   setkey(chunk, chrom, chunkStart1, chunkEnd)
   counts.all <- foverlaps(coverage, chunk, nomatch=0L)
+  gc()
   counts <- counts.all[, .(chrom, chromStart, chromEnd, count)]
   chunk.dir <- dirname(RData.path)
   out.RData <- file.path(chunk.dir, cell.type, RData.base)
@@ -51,3 +53,4 @@ for(RData.path in RData.path.vec){
   dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
   save(counts, chrom.ranges, file=out.RData)
 }
+cat("Done writing ", length(RData.path.vec), " RData files.\n")
