@@ -7,7 +7,7 @@ labels.txt.file <- # interactive default for debugging.
 argv <- commandArgs(trailingOnly=TRUE)
 if(length(argv) != 1){
   stop("usage: AllSteps_qsub.R path/to/labels.txt
-where there are path/to/*/*.bedGraph files")
+where there are path/to/*/*.bigwig files")
 }
 labels.txt.file <- normalizePath(argv[1], mustWork=TRUE)
 data.dir <- dirname(labels.txt.file)
@@ -33,10 +33,10 @@ Step1 <-
   system.file(file.path("exec", "Step1-chunk-coverage.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-bedGraph.path.vec <- Sys.glob(file.path(data.dir, "*", "*.bedGraph"))
+bigwig.path.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 cmd.list$Step1 <-
-  structure(paste(Rscript, Step1, bedGraph.path.vec),
-            names=basename(bedGraph.path.vec))
+  structure(paste(Rscript, Step1, bigwig.path.vec),
+            names=basename(bigwig.path.vec))
 
 Step2 <-
   system.file(file.path("exec", "Step2-segment-labeled-chunks.R"),

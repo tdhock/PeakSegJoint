@@ -15,7 +15,7 @@ print(argv)
 
 if(length(argv) != 1){
   stop("usage: convert-labels.R path/to/labels.txt
-where there are path/to/celltype/*.bedGraph files")
+where there are path/to/celltype/*.bigwig files")
 }
 
 labels.file <- argv[1]
@@ -50,11 +50,11 @@ str_match_perl <- function(string,pattern){
   result
 }
 
-## there should be bedGraph files in subdirectories under the same
+## there should be bigwig files in subdirectories under the same
 ## directory as labels.file.
-bedGraph.files <- Sys.glob(file.path(dirname(labels.file), "*", "*.bedGraph"))
-sample.id <- sub("[.]bedGraph$", "", basename(bedGraph.files))
-cell.type <- basename(dirname(bedGraph.files))
+bigwig.files <- Sys.glob(file.path(dirname(labels.file), "*", "*.bigwig"))
+sample.id <- sub("[.]bigwig$", "", basename(bigwig.files))
+cell.type <- basename(dirname(bigwig.files))
 sample.df <- data.frame(sample.id, cell.type)
 samples.by.type <- split(sample.df, sample.df$cell.type)
 

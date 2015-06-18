@@ -18,17 +18,17 @@ argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
-print(argv)
-
-if(length(argv) != 1){
-  stop("usage: Step2.R path/to/PeakSegJoint-chunks/012354")
-}
-
 options(mc.cores=detectCores())
 ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
 if(!is.finite(ppn))ppn <- 2
 options(mc.cores=ppn)
 print(options("mc.cores"))
+
+print(argv)
+
+if(length(argv) != 1){
+  stop("usage: Step2.R path/to/PeakSegJoint-chunks/012354")
+}
 
 my.mclapply <- function(...){
   result.list <- mclapply(...)
@@ -90,6 +90,10 @@ Step1Problem <- function(problem.i){
 }
 step1.results.list <-
   my.mclapply(seq_along(step1.problems.dt$problem.name), Step1Problem)
+if(all(sapply(step1.results.list, is.null))){
+  print(step1.problems.dt)
+  stop("no computable models for any uniform size segmentation problems")
+}
 step1.results <- do.call(rbind, step1.results.list)
 setkey(step1.results, chromStart, chromEnd)
 
