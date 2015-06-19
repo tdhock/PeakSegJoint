@@ -33,7 +33,7 @@ test_that("binSum gives same answer for real data sets", {
     both.bins <- do.call(rbind, bin.list)
     head(bin.list$without.zero, 20)
     ggplot()+
-      coord_cartesian(xlim=c(118219186, 118219286)/1e3)+
+      ##coord_cartesian(xlim=c(118219186, 118219286)/1e3)+
       geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                     ymin=0, ymax=count),
                 data=both.samples)+
@@ -62,6 +62,27 @@ test_that("PeakSegJointHeuristic loss same with or without zeros", {
     with(loss.list, expect_equal(with.zero, without.zero))
   }
 })
+
+
+test_that("PeakSegJointHeuristicStep1 loss same with or without zeros", {
+  for(bp in 2:7){
+    loss.list <- list()
+    for(data.name in names(data.list)){
+      L <- data.list[[data.name]]
+      fit <- PeakSegJointHeuristicStep1(L, bp)
+      loss.list[[data.name]] <- sapply(fit$models, "[[", "loss")
+    }
+    with(loss.list, expect_equal(with.zero, without.zero))
+  }
+})
+
+bp <- 4
+peak.list <- list()
+for(data.name in names(data.list)){
+  L <- data.list[[data.name]]
+  fit <- PeakSegJointHeuristic(L, bp)
+  peak.list[[data.name]] <- sapply(fit$models, "[[", "peak_start_end")
+}
 
 test_that("PeakSegJointSeveral loss same with or without zeros", {
   loss.list <- list()
