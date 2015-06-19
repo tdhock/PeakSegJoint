@@ -1,4 +1,6 @@
+library(testthat)
 context("binSum")
+library(PeakSegJoint)
 
 test_that("binSum with negative chromStart", {
   chromEnd <- 1:10
@@ -145,14 +147,16 @@ test_that("chromStart[i] < chromEnd[i-1] is an error", {
 test_that("gaps are treated as counts of 0", {
   ok <- data.frame(chromStart=as.integer(c(0, 15)),
                     chromEnd=as.integer(c(10, 20)),
-                    count=1L)
+                    count=as.integer(c(1, 10)))
   by2 <- binSum(ok, 0L, 2L, 10L)
   expect_equal(by2$count, c(2, 2, 2, 2, 2,
-                            0, 0, 1, 2, 2))
+                            0, 0, 10, 20, 20))
+  by3 <- binSum(ok, 0L, 3L, 7L)
+  expect_equal(by3$count, c(3, 3, 3, 1, 0, 30, 20))
   by5 <- binSum(ok, 0L, 5L, 4L)
-  expect_equal(by5$count, c(5, 5, 0, 5))
+  expect_equal(by5$count, c(5, 5, 0, 50))
   by10 <- binSum(ok, 0L, 10L, 2L)
-  expect_equal(by10$count, c(10, 5))
+  expect_equal(by10$count, c(10, 50))
 })
 
 test_that("no segfault", {
