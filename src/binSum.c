@@ -66,33 +66,27 @@ int binSum
   int count_until, bases, bin_add, profile_add;
   int begin_count_after;
   int bin_end = bin_chromStart + bin_size;
-  if(bin_chromStart < profile_chromStart[profile_i]){
-    begin_count_after = profile_chromStart[profile_i];
-  }else{
-    begin_count_after = bin_chromStart;
-  }
   while(bin_i < n_bins && profile_i < n_profiles){
     //printf("bin_i=%d profile_i=%d\n", bin_i, profile_i);
     // at this point there are two cases.
+    if(bin_end - bin_size < profile_chromStart[profile_i]){
+      begin_count_after = profile_chromStart[profile_i];
+    }else{
+      begin_count_after = bin_end - bin_size;
+    }
     if(bin_end <= profile_chromEnd[profile_i]){
-      // 1. the profile segment continues to the end of this bin,
+      // 1. the profile segment ends after the end of this bin,
       //    so add profile_coverage * bin_size to this bin total.
       // -profile----]
       //             (-----------
       //          bin]
       //         bin]
       //  bin]
-      //        (profile]
+      //        (profile] or maybe it is not overlapping!
       count_until = bin_end;
       if(bin_end < profile_chromStart[profile_i]){
 	//no overlap!
 	begin_count_after = count_until;
-      }else{
-	if(bin_end - bin_size < profile_chromStart[profile_i]){
-	  begin_count_after = profile_chromStart[profile_i];
-	}else{
-	  begin_count_after = bin_end - bin_size; //bin start.
-	}
       }
       if(bin_end == profile_chromEnd[profile_i]){
 	profile_add = 1; // done adding from this profile segment.
@@ -112,11 +106,13 @@ int binSum
       bin_add = 0;
     }
     bases = count_until - begin_count_after;
+    /* printf("begin_count_after=%d count_until=%d coverage=%d\n", */
+    /* 	   begin_count_after, count_until, */
+    /* 	   profile_coverage[profile_i]); */
     bin_total[bin_i] += profile_coverage[profile_i] * bases;
     bin_touched[bin_i] = 1;
     profile_i += profile_add;
     // setup next iteration.
-    begin_count_after = count_until;
     if(bin_add){
       bin_i++;
       bin_end += bin_size;
