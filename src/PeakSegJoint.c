@@ -148,7 +148,8 @@ int PeakSegJointHeuristicStep1(
     model_list->last_cumsum_vec[sample_i] = cumsum_value;
     //printf("\n");
     mean_value = cumsum_value / data_bases;
-    //printf("sample_i=%d cumsum=%d bases=%d\n", sample_i, cumsum_value, bases);
+    /* printf("sample_i=%d cumsum=%d bases=%f\n",  */
+    /* 	   sample_i, cumsum_value, data_bases); */
     model_list->sample_mean_vec[sample_i] = mean_value;
     loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
     model_list->flat_loss_vec[sample_i] = loss_value;
