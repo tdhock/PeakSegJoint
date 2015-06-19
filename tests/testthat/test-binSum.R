@@ -136,10 +136,23 @@ test_that("chromEnd <= chromStart is an error", {
 test_that("chromEnd[i-1] != chromStart[i] is an error", {
   bad <- data.frame(chromStart=as.integer(c(0, 10)),
                     chromEnd=as.integer(c(15, 20)),
-                    count=0L)
+                    count=1L)
   expect_error({
-    binSum(bad, 0L, 30L, 10L)
-  }, "chromStart[i] != chromEnd[i-1]", fixed=TRUE)
+    binSum(bad, 0L, 5L, 4L)
+  }, "chromStart before previous chromEnd")
+})
+
+test_that("chromEnd[i-1] != chromStart[i] is an error", {
+  ok <- data.frame(chromStart=as.integer(c(0, 15)),
+                    chromEnd=as.integer(c(10, 20)),
+                    count=1L)
+  by2 <- binSum(ok, 0L, 2L, 10L)
+  expect_equal(by2$count, c(2, 2, 2, 2, 2,
+                            0, 0, 1, 2, 2))
+  by5 <- binSum(ok, 0L, 5L, 4L)
+  expect_equal(by5$count, c(5, 5, 0, 5))
+  by10 <- binSum(ok, 0L, 10L, 2L)
+  expect_equal(by10$count, c(10, 5))
 })
 
 test_that("no segfault", {
