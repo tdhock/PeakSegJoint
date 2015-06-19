@@ -7,6 +7,26 @@ data(peak1.infeasible)
 data.list <-
   list(with.zero=peak1.infeasible,
        without.zero=subset(peak1.infeasible, 0 < count))
+
+test_that("binSum gives same answer for real data sets", {
+  bin.chromStart <- min(peak1.infeasible$chromStart)
+  bin.chromEnd <- max(peak1.infeasible$chromEnd)
+  bases.per.bin <- 100L
+  n.bins <- as.integer((bin.chromEnd-bin.chromStart)/bases.per.bin)
+  data.sample.list <- lapply(data.list, function(df)split(df, df$sample.id))
+  sample.id.vec <- names(data.sample.list[[1]])
+  for(sample.id in sample.id.vec){
+    bin.list <- list()
+    for(data.name in names(data.sample.list)){
+      one.sample <- data.sample.list[[data.name]][[sample.id]]
+      bin.list[[data.name]] <-
+        binSum(one.sample, bin.chromStart, bases.per.bin, n.bins)
+    }
+    with(bin.list, rbind(with.zero$count, without.zero$count))
+    with(bin.list, expect_equal(with.zero$count, without.zero$count))
+  }
+})
+
 test_that("PeakSegJointHeuristic loss same with or without zeros", {
   for(bp in 2:7){
     loss.list <- list()
