@@ -41,12 +41,12 @@ int binSum
       return ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND;
     }
   }
-  // check that chromEnd[i-1] == chromStart[i] for all i>0.
-  /* for(profile_i = 1; profile_i < n_profiles; profile_i++){ */
-  /*   if(profile_chromEnd[profile_i-1] != profile_chromStart[profile_i]){ */
-  /*     return ERROR_CHROMSTART_CHROMEND_MISMATCH; */
-  /*   } */
-  /* } */
+  // check that chromEnd[i-1] <= chromStart[i] for all i>0.
+  for(profile_i = 1; profile_i < n_profiles; profile_i++){
+    if(profile_chromStart[profile_i] < profile_chromEnd[profile_i-1]){
+      return ERROR_CHROMSTART_BEFORE_PREVIOUS_CHROMEND;
+    }
+  }
   /* printf("bin_chromStart=%d bin_size=%d n_bins=%d status=%d\n", */
   /* 	 bin_chromStart, bin_size, n_bins, status_for_empty_bin); */
   int *bin_touched = (int*) malloc(sizeof(int) * n_bins);

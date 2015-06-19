@@ -133,7 +133,7 @@ test_that("chromEnd <= chromStart is an error", {
   }, "chromStart not less than chromEnd")
 })
 
-test_that("chromEnd[i-1] != chromStart[i] is an error", {
+test_that("chromStart[i] < chromEnd[i-1] is an error", {
   bad <- data.frame(chromStart=as.integer(c(0, 10)),
                     chromEnd=as.integer(c(15, 20)),
                     count=1L)
@@ -142,7 +142,7 @@ test_that("chromEnd[i-1] != chromStart[i] is an error", {
   }, "chromStart before previous chromEnd")
 })
 
-test_that("chromEnd[i-1] != chromStart[i] is an error", {
+test_that("gaps are treated as counts of 0", {
   ok <- data.frame(chromStart=as.integer(c(0, 15)),
                     chromEnd=as.integer(c(10, 20)),
                     count=1L)
