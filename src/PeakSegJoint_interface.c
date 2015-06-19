@@ -307,6 +307,9 @@ PeakSegJointHeuristic_interface(
   free_PeakSegJointModelList(model_list);
   UNPROTECT(1); //model_list_sexp.
   if(status != 0){
+    if(status == ERROR_CHROMSTART_BEFORE_PREVIOUS_CHROMEND){
+      error("chromStart before previous chromEnd");
+    }
     if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND)
       error("chromStart not less than chromEnd");
     if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH)

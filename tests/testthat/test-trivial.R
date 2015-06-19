@@ -1,4 +1,6 @@
+library(testthat)
 context("trivial")
+library(PeakSegJoint)
 
 count <-
   as.integer(c(rep(c(0, 1), each=5),
@@ -29,13 +31,13 @@ test_that("chromEnd <= chromStart is an error", {
   }, "chromStart not less than chromEnd")
 })
 
-test_that("chromEnd[i-1] != chromStart[i] is an error", {
+test_that("chromStart[i] < chromEnd[i-1] is an error", {
   bad <- data.frame(chromStart=as.integer(c(0, 100)),
                     chromEnd=as.integer(c(150, 200)),
                     count=0L,
                     sample.id="foo")
   expect_error({
     PeakSegJointHeuristic(bad)
-  }, "chromStart[i] != chromEnd[i-1]", fixed=TRUE)
+  }, "chromStart before previous chromEnd", fixed=TRUE)
 })
 

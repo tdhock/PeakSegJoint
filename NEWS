@@ -1,3 +1,11 @@
+2015.06.19
+
+To support sparse bigwig data (created with -bg rather than -bga
+option to coverageBed, resulting in no rows with 0 coverage), binSum
+no longer returns an error code when chromEnd[i] !=
+chromStart[i+1]. Instead, gaps in the coverage profile are properly
+treated as bases with 0 coverage.
+
 2015.05.22
 
 ConvertModelList returns modelSelection.
