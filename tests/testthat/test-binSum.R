@@ -157,6 +157,12 @@ test_that("gaps are treated as counts of 0", {
   expect_equal(by5$count, c(5, 5, 0, 50))
   by10 <- binSum(ok, 0L, 10L, 2L)
   expect_equal(by10$count, c(10, 50))
+  big <- binSum(ok, 0L, 100L, 1L)
+  expect_equal(big$count, 60L)
+  two <- binSum(ok, 0L, 15L, 2L)
+  expect_equal(two$count, c(10, 50))
+  small <- binSum(ok, 0L, 16L, 2L)
+  expect_equal(small$count, c(20, 40))
 })
 
 test_that("no segfault", {

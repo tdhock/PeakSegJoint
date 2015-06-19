@@ -17,11 +17,35 @@ test_that("binSum gives same answer for real data sets", {
   sample.id.vec <- names(data.sample.list[[1]])
   for(sample.id in sample.id.vec){
     bin.list <- list()
+    sample.list <- list()
     for(data.name in names(data.sample.list)){
       one.sample <- data.sample.list[[data.name]][[sample.id]]
-      bin.list[[data.name]] <-
-        binSum(one.sample, bin.chromStart, bases.per.bin, n.bins)
+      bins <- binSum(one.sample, bin.chromStart, bases.per.bin, n.bins)
+      bin.list[[data.name]] <- data.frame(bins, data.name)
+      sample.list[[data.name]] <- data.frame(one.sample, data.name)
     }
+    for(data.name in names(data.sample.list)){
+      bin.list[[data.name]]$difference <-
+        ifelse(bin.list[[data.name]]$count != bin.list$with.zero$count,
+               "different", "same")
+    }
+    both.samples <- do.call(rbind, sample.list)
+    both.bins <- do.call(rbind, bin.list)
+    head(bin.list$without.zero, 20)
+    ggplot()+
+      coord_cartesian(xlim=c(118219186, 118219286)/1e3)+
+      geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                    ymin=0, ymax=count),
+                data=both.samples)+
+      geom_step(aes(chromStart/1e3, count),
+                data=both.samples)+
+      geom_segment(aes(chromStart/1e3, mean,
+                       color=difference,
+                       xend=chromEnd/1e3, yend=mean),
+                   data=both.bins)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(data.name ~ .)
     with(bin.list, rbind(with.zero$count, without.zero$count))
     with(bin.list, expect_equal(with.zero$count, without.zero$count))
   }
