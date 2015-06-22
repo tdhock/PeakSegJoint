@@ -2,6 +2,7 @@ library(testthat)
 context("sparse data without counts equal to 0")
 
 library(PeakSegJoint)
+library(ggplot2)
 
 data(peak1.infeasible)
 
