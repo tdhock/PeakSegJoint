@@ -2,6 +2,7 @@ library(testthat)
 context("real data")
 
 library(PeakSegJoint)
+library(ggplot2)
 
 data(peak1.infeasible)
 
