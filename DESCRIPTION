@@ -4,7 +4,8 @@ Author: Toby Dylan Hocking
 Version: 2015.06.19
 License: GPL-3
 Title: Joint peak detection via constrained optimal segmentation
- and supervised penalty learning.
-Description: Segment several ChIP-seq samples to jointly find the peaks.
+ and supervised penalty learning
+Description: Segment several ChIP-seq samples to jointly find the peaks 
+ which are the same and different across samples.
 Suggests: ggplot2, testthat, proto, PeakError, microbenchmark, PeakSegDP
 Depends: R (>= 2.10)

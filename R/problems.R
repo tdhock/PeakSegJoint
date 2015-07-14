@@ -1,11 +1,27 @@
 getProblems <- function
 ### Tile problems over an entire chromosome.
 (chrom,
+### chrom for problem names.
  min.chromStart,
+### First base of problems.
  max.chromEnd,
+### Last base of problems.
  bases.per.problem,
+### each problem has this many bases.
  overlap.count=3
+### how many problems overlap at any given genome position?
  ){
+  stopifnot(is.character(chrom))
+  stopifnot(length(chrom) == 1)
+  stopifnot(is.numeric(min.chromStart))
+  stopifnot(length(min.chromStart) == 1)
+  stopifnot(is.numeric(max.chromEnd))
+  stopifnot(length(max.chromEnd) == 1)
+  stopifnot(is.numeric(bases.per.problem))
+  stopifnot(length(bases.per.problem) == 1)
+  stopifnot(is.numeric(overlap.count))
+  stopifnot(length(overlap.count) == 1)
+  
   problemSeq <- seq(0, max.chromEnd, by=bases.per.problem)
   
   ## mix small and big problems for step 1?

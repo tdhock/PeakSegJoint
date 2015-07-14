@@ -32,28 +32,10 @@ for(RData.path in RData.path.vec){
   objs <- load(RData.path)
   stopifnot("chunk" %in% objs)
   tmp.bg <- tempfile()
-  cmd <-
-    sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s %s",
-            chunk$chrom, chunk$chunkStart, chunk$chunkEnd,
-            bigwig.file, tmp.bg)
-  status <- system(cmd)
-  if(status != 0){
-    stop("error code ", status, " for\n", cmd)
-  }
-  bg <- fread(tmp.bg)
-  setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
-  stopifnot(0 <= bg$norm)
-  nonzero <- bg[0 < norm, ]
-  min.nonzero.norm <- min(nonzero[, norm])
-  nonzero[, count := as.integer(norm/min.nonzero.norm) ]
-  counts <- nonzero[, .(
-    chrom,
-    chromStart,
-    chromEnd,
-    count
-    )]
   chunk.dir <- dirname(RData.path)
   out.RData <- file.path(chunk.dir, cell.type, RData.base)
+  counts <-
+    readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
   cat("Writing ", nrow(counts),
       " coverage rows to ", out.RData, "\n",
       sep="")
@@ -61,4 +43,4 @@ for(RData.path in RData.path.vec){
   dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
   save(counts, file=out.RData)
 }
-cat("Done writing ", length(RData.path.vec), " RData files.\n")
+cat("Done writing", length(RData.path.vec), "RData files.\n")

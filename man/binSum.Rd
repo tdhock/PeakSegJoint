@@ -3,8 +3,8 @@
 \title{binSum}
 \description{Compute sum of compressed coverage profile in bins, using fast C
 code.}
-\usage{binSum(compressed, bin.chromStart = 0L, bin.size = 1L, n.bins = 2000L, 
-    empty.as.zero = FALSE)}
+\usage{binSum(compressed, bin.chromStart = 0L, bin.size = 1L, 
+    n.bins = 2000L, empty.as.zero = FALSE)}
 \arguments{
   \item{compressed}{data.frame with integer columns chromStart, chromEnd, count.}
   \item{bin.chromStart}{Base before first bin.}
