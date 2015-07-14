@@ -2,6 +2,7 @@ library(data.table)
 library(ggplot2)
 library(xtable)
 library(PeakSegJoint)
+library(parallel)
 
 argv <-
   system.file(file.path("exampleData",
@@ -148,13 +149,25 @@ stopifnot(train.problem.counts > 0)
 
 set.seed(1)
 
+my.mclapply <- function(...){
+  result.list <- mclapply(...)
+  is.error <- sapply(result.list, inherits, "try-error")
+  if(any(is.error)){
+    print(result.list[is.error])
+    stop("errors in mclapply")
+  }
+  result.list
+}
+
 estimate.regularization <- function(train.validation, n.folds=4){
   stopifnot(is.character(train.validation))
   stopifnot(2 <= length(train.validation))
-  n.folds <- if(length(train.validation) < n.folds) length(train.validation)
+  if(length(train.validation) < n.folds){
+    n.folds <- length(train.validation)
+  }
   fold.id <- sample(rep(1:n.folds, l=length(train.validation)))
-  picked.by.fold <- list()
-  for(validation.fold in 1:n.folds){
+
+  one.fold <- function(validation.fold){
     is.validation <- fold.id == validation.fold
     sets <- list(validation=train.validation[is.validation],
                  train=train.validation[!is.validation])
@@ -190,7 +203,7 @@ estimate.regularization <- function(train.validation, n.folds=4){
             stopifnot(nrow(selected) == 1)
             reg.str <- paste(fit$regularization.vec[[regularization.i]])
             peaks.by.regularization[[reg.str]][[problem.name]] <-
-              subset(problem$peaks, peaks == selected)
+              subset(problem$peaks, peaks == selected$peaks)
           }#log.lambda
         }#problem.name
         error.vec <- rep(NA, length(fit$regularization.vec))
@@ -211,38 +224,60 @@ estimate.regularization <- function(train.validation, n.folds=4){
       incorrect.targets <- colSums(outside.target.mat)
       tvdf <- function(metric.name){
         data.frame(tv,
+                   validation.fold,
                    metric.name,
                    metric.value=get(metric.name),
                    regularization=fit$regularization.vec)
       }
+      ## TODO: also compute surrogate loss to see that it is monotonic
+      ## decreasing as a function of model complexity?
       error.by.tv[[tv]] <-
         rbind(tvdf("incorrect.targets"), tvdf("incorrect.regions"))
     }#tv
-    tv.error <- do.call(rbind, error.by.tv)
-    v.err <- subset(error.by.tv$validation, metric.name=="incorrect.regions")
-    picked.i <- pick.best.index(v.err$metric.value)
-    picked.error <- v.err[picked.i, ]
-    tvPlot <- 
-      ggplot()+
-        geom_point(aes(-log10(regularization), metric.value, color=tv),
-                   pch=1,
-                   data=picked.error)+
-        geom_line(aes(-log10(regularization), metric.value, color=tv),
-                  data=tv.error)+
-        theme_bw()+
-        theme(panel.margin=grid::unit(0, "cm"))+
-        facet_grid(metric.name ~ .)
-    print(tvPlot)
-    print(tv.error)
-    picked.by.fold[[validation.fold]] <- picked.error
+    do.call(rbind, error.by.tv)
   }#validation.fold
-  picked <- do.call(rbind, picked.by.fold)
-  mean(picked$regularization)
-}  
 
-estimate.regularization(names(problems.by.chunk))
+  error.by.fold <- my.mclapply(1:n.folds, one.fold)
+  do.call(rbind, error.by.fold)
+}
 
-print("TODO: train it!")
+full.curves <- estimate.regularization(names(problems.by.chunk))
+
+v.err <-
+  subset(full.curves,
+         metric.name=="incorrect.regions" &
+           tv=="validation")
+v.list <- split(v.err, v.err$validation.fold)
+picked.list <- list()
+for(validation.fold in names(v.list)){
+  v <- v.list[[validation.fold]]
+  picked.i <- pick.best.index(v$metric.value)
+  picked.list[[validation.fold]] <- v[picked.i, ]
+}
+picked.error <- do.call(rbind, picked.list)
+
+tvPlot <- 
+  ggplot()+
+    geom_point(aes(-log10(regularization), metric.value, color=tv),
+               pch=1,
+               data=picked.error)+
+    geom_line(aes(-log10(regularization), metric.value, color=tv),
+              data=full.curves)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(metric.name ~ validation.fold, scales="free")
+print(tvPlot)
+
+mean.reg <- mean(picked.error$regularization)
+
+train.list <- do.call(c, problems.by.chunk)
+fit <-
+  IntervalRegressionProblems(train.list,
+                             initial.regularization=mean.reg,
+                             factor.regularization=1.1,
+                             verbose=0)
+
+print("TODO: split data into train/test, compute test errors")
 
 coverage.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "*", "*.RData"))
 coverage.RData <- coverage.RData.vec[1]
