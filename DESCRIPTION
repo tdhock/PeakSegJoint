@@ -7,5 +7,5 @@ Title: Joint peak detection via constrained optimal segmentation
  and supervised penalty learning
 Description: Segment several ChIP-seq samples to jointly find the peaks 
  which are the same and different across samples.
-Suggests: ggplot2, testthat, proto, PeakError, microbenchmark, PeakSegDP
-Depends: R (>= 2.10)
+Suggests: ggplot2, testthat, proto, microbenchmark, PeakSegDP
+Depends: R (>= 2.10), data.table (>= 1.9.4), PeakError
