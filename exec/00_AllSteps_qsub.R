@@ -29,41 +29,33 @@ if(status != 0){
 cmd.list <- list()
 
 data.dir <- normalizePath(data.dir, mustWork=TRUE)#NEEDS TO BE ABSOLUTE!
-Step1 <-
-  system.file(file.path("exec", "Step1-chunk-coverage.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-bigwig.path.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
-cmd.list$Step1 <-
-  structure(paste(Rscript, Step1, bigwig.path.vec),
-            names=basename(bigwig.path.vec))
 
-Step2 <-
-  system.file(file.path("exec", "Step2-segment-labeled-chunks.R"),
+Step1 <-
+  system.file(file.path("exec", "Step1-segment-one-labeled-chunk.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 regions.RData.vec <-
   Sys.glob(file.path(data.dir, "PeakSegJoint-chunks", "*", "regions.RData"))
 chunk.dir.vec <- dirname(regions.RData.vec)
-cmd.list$Step2 <-
-  structure(paste(Rscript, Step2, chunk.dir.vec),
+cmd.list$Step1 <-
+  structure(paste(Rscript, Step1, chunk.dir.vec),
             names=paste0("chunk", basename(chunk.dir.vec)))
 
-Step3 <- 
-  system.file(file.path("exec", "Step3-training.R"),
+Step2 <- 
+  system.file(file.path("exec", "Step2-training.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
-cmd.list$Step3 <-
-  c(training=paste(Rscript, Step3, chunks.dir))
+cmd.list$Step2 <-
+  c(training=paste(Rscript, Step2, chunks.dir))
 
-Step4v <-
-  system.file(file.path("exec", "Step4v-viz-train-errors.R"),
+Step3v <-
+  system.file(file.path("exec", "Step3v-viz-train-errors.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 
-cmd.list$Step4 <-
-  structure(paste(Rscript, Step4v, chunk.dir.vec),
+cmd.list$Step3 <-
+  structure(paste(Rscript, Step3v, chunk.dir.vec),
             names=paste0("chunk", basename(chunk.dir.vec), "viz"))
 
 qsub <- "echo 1 && bash"

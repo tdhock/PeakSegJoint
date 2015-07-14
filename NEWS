@@ -1,3 +1,9 @@
+2015.07.14
+
+Remove "read one sample coverage file and save the coverage profile
+for each labeled chunk" step from exec/ pipeline, since it is so fast
+with bigwig files now.
+
 2015.06.19
 
 To support sparse bigwig data (created with -bg rather than -bga

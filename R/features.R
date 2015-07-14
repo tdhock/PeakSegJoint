@@ -31,9 +31,10 @@ featureMatrix <- structure(function(profile.list){
     too.long.pos <- with(sample.counts, {
       (chromStart[1]+1):chromEnd[length(chromEnd)]
     })
-    stopifnot(length(too.long) == length(too.long.pos))
-    keep <- max.chromStart < too.long.pos & too.long.pos <= min.chromEnd
-    long <- as.numeric(too.long[keep])
+    n.bins <- min.chromEnd-max.chromStart
+    bins <-
+      binSum(sample.counts, max.chromStart, n.bins=n.bins)
+    long <- bins$count
     stopifnot(length(long) == bases)
     feature.vec <-
       c(quartile=quantile(long),

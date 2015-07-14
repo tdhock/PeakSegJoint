@@ -27,7 +27,7 @@ print(options("mc.cores"))
 print(argv)
 
 if(length(argv) != 1){
-  stop("usage: Step2.R path/to/PeakSegJoint-chunks/012354")
+  stop("usage: Step1.R path/to/PeakSegJoint-chunks/012354")
 }
 
 my.mclapply <- function(...){
@@ -42,6 +42,9 @@ my.mclapply <- function(...){
 
 chunk.dir <- argv[1]
 chunk.id <- basename(chunk.dir)
+chunks.dir <- dirname(chunk.dir)
+data.dir <- dirname(chunks.dir)
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 
 regions.RData <- file.path(chunk.dir, "regions.RData")
 
@@ -50,12 +53,11 @@ regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 regions[, chromStart1 := chromStart + 1L]
 
-counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
-
 counts.by.sample <- list()
-for(counts.RData.path in counts.RData.vec){
-  objs <- load(counts.RData.path)
-  sample.id <- sub(".RData$", "", basename(counts.RData.path))
+for(bigwig.file in bigwig.file.vec){
+  counts <-
+    readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+  sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
   counts.by.sample[[sample.id]] <- data.table(sample.id, counts)
 }
 counts <- do.call(rbind, counts.by.sample)
