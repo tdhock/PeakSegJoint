@@ -180,7 +180,8 @@ tv.curves <- function(train.validation, n.folds=4){
     error.by.tv <- list()
     for(tv in names(sets)){
       chunk.name.vec <- sets[[tv]]
-      error.df <- error.metrics(chunk.name.vec, fit)
+      error.results <- error.metrics(chunk.name.vec, fit)
+      error.df <- error.results$metrics
       error.by.tv[[tv]] <- data.frame(tv, validation.fold, error.df)
     }#tv
     do.call(rbind, error.by.tv)
@@ -194,6 +195,7 @@ error.metrics <- function(chunk.name.vec, fit){
   error.vec.list <- list()
   regions.list <- list()
   outside.target.list <- list()
+  result.list <- list()
   for(chunk.name in chunk.name.vec){
     chunk.regions <- regions.by.chunk[[chunk.name]]
     regions.list[[chunk.name]] <- nrow(chunk.regions)
@@ -226,6 +228,10 @@ error.metrics <- function(chunk.name.vec, fit){
       chunk.peaks <-
         do.call(rbind, peaks.by.regularization[[regularization.i]])
       chunk.error <- PeakErrorSamples(chunk.peaks, chunk.regions)
+      if(regularization.i == 1){ # first one for test error.
+        result.list$peaks[[chunk.name]] <- chunk.peaks
+        result.list$error.regions[[chunk.name]] <- chunk.error
+      }
       for(metric.name in names(metric.vec.list)){
         metric.vec.list[[metric.name]][[regularization.i]] <-
           sum(chunk.error[, metric.name])
@@ -259,8 +265,10 @@ error.metrics <- function(chunk.name.vec, fit){
     }
     do.call(rbind, df.list)
   }
-  metrics("incorrect.targets", "incorrect.regions",
-          "false.positives", "false.negatives")
+  result.list$metrics <-
+    metrics("incorrect.targets", "incorrect.regions",
+            "false.positives", "false.negatives")
+  result.list
 }
 
 estimate.regularization <- function(train.validation){
@@ -309,19 +317,38 @@ if(length(all.chunk.names) < outer.folds){
 }
 outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
 test.error.list <- list()
+test.peaks.list <- list()
+test.regions.list <- list()
 for(test.fold in 1:outer.folds){
   is.test <- outer.fold.id == test.fold
   sets <- list(train.validation=all.chunk.names[!is.test],
                test=all.chunk.names[is.test])
+  mean.reg <- estimate.regularization(sets$train.validation)
   tv.list <- do.call(c, problems.by.chunk[sets$train.validation])
   fit <-
     IntervalRegressionProblems(tv.list,
-                               initial.regularization=0.005,
-                               factor.regularization=1.1,
+                               initial.regularization=mean.reg,
+                               factor.regularization=10000,
                                verbose=0)
+  test.results <- error.metrics(sets$test, fit)
+  test.regions.list[names(test.results$error.regions)] <-
+    test.results$error.regions
+  test.peaks.list[names(test.results$peaks)] <- test.results$peaks
+  test.metrics <-
+    subset(test.results$metrics, regularization == regularization[1])
+  rownames(test.metrics) <- NULL
+  test.error.list[[paste("test fold", test.fold)]] <-
+    data.frame(test.fold, test.metrics)
 }
 
-print("TODO: split data into train/test, compute test errors")
+incorrect <- rowSums(sapply(test.error.list, "[[", "metric.value"))
+possible <- rowSums(sapply(test.error.list, "[[", "possible"))
+percent.incorrect <- incorrect / possible * 100
+test.error.summary <- 
+  data.frame(metric.name=test.error.list[[1]]$metric.name,
+             incorrect, possible, percent.incorrect)
+
+print("TODO: plot predictions and test errors for each chunk")
 
 coverage.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "*", "*.RData"))
 coverage.RData <- coverage.RData.vec[1]
