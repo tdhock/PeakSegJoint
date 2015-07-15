@@ -180,65 +180,87 @@ tv.curves <- function(train.validation, n.folds=4){
     error.by.tv <- list()
     for(tv in names(sets)){
       chunk.name.vec <- sets[[tv]]
-      error.vec.list <- list()
-      regions.list <- list()
-      outside.target.list <- list()
-      for(chunk.name in chunk.name.vec){
-        chunk.regions <- regions.by.chunk[[chunk.name]]
-        regions.list[[chunk.name]] <- nrow(chunk.regions)
-        chunk.problems <- problems.by.chunk[[chunk.name]]
-        peaks.by.regularization <- list()
-        for(problem.name in names(chunk.problems)){
-          problem <- chunk.problems[[problem.name]]
-          log.lambda.vec <- fit$predict(problem$features)
-          too.hi <- problem$target[2] < log.lambda.vec
-          too.lo <- log.lambda.vec < problem$target[1]
-          outside.target.list[[problem.name]] <- too.hi | too.lo
-          for(regularization.i in seq_along(log.lambda.vec)){
-            log.lambda <- log.lambda.vec[[regularization.i]]
-            selected <- 
-              subset(problem$modelSelection,
-                     min.log.lambda < log.lambda &
-                       log.lambda < max.log.lambda)
-            stopifnot(nrow(selected) == 1)
-            reg.str <- paste(fit$regularization.vec[[regularization.i]])
-            peaks.by.regularization[[reg.str]][[problem.name]] <-
-              subset(problem$peaks, peaks == selected$peaks)
-          }#log.lambda
-        }#problem.name
-        error.vec <- rep(NA, length(fit$regularization.vec))
-        for(regularization.i in seq_along(peaks.by.regularization)){
-          chunk.peaks <-
-            do.call(rbind, peaks.by.regularization[[regularization.i]])
-          chunk.error <- PeakErrorSamples(chunk.peaks, chunk.regions)
-          error.vec[[regularization.i]] <- with(chunk.error, sum(fp+fn))
-        }
-        error.vec.list[[chunk.name]] <- error.vec
-      }#chunk.name
-      error.mat <- do.call(rbind, error.vec.list)
-      regions.vec <- do.call(c, regions.list)
-      outside.target.mat <- do.call(rbind, outside.target.list)
-      regions <- sum(regions.vec)
-      incorrect.regions <- colSums(error.mat)
-      targets <- nrow(outside.target.mat)
-      incorrect.targets <- colSums(outside.target.mat)
-      tvdf <- function(metric.name){
-        data.frame(tv,
-                   validation.fold,
-                   metric.name,
-                   metric.value=get(metric.name),
-                   regularization=fit$regularization.vec)
-      }
-      ## TODO: also compute surrogate loss to see that it is monotonic
-      ## decreasing as a function of model complexity?
-      error.by.tv[[tv]] <-
-        rbind(tvdf("incorrect.targets"), tvdf("incorrect.regions"))
+      error.df <- error.metrics(chunk.name.vec, fit)
+      error.by.tv[[tv]] <- data.frame(tv, validation.fold, error.df)
     }#tv
     do.call(rbind, error.by.tv)
   }#validation.fold
 
   error.by.fold <- my.mclapply(1:n.folds, one.fold)
   do.call(rbind, error.by.fold)
+}
+
+error.metrics <- function(chunk.name.vec, fit){
+  error.vec.list <- list()
+  regions.list <- list()
+  outside.target.list <- list()
+  for(chunk.name in chunk.name.vec){
+    chunk.regions <- regions.by.chunk[[chunk.name]]
+    regions.list[[chunk.name]] <- nrow(chunk.regions)
+    chunk.problems <- problems.by.chunk[[chunk.name]]
+    peaks.by.regularization <- list()
+    for(problem.name in names(chunk.problems)){
+      problem <- chunk.problems[[problem.name]]
+      log.lambda.vec <- fit$predict(problem$features)
+      too.hi <- problem$target[2] < log.lambda.vec
+      too.lo <- log.lambda.vec < problem$target[1]
+      outside.target.list[[problem.name]] <- too.hi | too.lo
+      for(regularization.i in seq_along(log.lambda.vec)){
+        log.lambda <- log.lambda.vec[[regularization.i]]
+        selected <- 
+          subset(problem$modelSelection,
+                 min.log.lambda < log.lambda &
+                   log.lambda < max.log.lambda)
+        stopifnot(nrow(selected) == 1)
+        reg.str <- paste(fit$regularization.vec[[regularization.i]])
+        peaks.by.regularization[[reg.str]][[problem.name]] <-
+          subset(problem$peaks, peaks == selected$peaks)
+      }#log.lambda
+    }#problem.name
+    metric.vec.list <- list()
+    for(metric.name in c("fp", "fn", "possible.fp", "possible.tp")){
+      metric.vec.list[[metric.name]] <-
+        rep(NA, length(fit$regularization.vec))
+    }
+    for(regularization.i in seq_along(peaks.by.regularization)){
+      chunk.peaks <-
+        do.call(rbind, peaks.by.regularization[[regularization.i]])
+      chunk.error <- PeakErrorSamples(chunk.peaks, chunk.regions)
+      for(metric.name in names(metric.vec.list)){
+        metric.vec.list[[metric.name]][[regularization.i]] <-
+          sum(chunk.error[, metric.name])
+      }
+    }
+    error.vec.list[[chunk.name]] <- metric.vec.list
+  }#chunk.name
+  fp.mat <- sapply(error.vec.list, "[[", "fp")
+  fn.mat <- sapply(error.vec.list, "[[", "fn")
+  fn.possible.mat <- sapply(error.vec.list, "[[", "possible.tp")
+  fp.possible.mat <- sapply(error.vec.list, "[[", "possible.fp")
+  false.positives <- rowSums(fp.mat)
+  false.negatives <- rowSums(fn.mat)
+  false.positives.possible <- rowSums(fp.possible.mat)
+  false.negatives.possible <- rowSums(fn.possible.mat)
+  regions.vec <- do.call(c, regions.list)
+  outside.target.mat <- do.call(rbind, outside.target.list)
+  incorrect.regions <- false.positives + false.negatives
+  incorrect.regions.possible <- sum(regions.vec)
+  incorrect.targets <- colSums(outside.target.mat)
+  incorrect.targets.possible <- nrow(outside.target.mat)
+  metrics <- function(...){
+    df.list <- list()
+    for(metric.name in c(...)){
+      possible <- get(paste0(metric.name, ".possible"))
+      df.list[[metric.name]] <- 
+        data.frame(metric.name,
+                   metric.value=get(metric.name),
+                   possible,
+                   regularization=fit$regularization.vec)
+    }
+    do.call(rbind, df.list)
+  }
+  metrics("incorrect.targets", "incorrect.regions",
+          "false.positives", "false.negatives")
 }
 
 estimate.regularization <- function(train.validation){
@@ -280,6 +302,24 @@ fit <-
                              initial.regularization=mean.reg,
                              factor.regularization=1.1,
                              verbose=0)
+
+outer.folds <- 4
+if(length(all.chunk.names) < outer.folds){
+  outer.folds <- length(all.chunk.names)
+}
+outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
+test.error.list <- list()
+for(test.fold in 1:outer.folds){
+  is.test <- outer.fold.id == test.fold
+  sets <- list(train.validation=all.chunk.names[!is.test],
+               test=all.chunk.names[is.test])
+  tv.list <- do.call(c, problems.by.chunk[sets$train.validation])
+  fit <-
+    IntervalRegressionProblems(tv.list,
+                               initial.regularization=0.005,
+                               factor.regularization=1.1,
+                               verbose=0)
+}
 
 print("TODO: split data into train/test, compute test errors")
 
