@@ -46,3 +46,20 @@ readBigWig <- function
     )]
 ### data.table with columns chrom chromStart chromEnd count.
 }
+
+bigWigInfo <- function
+### Run bigWigInfo to find chrom sizes.
+(bigwig.file
+### path or URL of bigwig file.
+ ){
+  stopifnot(is.character(bigwig.file))
+  stopifnot(length(bigwig.file) == 1)
+  cmd <- paste("bigWigInfo", bigwig.file, "-chroms")
+  info.lines <- system(cmd, intern=TRUE)
+  chrom.lines <- grep("^\t", info.lines, value=TRUE)
+  chrom.df <- read.table(text=chrom.lines)
+  names(chrom.df) <- c("chrom", "chromStart", "chromEnd")
+  chrom.df$chrom <- paste(chrom.df$chrom)
+  chrom.df
+}
+

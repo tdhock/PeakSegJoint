@@ -105,3 +105,16 @@ for(step.name in names(cmd.list)){
     }
   }
 }
+
+problems.by.job <- split(test.problems, test.problems$job.name)
+Step4 <-
+  system.file(file.path("exec", "Step4-test-segmentation.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+R.bin <- R.home("bin")
+Rscript <- file.path(R.bin, "Rscript")
+for(job.name in names(problems.by.job)){
+  job.problems <- problems.by.job[[job.name]]
+  cmd <- paste("qsub", Rscript, Step4, trained.model.RData, job.name)
+  print(cmd)
+}

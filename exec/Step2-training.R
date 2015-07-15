@@ -3,6 +3,7 @@ library(ggplot2)
 library(xtable)
 library(PeakSegJoint)
 library(parallel)
+options(xtable.print.results=FALSE)
 
 argv <-
   system.file(file.path("exampleData",
@@ -302,15 +303,8 @@ estimate.regularization <- function(train.validation){
   mean(picked.error$regularization)
 }
 
+## Divide chunks into train+validation/test, compute test error.
 all.chunk.names <- names(problems.by.chunk)
-mean.reg <- estimate.regularization(all.chunk.names)
-train.list <- do.call(c, problems.by.chunk)
-fit <-
-  IntervalRegressionProblems(train.list,
-                             initial.regularization=mean.reg,
-                             factor.regularization=1.1,
-                             verbose=0)
-
 outer.folds <- 4
 if(length(all.chunk.names) < outer.folds){
   outer.folds <- length(all.chunk.names)
@@ -325,12 +319,12 @@ for(test.fold in 1:outer.folds){
                test=all.chunk.names[is.test])
   mean.reg <- estimate.regularization(sets$train.validation)
   tv.list <- do.call(c, problems.by.chunk[sets$train.validation])
-  fit <-
+  tv.fit <-
     IntervalRegressionProblems(tv.list,
                                initial.regularization=mean.reg,
                                factor.regularization=10000,
                                verbose=0)
-  test.results <- error.metrics(sets$test, fit)
+  test.results <- error.metrics(sets$test, tv.fit)
   test.regions.list[names(test.results$error.regions)] <-
     test.results$error.regions
   test.peaks.list[names(test.results$peaks)] <- test.results$peaks
@@ -341,49 +335,102 @@ for(test.fold in 1:outer.folds){
     data.frame(test.fold, test.metrics)
 }
 
-incorrect <- rowSums(sapply(test.error.list, "[[", "metric.value"))
-possible <- rowSums(sapply(test.error.list, "[[", "possible"))
+incorrect <- as.integer(rowSums(sapply(test.error.list, "[[", "metric.value")))
+possible <- as.integer(rowSums(sapply(test.error.list, "[[", "possible")))
 percent.incorrect <- incorrect / possible * 100
 test.error.summary <- 
-  data.frame(metric.name=test.error.list[[1]]$metric.name,
+  data.frame(row.names=test.error.list[[1]]$metric.name,
              incorrect, possible, percent.incorrect)
 
-print("TODO: plot predictions and test errors for each chunk")
+test.out.dir <- file.path(chunks.dir, "figure-test-errors")
+dir.create(test.out.dir, showWarnings=FALSE)
+test.index.html <- file.path(test.out.dir, "index.html")
+test.row.list <- list()
+for(problems.RData in names(test.regions.list)){
+  chunk.dir <- dirname(problems.RData)
+  chunk.id <- basename(chunk.dir)
+  test.error.figure <-
+    sprintf('<img src="%s.png" alt="chunk%s" />', chunk.id, chunk.id)
+  error.regions <- test.regions.list[[problems.RData]]
+  chunk.peaks <- test.peaks.list[[problems.RData]]
+  out.RData <- file.path(test.out.dir, paste0(chunk.id, ".RData"))
+  save(error.regions, chunk.peaks, file=out.RData)
+  test.row.list[[chunk.id]] <- with(error.regions, {
+    data.frame(test.error.figure,
+               errors=sprintf("<pre>%4d / %4d</pre>",
+                 sum(fp+fn), length(fp)),
+               fp=sprintf("<pre>%4d / %4d</pre>",
+                 sum(fp), sum(possible.fp)),
+               fn=sprintf("<pre>%4d / %4d</pre>",
+                 sum(fn), sum(possible.tp)))
+  })
+}
+test.row.df <- do.call(rbind, test.row.list)
+test.xt <- xtable(test.row.df)
+test.html.table <-
+  print(test.xt, type="html",
+        include.rownames=FALSE,
+        sanitize.text.function=identity)
+summary.xt <- xtable(test.error.summary)
+summary.html <- print(summary.xt, type="html",
+                      include.rownames=TRUE)
+test.html.out <-
+  paste("<h1>Test error summary</h1>",
+        summary.html,
+        "<p>Targets counts examples (genomic regions to segment)",
+        "in the interval regression problem.</p>",
+        "<p>Regions, false postives, and false negatives",
+        "count labels (peakStart, peakEnd, peaks, noPeaks).</p>",
+        "<p>Test error was estimated using",
+        outer.folds, "fold cross-validation.",
+        "</p>",
+        "<h1>Test error details for each chunk of labels</h1>",
+        test.html.table)
+cat(test.html.out, file=test.index.html)
 
-coverage.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "*", "*.RData"))
-coverage.RData <- coverage.RData.vec[1]
-cobjs <- load(coverage.RData)
+stopifnot(test.error.summary["incorrect.regions", "possible"] ==
+            sum(sapply(regions.by.chunk, nrow)))
 
-## These calculations try to split the genome into manageable
-## subsets/jobs, each of which can fit several samples' coverage data
-## into RAM at once.
-rows.per.megabyte <- 53000 
-bases.per.row <- 20
-max.samples <- 100
-max.megabytes <- 4000
-max.megabytes.per.sample <- max.megabytes/max.samples
-max.rows.per.sample <- max.megabytes.per.sample * rows.per.megabyte
-max.bases.per.sample <- max.rows.per.sample * bases.per.row
+## Fit model to all training data.
+mean.reg <- estimate.regularization(all.chunk.names)
+train.list <- do.call(c, problems.by.chunk)
+full.fit <-
+  IntervalRegressionProblems(train.list,
+                             initial.regularization=mean.reg,
+                             factor.regularization=1.1,
+                             verbose=0)
+
+data.dir <- dirname(chunks.dir)
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+bigwig.file <- bigwig.file.vec[1]
+chrom.ranges <- bigWigInfo(bigwig.file)
+
 hg19.bases <- 3137161264
-bases.per.job <- as.integer(max.bases.per.sample)
-estimated.jobs <- hg19.bases/bases.per.job
-problems.per.job <- bases.per.job/bases.per.problem
+max.jobs <- 100 ## soft limit.
+min.bases.per.job <- 1e7
+total.bases <- sum(chrom.ranges$chromEnd)
+bases.per.job <- total.bases / max.jobs
+if(bases.per.job < min.bases.per.job){
+  bases.per.job <- min.bases.per.job
+}
+bases.per.job <- as.integer(bases.per.job)
+
 problems.by.chrom <- list()
 jobs.by.chrom <- list()
 for(chrom.i in 1:nrow(chrom.ranges)){
   chrom.range <- chrom.ranges[chrom.i, ]
   cat(sprintf("%4d / %4d %s\n", chrom.i, nrow(chrom.ranges), chrom.range$chrom))
-  chrom.bases <- with(chrom.range, max.chromEnd - min.chromStart)
+  chrom.bases <- with(chrom.range, chromEnd - chromStart)
   chrom.problems <- with(chrom.range, {
-    getProblems(chrom, min.chromStart, max.chromEnd, bases.per.problem)
+    getProblems(chrom, chromStart, chromEnd, bases.per.problem)
   })
   jobStart <- with(chrom.range, {
-    seq(min.chromStart, max.chromEnd, by=bases.per.job)
+    seq(chromStart, chromEnd, by=bases.per.job)
   })
   jobEnd <- jobStart + bases.per.job + bases.per.problem
-  jobEnd[chrom.range$max.chromEnd < jobEnd] <- chrom.range$max.chromEnd
+  jobEnd[chrom.range$chromEnd < jobEnd] <- chrom.range$chromEnd
   job.name <- sprintf("%s:%d-%d", chrom.range$chrom, jobStart, jobEnd)
-  chrom.jobs <- data.table(job.name, jobStart, jobEnd)
+  chrom.jobs <- data.table(chrom=chrom.range$chrom, job.name, jobStart, jobEnd)
   chrom.problems$job.name <- NA
   for(job.i in 1:nrow(chrom.jobs)){
     job <- chrom.jobs[job.i, ]
@@ -409,18 +456,7 @@ print(tail(tab.sorted))
 
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
+     full.fit,
      test.problems, test.jobs,
      file=trained.model.RData)
 
-problems.by.job <- split(test.problems, test.problems$job.name)
-Step4 <-
-  system.file(file.path("exec", "Step4-test-segmentation.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-R.bin <- R.home("bin")
-Rscript <- file.path(R.bin, "Rscript")
-for(job.name in names(problems.by.job)){
-  job.problems <- problems.by.job[[job.name]]
-  cmd <- paste("qsub", Rscript, Step4, trained.model.RData, job.name)
-  print(cmd)
-}

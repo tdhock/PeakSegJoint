@@ -42,14 +42,13 @@ getProblems <- function
   problemStart <-
     as.integer(sort(do.call(c, overlap.list)))
   problemEnd <- problemStart + bases.per.problem
-  ## TDH 12 June 2015 do not make the problems shorter.
-  
-  ##problemEnd[max.chromEnd < problemEnd] <- max.chromEnd
+
+  problemEnd[max.chromEnd < problemEnd] <- max.chromEnd
   problemStart[problemStart < 0] <- 0
   
   problem.name <- sprintf("%s:%d-%d", chrom, problemStart, problemEnd)
   problems <-
-    data.table(problem.name, 
+    data.table(chrom, problem.name, 
                bases.per.problem, problemStart, problemEnd)
   problems[min.chromStart < problemEnd &
              problemStart < max.chromEnd, ]
