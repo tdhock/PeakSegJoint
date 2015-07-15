@@ -118,6 +118,7 @@ out.file <- file.path(chunks.dir, "figure-train-errors", "index.html")
 cat(html.out, file=out.file)
 
 problems.by.chunk <- list()
+labeled.problems.by.chunk <- list()
 regions.by.chunk <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
@@ -126,16 +127,15 @@ for(chunk.i in seq_along(problems.RData.vec)){
     stop("step.data.list not found in ", problems.RData)
   }
   res.data <- step2.data.list[[res.str]]
-  for(problem.name in names(res.data$regions)){
+  labeled.and.unlabeled <- paste(res.data$problems$problem.name)
+  for(problem.name in labeled.and.unlabeled){
     target <- step2.error.list[[paste(res.str, problem.name)]]$problem$target
+    mlist <- step2.model.list[[problem.name]]
+    mlist$target <- target
+    problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
     if(is.numeric(target)){
-      n.finite <- sum(is.finite(target))
-      if(n.finite > 0){
-        mlist <- step2.model.list[[problem.name]]
-        mlist$target <- target
-        problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
-      }
-    }
+      labeled.problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
+    }      
   }
   chunk.dir <- dirname(problems.RData)
   regions.RData <- file.path(chunk.dir, "regions.RData")
@@ -143,9 +143,8 @@ for(chunk.i in seq_along(problems.RData.vec)){
   regions.by.chunk[[problems.RData]] <- regions
 }
 
-train.problem.counts <- sapply(problems.by.chunk, length)
+train.problem.counts <- sapply(labeled.problems.by.chunk, length)
 print(train.problem.counts)
-
 stopifnot(train.problem.counts > 0)
 
 set.seed(1)
@@ -172,7 +171,7 @@ tv.curves <- function(train.validation, n.folds=4){
     is.validation <- fold.id == validation.fold
     sets <- list(validation=train.validation[is.validation],
                  train=train.validation[!is.validation])
-    train.list <- do.call(c, problems.by.chunk[sets$train])
+    train.list <- do.call(c, labeled.problems.by.chunk[sets$train])
     fit <-
       IntervalRegressionProblems(train.list,
                                  initial.regularization=0.005,
@@ -205,9 +204,11 @@ error.metrics <- function(chunk.name.vec, fit){
     for(problem.name in names(chunk.problems)){
       problem <- chunk.problems[[problem.name]]
       log.lambda.vec <- fit$predict(problem$features)
-      too.hi <- problem$target[2] < log.lambda.vec
-      too.lo <- log.lambda.vec < problem$target[1]
-      outside.target.list[[problem.name]] <- too.hi | too.lo
+      if(is.numeric(problem$target)){
+        too.hi <- problem$target[2] < log.lambda.vec
+        too.lo <- log.lambda.vec < problem$target[1]
+        outside.target.list[[problem.name]] <- too.hi | too.lo
+      }
       for(regularization.i in seq_along(log.lambda.vec)){
         log.lambda <- log.lambda.vec[[regularization.i]]
         selected <- 
@@ -318,7 +319,7 @@ for(test.fold in 1:outer.folds){
   sets <- list(train.validation=all.chunk.names[!is.test],
                test=all.chunk.names[is.test])
   mean.reg <- estimate.regularization(sets$train.validation)
-  tv.list <- do.call(c, problems.by.chunk[sets$train.validation])
+  tv.list <- do.call(c, labeled.problems.by.chunk[sets$train.validation])
   tv.fit <-
     IntervalRegressionProblems(tv.list,
                                initial.regularization=mean.reg,
@@ -393,7 +394,7 @@ stopifnot(test.error.summary["incorrect.regions", "possible"] ==
 
 ## Fit model to all training data.
 mean.reg <- estimate.regularization(all.chunk.names)
-train.list <- do.call(c, problems.by.chunk)
+train.list <- do.call(c, labeled.problems.by.chunk)
 full.fit <-
   IntervalRegressionProblems(train.list,
                              initial.regularization=mean.reg,
