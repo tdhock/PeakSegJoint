@@ -8,7 +8,7 @@ argv <- commandArgs(trailingOnly=TRUE)
 print(argv)
 
 if(length(argv) != 1){
-  stop("usage: Step4.R path/to/PeakSegJoint-chunks/1")
+  stop("usage: Step3v.R path/to/PeakSegJoint-chunks/1")
 }
 
 ann.colors <-
@@ -372,7 +372,7 @@ first.regions <- all.regions[first.dt, ]
 regions.not.na <- first.regions[!is.na(sample.id), ]
 stopifnot(nrow(regions.not.na) == nrow(regions))
 
-just.samples <- 
+train.fig <- 
   ggplot()+
     ggtitle(animint.dir)+
     scale_y_continuous("aligned read coverage",
@@ -408,7 +408,7 @@ just.samples <-
                       showSelected2=bases.per.problem),
                   data=regions.not.na,
                   fill=NA,
-                  ##fill="grey50",
+                  size=1.5,
                   color="black")+
     geom_segment(aes(chromStart/1e3, 0,
                      xend=chromEnd/1e3, yend=0,
@@ -426,5 +426,58 @@ just.samples <-
 
 png.name <- paste0(animint.dir, ".png")
 png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
-print(just.samples)
+print(train.fig)
 dev.off()
+
+chunk.id <- basename(chunk.dir)
+test.base <- file.path(chunks.dir, "figure-test-errors", chunk.id)
+test.RData <- paste0(test.base, ".RData")
+  
+tobjs <- load(test.RData)
+
+test.fig <- 
+  ggplot()+
+    ggtitle(animint.dir)+
+    scale_y_continuous("aligned read coverage",
+                       breaks=function(limits){
+                         floor(limits[2])
+                       })+
+    scale_x_continuous(paste("position on", chrom,
+                             "(kilo bases = kb)"))+
+    coord_cartesian(xlim=lim.vec)+
+    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                      fill=annotation),
+                  alpha=0.5,
+                  color="grey",
+                  data=regions)+
+           scale_linetype_manual("error type",
+                                 values=c(correct=0,
+                                   "false negative"=3,
+                                   "false positive"=1))+
+    scale_fill_manual(values=ann.colors)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., labeller=function(var, val){
+      sub("McGill0", "", sub(" ", "\n", val))
+    }, scales="free")+
+    geom_line(aes(base/1e3, count),
+              data=some.counts,
+              color="grey50")+
+    geom_tallrect(aes(xmin=chromStart/1e3,
+                      xmax=chromEnd/1e3,
+                      linetype=status),
+                  data=error.regions,
+                  fill=NA,
+                  size=1.5,
+                  color="black")+
+    geom_segment(aes(chromStart/1e3, 0,
+                     xend=chromEnd/1e3, yend=0),
+                 data=chunk.peaks, size=4, color="deepskyblue")+
+    geom_point(aes(chromStart/1e3, 0),
+               data=chunk.peaks, size=4, color="deepskyblue")
+
+png.name <- paste0(test.base, ".png")
+png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
+print(test.fig)
+dev.off()
+
