@@ -159,7 +159,7 @@ my.mclapply <- function(...){
   result.list
 }
 
-estimate.regularization <- function(train.validation, n.folds=4){
+tv.curves <- function(train.validation, n.folds=4){
   stopifnot(is.character(train.validation))
   stopifnot(2 <= length(train.validation))
   if(length(train.validation) < n.folds){
@@ -241,35 +241,39 @@ estimate.regularization <- function(train.validation, n.folds=4){
   do.call(rbind, error.by.fold)
 }
 
-full.curves <- estimate.regularization(names(problems.by.chunk))
+estimate.regularization <- function(train.validation){
+  full.curves <- tv.curves(train.validation)
 
-v.err <-
-  subset(full.curves,
-         metric.name=="incorrect.regions" &
-           tv=="validation")
-v.list <- split(v.err, v.err$validation.fold)
-picked.list <- list()
-for(validation.fold in names(v.list)){
-  v <- v.list[[validation.fold]]
-  picked.i <- pick.best.index(v$metric.value)
-  picked.list[[validation.fold]] <- v[picked.i, ]
+  v.err <-
+    subset(full.curves,
+           metric.name=="incorrect.regions" &
+             tv=="validation")
+  v.list <- split(v.err, v.err$validation.fold)
+  picked.list <- list()
+  for(validation.fold in names(v.list)){
+    v <- v.list[[validation.fold]]
+    picked.i <- pick.best.index(v$metric.value)
+    picked.list[[validation.fold]] <- v[picked.i, ]
+  }
+  picked.error <- do.call(rbind, picked.list)
+
+  tvPlot <- 
+    ggplot()+
+      geom_point(aes(-log10(regularization), metric.value, color=tv),
+                 pch=1,
+                 data=picked.error)+
+      geom_line(aes(-log10(regularization), metric.value, color=tv),
+                data=full.curves)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(metric.name ~ validation.fold, scales="free")
+  print(tvPlot)
+
+  mean(picked.error$regularization)
 }
-picked.error <- do.call(rbind, picked.list)
 
-tvPlot <- 
-  ggplot()+
-    geom_point(aes(-log10(regularization), metric.value, color=tv),
-               pch=1,
-               data=picked.error)+
-    geom_line(aes(-log10(regularization), metric.value, color=tv),
-              data=full.curves)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ validation.fold, scales="free")
-print(tvPlot)
-
-mean.reg <- mean(picked.error$regularization)
-
+all.chunk.names <- names(problems.by.chunk)
+mean.reg <- estimate.regularization(all.chunk.names)
 train.list <- do.call(c, problems.by.chunk)
 fit <-
   IntervalRegressionProblems(train.list,
