@@ -1,8 +1,6 @@
-library(data.table)
 library(ggplot2)
 library(xtable)
 library(PeakSegJoint)
-library(parallel)
 options(xtable.print.results=FALSE)
 
 argv <-
@@ -149,16 +147,6 @@ stopifnot(train.problem.counts > 0)
 
 set.seed(1)
 
-my.mclapply <- function(...){
-  result.list <- mclapply(...)
-  is.error <- sapply(result.list, inherits, "try-error")
-  if(any(is.error)){
-    print(result.list[is.error])
-    stop("errors in mclapply")
-  }
-  result.list
-}
-
 tv.curves <- function(train.validation, n.folds=4){
   stopifnot(is.character(train.validation))
   stopifnot(2 <= length(train.validation))
@@ -187,7 +175,7 @@ tv.curves <- function(train.validation, n.folds=4){
     do.call(rbind, error.by.tv)
   }#validation.fold
 
-  error.by.fold <- my.mclapply(1:n.folds, one.fold)
+  error.by.fold <- mclapply.or.stop(1:n.folds, one.fold)
   do.call(rbind, error.by.fold)
 }
 
@@ -434,32 +422,33 @@ for(chrom.i in 1:nrow(chrom.ranges)){
   jobEnd[chrom.range$chromEnd < jobEnd] <- chrom.range$chromEnd
   job.name <- sprintf("%s:%d-%d", chrom.range$chrom, jobStart, jobEnd)
   chrom.jobs <- data.table(chrom=chrom.range$chrom, job.name, jobStart, jobEnd)
-  chrom.problems$job.name <- NA
-  for(job.i in 1:nrow(chrom.jobs)){
-    job <- chrom.jobs[job.i, ]
-    to.assign <-
-      job$jobStart <= chrom.problems$problemStart &
-        chrom.problems$problemEnd <= job$jobEnd
-    chrom.problems$job.name[to.assign] <- job$job.name
-  }
-  stopifnot(!is.na(chrom.problems$job.name))
+  ## chrom.problems$job.name <- NA
+  ## for(job.i in 1:nrow(chrom.jobs)){
+  ##   job <- chrom.jobs[job.i, ]
+  ##   to.assign <-
+  ##     job$jobStart <= chrom.problems$problemStart &
+  ##       chrom.problems$problemEnd <= job$jobEnd
+  ##   chrom.problems$job.name[to.assign] <- job$job.name
+  ## }
+  ## stopifnot(!is.na(chrom.problems$job.name))
   problems.by.chrom[[paste(chrom.range$chrom)]] <- chrom.problems
   jobs.by.chrom[[paste(chrom.range$chrom)]] <- chrom.jobs
 }
 test.problems <- do.call(rbind, problems.by.chrom)
 test.jobs <- do.call(rbind, jobs.by.chrom)
 problem.job.tab <- table(test.problems$job.name)
-cat(length(problem.job.tab), "jobs with",
-    nrow(test.problems), "problems.",
-    "Problems per job:\n")
-print(quantile(problem.job.tab))
-tab.sorted <- sort(problem.job.tab)
-print(head(tab.sorted))
-print(tail(tab.sorted))
+## cat(length(problem.job.tab), "jobs with",
+##     nrow(test.problems), "problems.",
+##     "Problems per job:\n")
+## print(quantile(problem.job.tab))
+## tab.sorted <- sort(problem.job.tab)
+## print(head(tab.sorted))
+## print(tail(tab.sorted))
 
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
-     test.problems, test.jobs,
+     test.problems,
+     ##test.jobs,
      file=trained.model.RData)
 

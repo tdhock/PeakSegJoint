@@ -33,18 +33,25 @@ readBigWig <- function
   if(status != 0){
     stop("error code ", status, " for\n", cmd)
   }
-  bg <- fread(bedGraph.file)
-  setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
-  stopifnot(0 <= bg$norm)
-  nonzero <- bg[0 < norm, ]
-  min.nonzero.norm <- min(nonzero[, norm])
-  nonzero[, count := as.integer(norm/min.nonzero.norm) ]
-  nonzero[, .(
-    chrom,
-    chromStart,
-    chromEnd,
-    count
-    )]
+  if(file.info(bedGraph.file)$size == 0){
+    data.table(chrom=character(),
+               chromStart=integer(),
+               chromEnd=integer(),
+               count=integer())
+  }else{
+    bg <- fread(bedGraph.file)
+    setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
+    stopifnot(0 <= bg$norm)
+    nonzero <- bg[0 < norm, ]
+    min.nonzero.norm <- min(nonzero[, norm])
+    nonzero[, count := as.integer(norm/min.nonzero.norm) ]
+    nonzero[, .(
+      chrom,
+      chromStart,
+      chromEnd,
+      count
+      )]
+  }
 ### data.table with columns chrom chromStart chromEnd count.
 }
 

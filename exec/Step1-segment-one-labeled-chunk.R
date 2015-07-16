@@ -1,7 +1,5 @@
-library(data.table)
 library(PeakSegJoint)
 library(PeakError)
-library(parallel)
 
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.
@@ -28,16 +26,6 @@ print(argv)
 
 if(length(argv) != 1){
   stop("usage: Step1.R path/to/PeakSegJoint-chunks/012354")
-}
-
-my.mclapply <- function(...){
-  result.list <- mclapply(...)
-  is.error <- sapply(result.list, inherits, "try-error")
-  if(any(is.error)){
-    print(result.list[is.error])
-    stop("errors in mclapply")
-  }
-  result.list
 }
 
 chunk.dir <- argv[1]
@@ -77,7 +65,7 @@ Step1Problem <- function(problem.i){
   }
 }
 step1.results.list <-
-  my.mclapply(seq_along(step1.problems.dt$problem.name), Step1Problem)
+  mclapply.or.stop(seq_along(step1.problems.dt$problem.name), Step1Problem)
 if(all(sapply(step1.results.list, is.null))){
   print(step1.problems.dt)
   stop("no computable models for any uniform size segmentation problems")
@@ -140,7 +128,7 @@ Step1Step2 <- function(res.str){
   list(problems=problems.dt,
        regions=regions.by.problem)
 }
-step2.data.list <- my.mclapply(names(step1.by.res), Step1Step2)
+step2.data.list <- mclapply.or.stop(names(step1.by.res), Step1Step2)
 names(step2.data.list) <- names(step1.by.res)
 
 step2.problems.list <- list()
@@ -227,7 +215,7 @@ SegmentStep2 <- function(row.i){
   info
 }
 step2.model.list <-
-  my.mclapply(seq_along(step2.problems$problem.name), SegmentStep2)
+  mclapply.or.stop(seq_along(step2.problems$problem.name), SegmentStep2)
 ## It is OK to index the model list on problem name (even though the
 ## same problem could occur in several resolutions), since anyways the
 ## model should not change between resolutions.
@@ -258,7 +246,7 @@ ProblemError <- function(row.i){
        peaks=pred.peaks)
 }
 step2.error.list <-
-  my.mclapply(seq_along(problems.with.regions$problem.name), ProblemError)
+  mclapply.or.stop(seq_along(problems.with.regions$problem.name), ProblemError)
 names(step2.error.list) <- with(problems.with.regions, {
   paste(bases.per.problem, problem.name)
 })
@@ -288,7 +276,7 @@ ResError <- function(res.str){
                regions=length(fp))
   })
 }
-res.error.list <- my.mclapply(names(problems.with.regions.list), ResError)
+res.error.list <- mclapply.or.stop(names(problems.with.regions.list), ResError)
 res.error <- do.call(rbind, res.error.list)
 print(res.error)
 
