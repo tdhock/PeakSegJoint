@@ -45,20 +45,6 @@ readBigWigSamples <- function(problem){
   counts.by.sample
 }
 
-readChrom <- function(problem){
-  counts.by.sample <- list()
-  for(bigwig.file in bigwig.file.vec){
-    sample.counts <- 
-      readBigWig(bigwig.file, chrom,
-                 problem$problemStart, problem$problemEnd)
-    sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
-    counts.by.sample[[sample.id]] <- with(sample.counts, {
-      data.frame(chromStart, chromEnd, count)
-    })
-  }
-  counts.by.sample
-}
-
 Step1Problem <- function(problem.i){
   ##cat(sprintf("%10d / %10d problems\n", problem.i, nrow(chrom.problems)))
   problem <- chrom.problems[problem.i, ]
