@@ -132,15 +132,18 @@ for(chunk.i in seq_along(problems.RData.vec)){
     stop("step.data.list not found in ", problems.RData)
   }
   res.data <- step2.data.list[[res.str]]
-  labeled.and.unlabeled <- paste(res.data$problems$problem.name)
-  for(problem.name in labeled.and.unlabeled){
+  for(problem.i in 1:nrow(res.data$problems)){
+    prob.info <- res.data$problems[problem.i, ]
+    problem.name <- paste(prob.info$problem.name)
     target <- step2.error.list[[paste(res.str, problem.name)]]$problem$target
     mlist <- step2.model.list[[problem.name]]
+    stopifnot(prob.info$problemStart < mlist$peaks$chromStart)
+    stopifnot(mlist$peaks$chromEnd < prob.info$problemEnd)
     mlist$target <- target
     problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
     if(is.numeric(target)){
       labeled.problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
-    }      
+    }
   }
   chunk.dir <- dirname(problems.RData)
   regions.RData <- file.path(chunk.dir, "regions.RData")

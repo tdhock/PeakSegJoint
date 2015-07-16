@@ -129,7 +129,7 @@ sample.id.vec <- sort(unique(paste(pred.peaks$sample.id)))
 pred.peaks$peak.name <- with(pred.peaks, {
   sprintf("%s:%d-%d", chrom, chromStart, chromEnd)
 })
-peak.name.vec <- sort(unique(peak.name))
+peak.name.vec <- sort(unique(pred.peaks$peak.name))
 peak.mat <- 
   matrix(0, length(sample.id.vec), length(peak.name.vec),
          dimnames=list(sample.id=sample.id.vec,
