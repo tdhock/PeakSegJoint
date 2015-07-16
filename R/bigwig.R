@@ -22,8 +22,9 @@ readBigWig <- function
   stopifnot(is.character(chrom))
   start <- as.integer(start)
   end <- as.integer(end)
-  stopifnot(0 <= start && start < Inf)
-  stopifnot(0 < end && end < Inf)
+  stopifnot(0 <= start)
+  stopifnot(start < end)
+  stopifnot(end < Inf)
   cmd <-
     sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s %s",
             chrom, start, end,

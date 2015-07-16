@@ -315,6 +315,8 @@ test.error.list <- list()
 test.peaks.list <- list()
 test.regions.list <- list()
 for(test.fold in 1:outer.folds){
+  cat(sprintf("estimating test error for fold %4d / %4d\n",
+              test.fold, outer.folds))
   is.test <- outer.fold.id == test.fold
   sets <- list(train.validation=all.chunk.names[!is.test],
                test=all.chunk.names[is.test])
