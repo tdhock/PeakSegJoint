@@ -60,6 +60,8 @@ clusterProblems <- function
 ### Maximum number of peaks from overlapping segmentation problems.
  ){
   step2.overlap.list <- list()
+  bases.per.problem <- step1.peaks$bases.per.problem[[1]]
+  stopifnot(step1.peaks$bases.per.problem == bases.per.problem)
   clustered.peaks <- clusterPeaks(step1.peaks)
   peaks.by.cluster <- split(clustered.peaks, clustered.peaks$cluster)
   for(cluster.name in names(peaks.by.cluster)){
