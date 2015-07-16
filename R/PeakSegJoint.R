@@ -160,13 +160,11 @@ PeakSegJointSeveral <- structure(function
   if(length(fit.list) == 1){
     return(best.fit)
   }
-  for(model.i in seq_along(best.fit$models)){
-    for(fit in fit.list[-1]){
-      model <- fit$models[[model.i]]
-      if(model$loss < best.fit$models[[model.i]]$loss){
-        best.fit$models[[model.i]] <- model
-      }
-    }
+  for(fit in fit.list[-1]){
+    fit.loss <- sapply(fit$models, "[[", "loss")
+    best.loss <- sapply(best.fit$models, "[[", "loss")
+    to.copy <- fit.loss < best.loss
+    best.fit$models[to.copy] <- fit$models[to.copy]
   }
   best.fit
 ### Model fit list as is returned by PeakSegJointHeuristic.
