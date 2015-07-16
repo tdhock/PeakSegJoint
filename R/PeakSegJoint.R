@@ -157,9 +157,6 @@ PeakSegJointSeveral <- structure(function
     stop("No computable models")
   }
   best.fit <- fit.list[[1]]
-  if(length(fit.list) == 1){
-    return(best.fit)
-  }
   for(fit in fit.list[-1]){
     fit.loss <- sapply(fit$models, "[[", "loss")
     best.loss <- sapply(best.fit$models, "[[", "loss")
