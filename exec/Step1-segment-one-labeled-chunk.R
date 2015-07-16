@@ -71,7 +71,6 @@ if(all(sapply(step1.results.list, is.null))){
   stop("no computable models for any uniform size segmentation problems")
 }
 step1.results <- do.call(rbind, step1.results.list)
-setkey(step1.results, chromStart, chromEnd)
 
 step1.by.res <- split(step1.results, step1.results$bases.per.problem)
 Step1Step2 <- function(res.str){

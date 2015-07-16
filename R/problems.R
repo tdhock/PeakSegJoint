@@ -125,7 +125,7 @@ clusterProblems <- function
     mid <- as.integer((prev.problemEnd+next.problemStart)/2)
     problemEnd[overlaps.next] <- mid[overlaps.next]
     problemStart[overlaps.next+1] <- mid[overlaps.next]+1L
-    data.frame(problem.i=seq_along(problemStart),
+    data.table(problem.i=seq_along(problemStart),
                problem.name=sprintf("%s:%d-%d",
                  chrom, problemStart, problemEnd),
                problemStart, problemEnd)
