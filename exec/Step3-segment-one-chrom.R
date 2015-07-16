@@ -8,6 +8,13 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
+ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
+if(!is.finite(ppn)){
+  ppn <- 2
+}
+options(mc.cores=ppn)
+print(options("mc.cores"))
+
 if(length(argv) != 2){
   stop("usage: Step3.R PeakSegJoint-chunks/trained.model.RData chrom")
 }

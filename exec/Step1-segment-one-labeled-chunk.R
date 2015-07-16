@@ -16,9 +16,10 @@ argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
-options(mc.cores=detectCores())
 ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
-if(!is.finite(ppn))ppn <- 2
+if(!is.finite(ppn)){
+  ppn <- 2
+}
 options(mc.cores=ppn)
 print(options("mc.cores"))
 
