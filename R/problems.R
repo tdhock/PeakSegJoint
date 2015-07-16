@@ -146,3 +146,31 @@ clusterProblems <- function
 ### data.table of non-overlapping segmentation problems.
 }
 
+peak.or.null <- function
+### Run PeakSegJointSeveral in segmentation problems that overlap
+### across the genome. Will later use the results of this function in
+### clusterProblems to determine a set of non-overlapping segmentation
+### problems.
+(count.data
+### data.frame of counts to segment.
+ ){
+  fit <- tryCatch({
+    PeakSegJointSeveral(count.data)
+  }, error=function(e){
+    NULL
+  })
+  if(!is.null(fit)){
+    models <- fit$models[-1]
+    loss.vec <- sapply(models, "[[", "loss")
+    is.feasible <- is.finite(loss.vec)
+    peak.mat <- sapply(models, "[[", "peak_start_end")
+    rownames(peak.mat) <- c("chromStart", "chromEnd")  
+    feasible.mat <- peak.mat[, is.feasible]
+    if(ncol(feasible.mat) > 0){
+      peak.vec <- feasible.mat[, ncol(feasible.mat)]
+      data.table(t(peak.vec))
+    }
+  }
+### the peak of the most complex model, or NULL if there are no
+### feasible models.
+}
