@@ -217,21 +217,11 @@ step2.model.list <-
 names(step2.model.list) <- step2.problems$problem.name
 stopifnot(table(names(step2.model.list)) == 1)
 
-## Check to make sure each peak occurs within its problem.
-for(prob.i in 1:nrow(step2.problems)){
-  prob <- step2.problems[prob.i, ]
-  model <- step2.model.list[[prob.i]]
-  stopifnot(prob$problemStart < model$peaks$chromStart)
-  stopifnot(model$peaks$chromEnd < prob$problemEnd)
-}
-
-setkey(step2.problems, problem.name)
 ProblemError <- function(row.i){
   prob.meta <- problems.with.regions[row.i, ]
   one.res <- step2.data.list[[paste(prob.meta$bases.per.problem)]]
   problem.name <- paste(prob.meta$problem.name)
   problem.regions <- one.res$regions[[problem.name]]
-  problem <- step2.problems[problem.name]
   converted <- step2.model.list[[problem.name]]
   if(is.null(converted)){
     pred.peaks <- Peaks()
@@ -282,6 +272,15 @@ ResError <- function(res.str){
 res.error.list <- mclapply.or.stop(names(problems.with.regions.list), ResError)
 res.error <- do.call(rbind, res.error.list)
 print(res.error)
+
+## Check to make sure each peak occurs within its problem.
+for(prob.i in 1:nrow(step2.problems)){
+  prob <- step2.problems[prob.i, ]
+  problem.name <- paste(prob$problem.name)
+  model <- step2.model.list[[problem.name]]
+  stopifnot(prob$problemStart < model$peaks$chromStart)
+  stopifnot(model$peaks$chromEnd < prob$problemEnd)
+}
 
 ## Save results for this chunk/resolution.
 problems.RData <- file.path(chunk.dir, "problems.RData")
