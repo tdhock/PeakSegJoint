@@ -4,6 +4,34 @@ context("real data")
 library(PeakSegJoint)
 library(ggplot2)
 
+data(peak.at.profile.end)
+
+test_that("no peak detected at profile end", {
+  fit <- PeakSegJointSeveral(peak.at.profile.end)
+  for(model in fit$models){
+    if(is.finite(model$loss)){
+      expect_true(all(is.finite(model$seg3_mean_vec)))
+      expect_true(model$peak_start_end[2] < fit$data_start_end[2])
+    }
+  }
+  counts.list <- list()
+  for(sample.id in names(peak.at.profile.end)){
+    sample.counts <- peak.at.profile.end[[sample.id]]
+    counts.list[[sample.id]] <- data.frame(sample.id, sample.counts)
+  }
+  counts <- do.call(rbind, counts.list)
+  ggplot()+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., labeller=function(var, val){
+      sub("McGill0", "", sub(" ", "\n", val))
+    }, scales="free")+
+    geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                  ymin=0, ymax=count),
+              fill="grey",
+              data=counts)
+})
+
 data(peak1.infeasible)
 
 test_that("peak1 infeasible does not corrupt bigger models", {
