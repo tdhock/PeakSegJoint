@@ -401,15 +401,15 @@ bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
 
-hg19.bases <- 3137161264
-max.jobs <- 100 ## soft limit.
-min.bases.per.job <- 1e7
-total.bases <- sum(chrom.ranges$chromEnd)
-bases.per.job <- total.bases / max.jobs
-if(bases.per.job < min.bases.per.job){
-  bases.per.job <- min.bases.per.job
-}
-bases.per.job <- as.integer(bases.per.job)
+## hg19.bases <- 3137161264
+## max.jobs <- 100 ## soft limit.
+## min.bases.per.job <- 1e7
+## total.bases <- sum(as.numeric(chrom.ranges$chromEnd))
+## bases.per.job <- total.bases / max.jobs
+## if(bases.per.job < min.bases.per.job){
+##   bases.per.job <- min.bases.per.job
+## }
+## bases.per.job <- as.integer(bases.per.job)
 
 problems.by.chrom <- list()
 jobs.by.chrom <- list()
@@ -420,13 +420,13 @@ for(chrom.i in 1:nrow(chrom.ranges)){
   chrom.problems <- with(chrom.range, {
     getProblems(chrom, chromStart, chromEnd, bases.per.problem)
   })
-  jobStart <- with(chrom.range, {
-    seq(chromStart, chromEnd, by=bases.per.job)
-  })
-  jobEnd <- jobStart + bases.per.job + bases.per.problem
-  jobEnd[chrom.range$chromEnd < jobEnd] <- chrom.range$chromEnd
-  job.name <- sprintf("%s:%d-%d", chrom.range$chrom, jobStart, jobEnd)
-  chrom.jobs <- data.table(chrom=chrom.range$chrom, job.name, jobStart, jobEnd)
+  ## jobStart <- with(chrom.range, {
+  ##   seq(chromStart, chromEnd, by=bases.per.job)
+  ## })
+  ## jobEnd <- jobStart + bases.per.job + bases.per.problem
+  ## jobEnd[chrom.range$chromEnd < jobEnd] <- chrom.range$chromEnd
+  ## job.name <- sprintf("%s:%d-%d", chrom.range$chrom, jobStart, jobEnd)
+  ## chrom.jobs <- data.table(chrom=chrom.range$chrom, job.name, jobStart, jobEnd)
   ## chrom.problems$job.name <- NA
   ## for(job.i in 1:nrow(chrom.jobs)){
   ##   job <- chrom.jobs[job.i, ]
@@ -437,7 +437,7 @@ for(chrom.i in 1:nrow(chrom.ranges)){
   ## }
   ## stopifnot(!is.na(chrom.problems$job.name))
   problems.by.chrom[[paste(chrom.range$chrom)]] <- chrom.problems
-  jobs.by.chrom[[paste(chrom.range$chrom)]] <- chrom.jobs
+  ##jobs.by.chrom[[paste(chrom.range$chrom)]] <- chrom.jobs
 }
 test.problems <- do.call(rbind, problems.by.chrom)
 test.jobs <- do.call(rbind, jobs.by.chrom)
