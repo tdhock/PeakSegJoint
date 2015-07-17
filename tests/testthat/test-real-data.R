@@ -10,7 +10,7 @@ fit <- PeakSegJointSeveral(peak.at.profile.end)
 
 test_that("no peak detected at profile end", {
   for(model in fit$models){
-    if(is.finite(model$loss)){
+    if(!is.null(model$peak_start_end)){
       expect_true(all(is.finite(model$seg3_mean_vec)))
       expect_true(model$peak_start_end[2] < fit$data_start_end[2])
     }
