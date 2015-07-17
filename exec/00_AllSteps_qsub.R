@@ -73,11 +73,6 @@ qsub <- "qsub"
 
 depend.list <- list()
 for(step.name in names(cmd.list)){
-  walltime <- if(step.name == "Step3"){
-    "08:00:00"
-  }else{
-    "01:00:00"
-  }
   depend.txt <- if(length(depend.list)==0){
     ""
   }else{
@@ -88,6 +83,13 @@ for(step.name in names(cmd.list)){
   depend.list <- list()
   cmd.vec <- cmd.list[[step.name]]
   for(cmd.name in names(cmd.vec)){
+    is.viz <- grepl("viz", cmd.name)
+    is.prediction <- grepl(Step3, step.name)
+    walltime <- if(is.prediction){
+      "08:00:00"
+    }else{
+      "01:00:00"
+    }
     cmd <- cmd.vec[[cmd.name]]
     last.file <- sub(".* ", "", cmd)
     last.base <- basename(last.file)
@@ -115,7 +117,7 @@ for(step.name in names(cmd.list)){
         cmd.name, " ",
         "submitted as job ",
         qsub.id, "\n", sep="")
-    if(!grepl("viz", cmd.name)){
+    if(!is.viz){
       depend.list[[cmd.name]] <- qsub.id
     }
   }
