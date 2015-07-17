@@ -24,7 +24,7 @@ regression with the squared hinge loss]].
 ** Run PeakSegJoint on a cluster with qsub
 
 First, plot the coverage of several samples of the same experiment
-type in a genome browser ([[%20https://www.broadinstitute.org/igv/][IGV]] or [[http://genome.ucsc.edu/cgi-bin/hgGateway][UCSC]]). To compute the coverage you
+type in a genome browser ([[https://www.broadinstitute.org/igv/][IGV]] or [[http://genome.ucsc.edu/cgi-bin/hgGateway][UCSC]]). To compute the coverage you
 can use [[http://bedtools.readthedocs.org/en/latest/content/tools/genomecov.html][bedtools genomecov -bg]] to get a bedGraph file and then use
 [[http://genome.ucsc.edu/goldenPath/help/bigWig.html][bedGraphToBigWig]] to convert it to a bigwig file that can be viewed on
 a genome browser. The coverage data can be either normalized
@@ -51,5 +51,10 @@ Rscript 00_AllSteps_qsub.R path/to/labels.txt
 #+END_SRC
 
 If you don't have access to a cluster with qsub, you can still run the
-[[file:exec/][steps]] in sequence on one computer, by defining =qsub <- "bash" = in
-=00_AllSteps_qsub.R=.
+[[file:exec/][steps]] in sequence on one computer, by changing the definition of
+=qsub= in that file:
+
+#+BEGIN_SRC R
+qsub <- "bash"
+#+END_SRC
+
