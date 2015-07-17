@@ -400,6 +400,12 @@ ConvertModelList <- function
     list(peaks=do.call(rbind, peak.list),
          segments=do.call(rbind, seg.list),
          loss=do.call(rbind, loss.list))
+  seg.size <- with(info$segments, chromEnd - chromStart)
+  too.small <- seg.size < 1
+  if(any(too.small)){
+    print(info$segments[too.small, ])
+    stop("solver reported segment less than 1 base")
+  }
   info$loss$cummin <- cummin(info$loss$loss)
   some.loss <- subset(info$loss, loss == cummin)
   ## what to do when models have the same loss but different number of
