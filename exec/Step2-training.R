@@ -15,12 +15,7 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
-if(!is.finite(ppn)){
-  ppn <- 2
-}
-options(mc.cores=ppn)
-print(options("mc.cores"))
+PPN.cores()
 
 if(length(argv) != 1){
   stop("usage: Step3.R path/to/PeakSegJoint-chunks")

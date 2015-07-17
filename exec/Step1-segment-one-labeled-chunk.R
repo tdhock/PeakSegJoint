@@ -16,12 +16,7 @@ argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
-ppn <- as.integer(Sys.getenv("PBS_NUM_PPN"))
-if(!is.finite(ppn)){
-  ppn <- 2
-}
-options(mc.cores=ppn)
-print(options("mc.cores"))
+PPN.cores()
 
 print(argv)
 
@@ -221,6 +216,14 @@ step2.model.list <-
 ## model should not change between resolutions.
 names(step2.model.list) <- step2.problems$problem.name
 stopifnot(table(names(step2.model.list)) == 1)
+
+## Check to make sure each peak occurs within its problem.
+for(prob.i in 1:nrow(step2.problems)){
+  prob <- step2.problems[prob.i, ]
+  model <- step2.model.list[[prob.i]]
+  stopifnot(prob$problemStart < model$peaks$chromStart)
+  stopifnot(model$peaks$chromEnd < prob$problemEnd)
+}
 
 setkey(step2.problems, problem.name)
 ProblemError <- function(row.i){
