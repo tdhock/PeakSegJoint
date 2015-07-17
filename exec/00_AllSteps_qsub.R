@@ -50,19 +50,34 @@ cmd.list$Step2 <-
   c(training=paste(Rscript, Step2, chunks.dir))
 
 Step3v <-
-  system.file(file.path("exec", "Step3v-viz-train-errors.R"),
+  system.file(file.path("exec", "Step3v-viz-one-labeled-chunk.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+chrom.ranges <- bigWigInfo(bigwig.file.vec[1])
+Step3 <-
+  system.file(file.path("exec", "Step3-segment-one-chrom.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
+
 cmd.list$Step3 <-
-  structure(paste(Rscript, Step3v, chunk.dir.vec),
-            names=paste0("chunk", basename(chunk.dir.vec), "viz"))
+  c(structure(paste(Rscript, Step3v, chunk.dir.vec),
+              names=paste0("chunk", basename(chunk.dir.vec), "viz")),
+    structure(paste(Rscript, Step3, trained.model.RData, chrom.ranges$chrom),
+              names=paste0(chrom.ranges$chrom, "predict")))
 
 qsub <- "echo 1 && bash"
 qsub <- "qsub"
 
 depend.list <- list()
 for(step.name in names(cmd.list)){
+  walltime <- if(step.name == "Step3"){
+    "08:00:00"
+  }else{
+    "01:00:00"
+  }
   depend.txt <- if(length(depend.list)==0){
     ""
   }else{
@@ -83,7 +98,7 @@ for(step.name in names(cmd.list)){
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
-#PBS -l walltime=02:00:00
+#PBS -l walltime=", walltime, "
 #PBS -A bws-221-ae", depend.txt, "
 #PBS -m ae
 #PBS -M tdhock5@gmail.com
@@ -106,15 +121,3 @@ for(step.name in names(cmd.list)){
   }
 }
 
-problems.by.job <- split(test.problems, test.problems$job.name)
-Step4 <-
-  system.file(file.path("exec", "Step4-test-segmentation.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-R.bin <- R.home("bin")
-Rscript <- file.path(R.bin, "Rscript")
-for(job.name in names(problems.by.job)){
-  job.problems <- problems.by.job[[job.name]]
-  cmd <- paste("qsub", Rscript, Step4, trained.model.RData, job.name)
-  print(cmd)
-}
