@@ -6,8 +6,9 @@ library(ggplot2)
 
 data(peak.at.profile.end)
 
+fit <- PeakSegJointSeveral(peak.at.profile.end)
+
 test_that("no peak detected at profile end", {
-  fit <- PeakSegJointSeveral(peak.at.profile.end)
   for(model in fit$models){
     if(is.finite(model$loss)){
       expect_true(all(is.finite(model$seg3_mean_vec)))
@@ -30,6 +31,13 @@ test_that("no peak detected at profile end", {
                   ymin=0, ymax=count),
               fill="grey",
               data=counts)
+})
+
+test_that("ConvertModelList stops when segments make no sense", {
+  fit$models[[2]]$peak_start_end[1] <- fit$data_start_end[1]
+  expect_error({
+    converted <- ConvertModelList(fit)
+  }, "solver reported segment less than 1 base")
 })
 
 data(peak1.infeasible)
