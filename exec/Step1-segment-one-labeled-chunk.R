@@ -133,9 +133,11 @@ for(res.str in names(step2.data.list)){
   problems.dt <- res.data$problems[, .(problem.name, problemStart, problemEnd)]
   problems.by.name <- split(problems.dt, problems.dt$problem.name)
   step2.problems.list[names(problems.by.name)] <- problems.by.name
-  problems.with.regions.list[[res.str]] <- 
-    data.table(bases.per.problem=as.integer(res.str),
-               problem.name=names(res.data$regions))
+  if(length(res.data$regions)){
+    problems.with.regions.list[[res.str]] <- 
+      data.table(bases.per.problem=as.integer(res.str),
+                 problem.name=names(res.data$regions))
+  }
 }
 step2.problems <- do.call(rbind, step2.problems.list)
 problems.with.regions <- do.call(rbind, problems.with.regions.list)
