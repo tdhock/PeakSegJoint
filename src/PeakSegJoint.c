@@ -584,7 +584,9 @@ PeakSegJointHeuristicStep2
 	      /* 	   seg3_mean_vec[sample_i]); */
 	      //if not feasible, loss is infinite.
 	      if(seg2_mean_vec[sample_i] <= seg1_mean_vec[sample_i] ||
-		 seg2_mean_vec[sample_i] <= seg3_mean_vec[sample_i]){
+		 seg2_mean_vec[sample_i] <= seg3_mean_vec[sample_i] ||
+		 peakStart <= model_list->data_start_end[0] ||
+		 model_list->data_start_end[1] <= peakEnd){
 		total_loss = INFINITY;
 	      }
 	    }	  
