@@ -1,0 +1,18 @@
+chr11:118,173,358-118,176,231 peakStart tcell
+chr11:118,176,442-118,181,782 peakEnd tcell
+chr11:118,229,419-118,230,534 peakStart tcell bcell
+chr11:118,230,778-118,232,881 peakEnd tcell bcell
+chr11:118,216,570-118,220,883 peakEnd tcell
+chr11:118,214,653-118,215,916 peakStart tcell
+chr11:118,213,055-118,214,022 peakEnd tcell
+chr11:118,207,607-118,211,434 peakStart tcell
+chr11:118,222,047-118,228,604 peaks
+
+chr11:118,092,641-118,095,026 peakStart tcell
+chr11:118,095,334-118,096,640 peakEnd tcell
+chr11:118,101,452-118,118,472 peaks
+chr11:118,121,649-118,124,175 peaks tcell bcell
+
+chr11:117,197,077-117,200,591 peaks tcell bcell
+chr11:117,190,651-117,196,415 peaks
+chr11:117,149,810-117,152,933 peaks tcell 
