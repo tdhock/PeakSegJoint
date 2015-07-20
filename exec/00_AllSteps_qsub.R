@@ -1,3 +1,5 @@
+library(PeakSegJoint)
+
 ## Make and run qsub scripts for all steps of the PeakSegJoint pipeline.
 R.bin <- R.home("bin")
 Rscript <- file.path(R.bin, "Rscript")
@@ -93,11 +95,7 @@ for(step.name in names(cmd.list)){
     cmd <- cmd.vec[[cmd.name]]
     last.args <- sub(".*[.]R ", "", cmd)
     last.file <- sub(" ", "-", last.args)
-    last.base <- basename(last.file)
-    last.dir <- dirname(last.file)
-    prefix.only <- sub("[.].*?$", "", last.base)
-    prefix.nostep <- file.path(last.dir, prefix.only)
-    prefix <- paste0(prefix.nostep, "-", step.name)
+    prefix <- paste0(last.file, "-", step.name)
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
