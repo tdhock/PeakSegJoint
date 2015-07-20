@@ -33,7 +33,7 @@ readBigWig <- function
   if(status != 0){
     stop("error code ", status, " for\n", cmd)
   }
-  if(file.info(bedGraph.file)$size == 0){
+  dt <- if(file.info(bedGraph.file)$size == 0){
     data.table(chrom=character(),
                chromStart=integer(),
                chromEnd=integer(),
@@ -52,6 +52,8 @@ readBigWig <- function
       count
       )]
   }
+  unlink(bedGraph.file)
+  dt
 ### data.table with columns chrom chromStart chromEnd count.
 }
 
