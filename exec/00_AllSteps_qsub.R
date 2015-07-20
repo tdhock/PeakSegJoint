@@ -91,7 +91,8 @@ for(step.name in names(cmd.list)){
       "01:00:00"
     }
     cmd <- cmd.vec[[cmd.name]]
-    last.file <- sub(".* ", "", cmd)
+    last.args <- sub(".*[.]R ", "", cmd)
+    last.file <- sub(" ", "-", last.args)
     last.base <- basename(last.file)
     last.dir <- dirname(last.file)
     prefix.only <- sub("[.].*?$", "", last.base)
