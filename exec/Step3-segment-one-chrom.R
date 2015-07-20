@@ -131,15 +131,16 @@ peak.mat <-
            peak=peak.name.vec))
 i.mat <- with(pred.peaks, cbind(paste(sample.id), peak.name))
 peak.mat[i.mat] <- 1
-d.mat <- dist(peak.mat, method="manhattan")
-fit <- hclust(d.mat, method="average")
+## d.mat <- dist(peak.mat, method="manhattan")
+## fit <- hclust(d.mat, method="average")
 ##plot(fit)
 
 ## combine chroms and save bed files later.
 ##peaks.by.sample <- split(pred.peaks, pred.peaks$sample.id)
 
 pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
+dir.create(pred.dir, showWarnings=FALSE)
 
 chrom.RData <- file.path(pred.dir, paste0(chrom, ".RData"))
 
-save(pred.peaks, file=chrom.RData)
+save(pred.peaks, peak.mat, file=chrom.RData)
