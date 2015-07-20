@@ -5,7 +5,7 @@ R.bin <- R.home("bin")
 Rscript <- file.path(R.bin, "Rscript")
 labels.txt.file <- # interactive default for debugging.
   system.file(file.path("exampleData", "manually_annotated_region_labels.txt"),
-              package="PeakSegDP")
+              package="PeakSegJoint")
 argv <- commandArgs(trailingOnly=TRUE)
 if(length(argv) != 1){
   stop("usage: AllSteps_qsub.R path/to/labels.txt
@@ -70,6 +70,16 @@ cmd.list$Step3 <-
     structure(paste(Rscript, Step3, trained.model.RData, chrom.ranges$chrom),
               names=paste0(chrom.ranges$chrom, "predict")))
 
+Step4 <-
+  system.file(file.path("exec", "Step4-write-bed-files.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+
+pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
+cmd.list$Step4 <-
+  structure(paste(Rscript, Step4, pred.dir),
+            names="bed")
+
 qsub <- "echo 1 && bash"
 qsub <- "qsub"
 
@@ -86,13 +96,13 @@ for(step.name in names(cmd.list)){
   cmd.vec <- cmd.list[[step.name]]
   for(cmd.name in names(cmd.vec)){
     is.viz <- grepl("viz", cmd.name)
-    is.prediction <- grepl(Step3, step.name)
+    cmd <- cmd.vec[[cmd.name]]
+    is.prediction <- grepl(Step3, cmd)
     walltime <- if(is.prediction){
       "08:00:00"
     }else{
       "01:00:00"
     }
-    cmd <- cmd.vec[[cmd.name]]
     last.args <- sub(".*[.]R ", "", cmd)
     last.file <- sub(" ", "-", last.args)
     prefix <- paste0(last.file, "-", step.name)
