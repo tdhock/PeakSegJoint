@@ -96,12 +96,12 @@ if(all(sapply(step1.results.list, is.null))){
     mclapply.or.stop(seq_along(step2.problems$problem.name), SegmentStep2)
 
   pred.peaks <- do.call(rbind, step2.peak.list)
-  pred.peaks$chrom <- chrom
 
   if(0 == nrow(pred.peaks)){
     warning("no predicted peaks")
   }else{
-
+    pred.peaks$chrom <- chrom
+    
     ## big.problem <- with(step1.results, {
     ##   data.table(problemStart=min(problemStart),
     ##              problemEnd=max(problemEnd))
