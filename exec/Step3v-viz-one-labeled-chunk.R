@@ -370,7 +370,16 @@ setkey(all.regions, selector.name, peaks, bases.per.problem)
 first.dt$bases.per.problem <- first.selection.list$bases.per.problem
 first.regions <- all.regions[first.dt, ]
 regions.not.na <- first.regions[!is.na(sample.id), ]
-stopifnot(nrow(regions.not.na) == nrow(regions))
+
+## This test was originally designed to make sure that the number of
+## errors that we show is the same as the number of regions, under the
+## assumption that each region is assigned to exactly 1 segmentation
+## problem. However in some rare cases some regions are assigned to a
+## segmentation problem for which no peaks were feasible. In this case
+## we will not show the error regions, since anyways it does not help
+## us train the model.
+
+##stopifnot(nrow(regions.not.na) == nrow(regions))
 
 train.fig <- 
   ggplot()+
