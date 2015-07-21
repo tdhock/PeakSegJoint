@@ -18,6 +18,9 @@ int PeakSegJointHeuristicStep1(
   struct PeakSegJointModelList *model_list
   ){
   int n_samples = profile_list->n_profiles;
+  if(n_samples == 0){
+    return ERROR_NO_COVERAGE_DATA;
+  }
   int chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
   struct Profile *profile, *samples = profile_list->profile_vec;
   struct PeakSegJointModel *model;

@@ -318,6 +318,8 @@ PeakSegJointHeuristic_interface(
       error("bin factor too large");
     if(status == ERROR_EMPTY_BIN)
       error("empty bin");
+    if(status == ERROR_NO_COVERAGE_DATA)
+      error("no coverage data");
     error("unrecognized error code %d", status);
   }
   return model_list_sexp;

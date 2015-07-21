@@ -4,6 +4,7 @@
 #include "profile.h"
 
 #define ERROR_BIN_FACTOR_TOO_LARGE 1
+#define ERROR_NO_COVERAGE_DATA 2
 
 struct PeakSegJointModel {
   double *loss; 
