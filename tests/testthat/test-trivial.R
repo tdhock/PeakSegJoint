@@ -41,3 +41,13 @@ test_that("chromStart[i] < chromEnd[i-1] is an error", {
   }, "chromStart before previous chromEnd", fixed=TRUE)
 })
 
+empty <- 
+  data.frame(sample.id=character(),
+             chrom=character(),
+             chromStart=integer(),
+             chromEnd=integer(),
+             count=integer())
+
+test_that("no segfault for empty coverage data", {
+  fit <- PeakSegJointSeveral(empty)
+})
