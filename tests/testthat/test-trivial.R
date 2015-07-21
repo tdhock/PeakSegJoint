@@ -48,6 +48,14 @@ empty <-
              chromEnd=integer(),
              count=integer())
 
-test_that("no segfault for empty coverage data", {
-  fit <- PeakSegJointSeveral(empty)
+test_that("no computable models error for empty coverage data", {
+  expect_error({
+    fit <- PeakSegJointSeveral(empty)
+  }, "No computable models")
+})
+
+test_that("no coverage error for empty coverage data", {
+  expect_error({
+    fit <- PeakSegJointHeuristic(empty)
+  }, "no coverage data")
 })
