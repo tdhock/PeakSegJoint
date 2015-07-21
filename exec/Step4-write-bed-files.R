@@ -1,6 +1,6 @@
 library(PeakSegJoint)
 
-argv <- "~/genomepipelines/H3K36me3_TDH_immune/PeakSegJoint-predictions"
+argv <- "~/genomepipelines/H3K4me3_TDH_immune/PeakSegJoint-predictions"
 
 argv <- commandArgs(trailingOnly=TRUE)
 

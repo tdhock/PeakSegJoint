@@ -4,6 +4,10 @@ argv <-
   c("~/exampleData/PeakSegJoint-chunks/trained.model.RData",
     "chr11")
 
+argv <-
+  c("~/genomepipelines/H3K4me3_TDH_immune/PeakSegJoint-chunks/trained.model.RData",
+    "chrUn_gl000211")
+
 argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
@@ -22,17 +26,18 @@ objs <- load(trained.model.RData)
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+names(bigwig.file.vec) <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
 
 setkey(test.problems, chrom)
 chrom.problems <- test.problems[chrom]
 
 readBigWigSamples <- function(problem){
   counts.by.sample <- list()
-  for(bigwig.file in bigwig.file.vec){
+  for(sample.id in names(bigwig.file.vec)){
+    bigwig.file <- bigwig.file.vec[[sample.id]]
     sample.counts <- 
       readBigWig(bigwig.file, chrom,
                  problem$problemStart, problem$problemEnd)
-    sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
     counts.by.sample[[sample.id]] <- with(sample.counts, {
       data.frame(chromStart, chromEnd, count)
     })
@@ -125,7 +130,7 @@ if(all(sapply(step1.results.list, is.null))){
     ##   theme(panel.margin=grid::unit(0, "cm"))+
     ##   facet_grid(sample.id ~ ., scales="free")
 
-    sample.id.vec <- sort(unique(paste(pred.peaks$sample.id)))
+    sample.id.vec <- names(bigwig.file.vec)
     pred.peaks$peak.name <- with(pred.peaks, {
       sprintf("%s:%d-%d", chrom, chromStart, chromEnd)
     })
