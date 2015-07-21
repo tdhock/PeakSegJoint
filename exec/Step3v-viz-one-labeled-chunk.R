@@ -1,5 +1,5 @@
 library(animint)
-library(data.table)
+library(PeakSegJoint)
 
 argv <- "~/exampleData/PeakSegJoint-chunks/1"
 
@@ -19,25 +19,31 @@ ann.colors <-
 
 chunk.dir <- argv
 chunks.dir <- dirname(chunk.dir)
+data.dir <- dirname(chunks.dir)
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 problems.RData <- file.path(chunk.dir, "problems.RData")
 regions.RData <- file.path(chunk.dir, "regions.RData")
 
+mobjs <- load(trained.model.RData)
+pobjs <- load(problems.RData)
 robjs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
-counts.RData.vec <- Sys.glob(file.path(chunk.dir, "*", "*.RData"))
+width.pixels <- 1500
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 limits.by.sample <- list()
-for(counts.RData.path in counts.RData.vec){
-  objs <- load(counts.RData.path)
-  sample.id <- sub(".RData$", "", basename(counts.RData.path))
-  limits.by.sample[[sample.id]] <- with(counts, {
+for(bigwig.file in bigwig.file.vec){
+  sample.counts <-
+    readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+  sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+  limits.by.sample[[sample.id]] <- with(sample.counts, {
     data.table(sample.id,
                min.chromStart=min(chromStart),
                max.chromEnd=max(chromEnd))
   })
 }
+
 region.limits <- regions[, .(chromStart=min(chromStart),
                              chromEnd=max(chromEnd))]
 region.limits[, bases := chromEnd - chromStart ]
@@ -55,33 +61,12 @@ limits <- sample.limits[, .(min=max(min.chromStart),
                             max=min(max.chromEnd))]
 lim.vec <- with(limits, c(min, max))/1e3
 
-mobjs <- load(trained.model.RData)
-pobjs <- load(problems.RData)
-
-## Some fake data to demonstrate how to sub-sample a coverage
-## data.frame using approx.
-fake.segs <- data.frame(chromStart=c(0, 1, 3),
-                   chromEnd=c(1, 3, 10),
-                   coverage=1:3)
-x <- 1:10
-y <- with(fake.segs, {
-  approx(chromStart+1, coverage, x,
-         method="constant", rule=2)
-})$y
-fake.points <- data.frame(x,y)
-## ggplot()+
-##   geom_segment(aes(chromStart+0.5, coverage,
-##                    xend=chromEnd+0.5, yend=coverage),
-##                data=fake.segs)+
-##   geom_point(aes(x, y), data=fake.points)
-
-## Read and subsample count data to plot width.
-width.pixels <- 1500
 counts.by.sample <- list()
-for(counts.RData.path in counts.RData.vec){
-  objs <- load(counts.RData.path)
-  sample.id <- sub(".RData$", "", basename(counts.RData.path))
-  a.data <- with(counts, {
+for(bigwig.file in bigwig.file.vec){
+  sample.counts <-
+    readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+  sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+  a.data <- with(sample.counts, {
     approx(chromStart+1, count,
            as.integer(seq(limits$min, limits$max, l=width.pixels)),
            method="constant", rule=2)
