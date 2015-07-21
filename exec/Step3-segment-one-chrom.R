@@ -102,7 +102,7 @@ if(all(sapply(step1.results.list, is.null))){
 
   pred.peaks <- do.call(rbind, step2.peak.list)
 
-  if(0 == nrow(pred.peaks)){
+  if(is.null(pred.peaks) || 0 == nrow(pred.peaks)){
     warning("no predicted peaks")
   }else{
     pred.peaks$chrom <- chrom
