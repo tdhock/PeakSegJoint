@@ -196,23 +196,25 @@ error.metrics <- function(chunk.name.vec, fit){
     peaks.by.regularization <- list()
     for(problem.name in names(chunk.problems)){
       problem <- chunk.problems[[problem.name]]
-      log.lambda.vec <- fit$predict(problem$features)
-      if(is.numeric(problem$target)){
-        too.hi <- problem$target[2] < log.lambda.vec
-        too.lo <- log.lambda.vec < problem$target[1]
-        outside.target.list[[problem.name]] <- too.hi | too.lo
-      }
-      for(regularization.i in seq_along(log.lambda.vec)){
-        log.lambda <- log.lambda.vec[[regularization.i]]
-        selected <- 
-          subset(problem$modelSelection,
-                 min.log.lambda < log.lambda &
-                   log.lambda < max.log.lambda)
-        stopifnot(nrow(selected) == 1)
-        reg.str <- paste(fit$regularization.vec[[regularization.i]])
-        peaks.by.regularization[[reg.str]][[problem.name]] <-
-          subset(problem$peaks, peaks == selected$peaks)
-      }#log.lambda
+      if(is.data.frame(problem$peaks) && 0 < nrow(problem$peaks)){
+        log.lambda.vec <- fit$predict(problem$features)
+        if(is.numeric(problem$target)){
+          too.hi <- problem$target[2] < log.lambda.vec
+          too.lo <- log.lambda.vec < problem$target[1]
+          outside.target.list[[problem.name]] <- too.hi | too.lo
+        }
+        for(regularization.i in seq_along(log.lambda.vec)){
+          log.lambda <- log.lambda.vec[[regularization.i]]
+          selected <- 
+            subset(problem$modelSelection,
+                   min.log.lambda < log.lambda &
+                     log.lambda < max.log.lambda)
+          stopifnot(nrow(selected) == 1)
+          reg.str <- paste(fit$regularization.vec[[regularization.i]])
+          peaks.by.regularization[[reg.str]][[problem.name]] <-
+            subset(problem$peaks, peaks == selected$peaks)
+        }#log.lambda
+      }#if(is.data.frame(problem$peaks)
     }#problem.name
     metric.vec.list <- list()
     for(metric.name in c("fp", "fn", "possible.fp", "possible.tp")){
