@@ -149,6 +149,10 @@ for(chunk.id in names(match.by.chunk)){
     to.assign[not.observed] <- "noPeaks"
     for(cell.type in names(to.assign)){
       relevant.samples <- samples.by.type[[cell.type]]
+      if(length(relevant.samples) == 0){
+        glob.str <- file.path(cell.type, "*.bigwig")
+        stop("no ", glob.str, " files (but labels are present)")
+      }
       annotation <- to.assign[[cell.type]]
       regions.list[[paste(ann.i, cell.type)]] <- 
         data.table(sample.id=paste(relevant.samples$sample.id),
