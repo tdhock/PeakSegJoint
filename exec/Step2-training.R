@@ -355,15 +355,16 @@ for(problems.RData in names(test.regions.list)){
   save(error.regions, chunk.peaks, file=out.RData)
   test.row.list[[chunk.id]] <- with(error.regions, {
     data.frame(test.error.figure,
-               errors=sprintf("<pre>%4d / %4d</pre>",
-                 sum(fp+fn), length(fp)),
-               fp=sprintf("<pre>%4d / %4d</pre>",
-                 sum(fp), sum(possible.fp)),
-               fn=sprintf("<pre>%4d / %4d</pre>",
-                 sum(fn), sum(possible.tp)))
+               errors=sum(fp+fn),
+               regions=length(fp),
+               fp=sum(fp),
+               possible.fp=sum(possible.fp),
+               fn=sum(fn),
+               possible.fn=sum(possible.tp))
   })
 }
 test.row.df <- do.call(rbind, test.row.list)
+test.row.df <- test.row.df[order(test.row.df$errors, decreasing=TRUE), ]
 test.xt <- xtable(test.row.df)
 test.html.table <-
   print(test.xt, type="html",
