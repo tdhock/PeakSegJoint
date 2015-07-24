@@ -59,6 +59,8 @@ sample.limits <- do.call(rbind, limits.by.sample)
 
 limits <- sample.limits[, .(min=max(min.chromStart),
                             max=min(max.chromEnd))]
+limits <- data.table(min=chunk$chunkStart,
+                     max=chunk$chunkEnd)
 lim.vec <- with(limits, c(min, max))/1e3
 
 counts.by.sample <- list()

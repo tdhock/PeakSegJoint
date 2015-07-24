@@ -8,8 +8,9 @@ getProblems <- function
 ### Last base of problems.
  bases.per.problem,
 ### each problem has this many bases.
- overlap.count=3
+ overlap.count=3,
 ### how many problems overlap at any given genome position?
+ chrom.size=NULL
  ){
   stopifnot(is.character(chrom))
   stopifnot(length(chrom) == 1)
@@ -43,8 +44,11 @@ getProblems <- function
     as.integer(sort(do.call(c, overlap.list)))
   problemEnd <- problemStart + bases.per.problem
 
-  problemEnd[max.chromEnd < problemEnd] <- max.chromEnd
   problemStart[problemStart < 0] <- 0
+  if(is.numeric(chrom.size)){
+    stopifnot(length(chrom.size) == 1)
+    problemEnd[chrom.size < problemEnd] <- chrom.size
+  }
   
   problem.name <- sprintf("%s:%d-%d", chrom, problemStart, problemEnd)
   problems <-

@@ -192,20 +192,20 @@ for(chunk.str in names(regions.by.chunk)){
   }
 
   problems <- do.call(rbind, problems.by.res)
-  ## ggplot()+
-  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3),
-  ##                 data=data.frame(chromStart=min.chromStart,
-  ##                   chromEnd=max.chromEnd),
-  ##                 color="black",
-  ##                 size=2,
-  ##                 fill="grey")+
-  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-  ##                     fill=annotation),
-  ##                 data=regions)+
-  ##   scale_fill_manual(values=ann.colors)+
-  ##   geom_segment(aes(problemStart/1e3, problem.name,
-  ##                    xend=problemEnd/1e3, yend=problem.name),
-  ##                data=problems)
+  ggplot()+
+    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3),
+                  data=data.frame(chromStart=min.chromStart,
+                    chromEnd=max.chromEnd),
+                  color="black",
+                  size=2,
+                  fill="grey")+
+    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                      fill=annotation),
+                  data=regions)+
+    scale_fill_manual(values=ann.colors)+
+    geom_segment(aes(problemStart/1e3, problem.name,
+                     xend=problemEnd/1e3, yend=problem.name),
+                 data=problems)
 
   chunk <- 
   data.table(chrom=regions$chrom[1],
