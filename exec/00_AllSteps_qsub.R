@@ -80,8 +80,10 @@ cmd.list$Step4 <-
   structure(paste(Rscript, Step4, pred.dir),
             names="bed")
 
-qsub <- "echo 1 && bash"
-qsub <- "qsub"
+qsub <- Sys.getenv("QSUB")
+if(qsub == ""){
+  qsub <- "qsub"
+}
 
 depend.list <- list()
 for(step.name in names(cmd.list)){
