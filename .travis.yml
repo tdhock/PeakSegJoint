@@ -1,5 +1,6 @@
 language: c
 
+sudo: required
 
 before_install:
   - curl -OL http://raw.github.com/craigcitro/r-travis/master/scripts/travis-tool.sh
@@ -12,6 +13,9 @@ install:
 
 script:
   - Rscript -e "devtools::install(); source('tests/testthat.R', chdir = TRUE)"
+
+after_failure:
+  - ./travis-tool.sh dump_logs
 
 notifications:
   email:
