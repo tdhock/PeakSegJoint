@@ -4,6 +4,33 @@ context("real data")
 library(PeakSegJoint)
 library(ggplot2)
 
+
+data(H3K27ac.TDH.MMM4)
+fit <- PeakSegJointSeveral(H3K27ac.TDH.MMM4)
+converted <- ConvertModelList(fit)
+segs <- subset(converted$segments, peaks==10)
+breaks <- subset(segs, min(chromStart) < chromStart)
+
+ggplot()+
+  theme_bw()+
+  theme(panel.margin=grid::unit(0, "cm"))+
+  facet_grid(sample.id ~ ., labeller=function(var, val){
+    sub("McGill0", "", sub(" ", "\n", val))
+  }, scales="free")+
+  geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                ymin=0, ymax=count),
+            fill="grey",
+            data=H3K27ac.TDH.MMM4)+
+  geom_segment(aes(chromStart/1e3, mean,
+                   xend=chromEnd/1e3, yend=mean),
+               color="green",
+               data=segs)+
+  geom_vline(aes(xintercept=chromStart/1e3),
+             linetype="dashed",
+             color="green",
+             data=breaks)
+
+
 data(peak.at.profile.end)
 
 fit <- PeakSegJointSeveral(peak.at.profile.end)
