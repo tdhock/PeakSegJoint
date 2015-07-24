@@ -57,10 +57,11 @@ limits.by.sample[["regions"]] <- with(region.limits, {
 })
 sample.limits <- do.call(rbind, limits.by.sample)
 
+## We can't simply use chunkStart/chunkEnd, because that is much too
+## zoomed out (the big problem sizes start/end much outside the
+## first/last annotated region labels.
 limits <- sample.limits[, .(min=max(min.chromStart),
                             max=min(max.chromEnd))]
-limits <- data.table(min=chunk$chunkStart,
-                     max=chunk$chunkEnd)
 lim.vec <- with(limits, c(min, max))/1e3
 
 counts.by.sample <- list()
