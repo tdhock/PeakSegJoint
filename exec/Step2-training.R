@@ -419,9 +419,9 @@ jobs.by.chrom <- list()
 for(chrom.i in 1:nrow(chrom.ranges)){
   chrom.range <- chrom.ranges[chrom.i, ]
   cat(sprintf("%4d / %4d %s\n", chrom.i, nrow(chrom.ranges), chrom.range$chrom))
-  chrom.bases <- with(chrom.range, chromEnd - chromStart)
   chrom.problems <- with(chrom.range, {
-    getProblems(chrom, chromStart, chromEnd, bases.per.problem)
+    getProblems(chrom, chromStart, chromEnd, bases.per.problem,
+                chrom.size=chromEnd)
   })
   ## jobStart <- with(chrom.range, {
   ##   seq(chromStart, chromEnd, by=bases.per.job)
