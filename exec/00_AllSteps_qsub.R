@@ -123,7 +123,7 @@ for(step.name in names(cmd.list)){
     cat(script.txt, file=script.file)
     qsub.cmd <- paste(qsub, script.file)
     qsub.out <- system(qsub.cmd, intern=TRUE)
-    qsub.id <- sub("[.].*", "", qsub.out)
+    qsub.id <- sub("[.].*", "", qsub.out[1])
     cat(step.name, " ",
         cmd.name, " ",
         "submitted as job ",
