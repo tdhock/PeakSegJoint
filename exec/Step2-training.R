@@ -236,10 +236,10 @@ error.metrics <- function(chunk.name.vec, fit){
     }
     error.vec.list[[chunk.name]] <- metric.vec.list
   }#chunk.name
-  fp.mat <- sapply(error.vec.list, "[[", "fp")
-  fn.mat <- sapply(error.vec.list, "[[", "fn")
-  fn.possible.mat <- sapply(error.vec.list, "[[", "possible.tp")
-  fp.possible.mat <- sapply(error.vec.list, "[[", "possible.fp")
+  fp.mat <- do.call(rbind, lapply(error.vec.list, "[[", "fp"))
+  fn.mat <- do.call(rbind, lapply(error.vec.list, "[[", "fn"))
+  fn.possible.mat <- do.call(rbind, lapply(error.vec.list, "[[", "possible.tp"))
+  fp.possible.mat <- do.call(rbind, lapply(error.vec.list, "[[", "possible.fp"))
   false.positives <- rowSums(fp.mat)
   false.negatives <- rowSums(fn.mat)
   false.positives.possible <- rowSums(fp.possible.mat)
@@ -258,7 +258,8 @@ error.metrics <- function(chunk.name.vec, fit){
         data.frame(metric.name,
                    metric.value=get(metric.name),
                    possible,
-                   regularization=fit$regularization.vec)
+                   regularization=fit$regularization.vec,
+                   row.names=NULL)
     }
     do.call(rbind, df.list)
   }

@@ -733,7 +733,7 @@ int PeakSegJointHeuristicStep3
 	/* 	     n_peaks, seg1_mean_vec[sample_i], */
 	/* 	     seg2_mean_vec[sample_i], */
 	/* 	     seg3_mean_vec[sample_i]); */
-	if(1 || seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
+	if(seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
 	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
 	  //printf(" FEASIBLE");
 	  diff_index_vec[n_feasible].sample_i = sample_i;

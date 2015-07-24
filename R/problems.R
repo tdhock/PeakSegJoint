@@ -169,7 +169,7 @@ peak.or.null <- function
     is.feasible <- is.finite(loss.vec)
     peak.mat <- sapply(models, "[[", "peak_start_end")
     rownames(peak.mat) <- c("chromStart", "chromEnd")  
-    feasible.mat <- peak.mat[, is.feasible]
+    feasible.mat <- peak.mat[, is.feasible, drop=FALSE]
     if(ncol(feasible.mat) > 0){
       peak.vec <- feasible.mat[, ncol(feasible.mat)]
       data.table(t(peak.vec))

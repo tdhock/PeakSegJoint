@@ -1,7 +1,7 @@
 library(animint)
 library(PeakSegJoint)
 
-argv <- "~/exampleData/PeakSegJoint-chunks/1"
+argv <- "~/exampleData/PeakSegJoint-chunks/3"
 
 argv <- commandArgs(trailingOnly=TRUE)
 

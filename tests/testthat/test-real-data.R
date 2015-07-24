@@ -4,15 +4,35 @@ context("real data")
 library(PeakSegJoint)
 library(ggplot2)
 
-
 data(H3K27ac.TDH.MMM4)
-fit <- PeakSegJointSeveral(H3K27ac.TDH.MMM4)
+small.prob <- subset(H3K27ac.TDH.MMM4, chromStart < 7144233)
+small.prob <- H3K27ac.TDH.MMM4
+before.chromStart <- min(small.prob$chromStart)-1L
+after.chromEnd <- max(small.prob$chromEnd)+1L
+small.list <- split(small.prob, small.prob$sample.id)
+zero <- function(sample.id, chrom, chromStart, chromEnd){
+  data.frame(sample.id, chrom, chromStart, chromEnd, count=0L)
+}
+with.zero.list <- list()
+for(sample.id in names(small.list)){
+  sample.counts <- small.list[[sample.id]]
+  with.zero.list[[sample.id]] <-
+    rbind(zero(sample.id, sample.counts$chrom[1],
+               before.chromStart, min(sample.counts$chromStart)),
+          sample.counts,
+          zero(sample.id, sample.counts$chrom[1],
+               max(sample.counts$chromEnd), after.chromEnd))
+}
+with.zero <- do.call(rbind, with.zero.list)
+fit <- PeakSegJointSeveral(with.zero)
 converted <- ConvertModelList(fit)
 segs <- subset(converted$segments, peaks==10)
 breaks <- subset(segs, min(chromStart) < chromStart)
 
 ggplot()+
   theme_bw()+
+  geom_vline(xintercept=7141905/1e3)+
+  ##coord_cartesian(xlim=c(7121907, 7144233)/1e3)+
   theme(panel.margin=grid::unit(0, "cm"))+
   facet_grid(sample.id ~ ., labeller=function(var, val){
     sub("McGill0", "", sub(" ", "\n", val))
@@ -20,7 +40,7 @@ ggplot()+
   geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                 ymin=0, ymax=count),
             fill="grey",
-            data=H3K27ac.TDH.MMM4)+
+            data=with.zero)+
   geom_segment(aes(chromStart/1e3, mean,
                    xend=chromEnd/1e3, yend=mean),
                color="green",
@@ -30,14 +50,17 @@ ggplot()+
              color="green",
              data=breaks)
 
-
 data(peak.at.profile.end)
 
 fit <- PeakSegJointSeveral(peak.at.profile.end)
+sapply(fit$models, "[[", "loss")
+converted <- ConvertModelList(fit)
 
-test_that("no peak detected at profile end", {
+test_that("there is no peakEnd equal to data_end", {
   for(model in fit$models){
-    if(!is.null(model$peak_start_end)){
+    has.peak <- !is.null(model$peak_start_end)
+    do.check <- is.finite(model$loss) && has.peak
+    if(do.check){
       expect_true(all(is.finite(model$seg3_mean_vec)))
       expect_true(model$peak_start_end[2] < fit$data_start_end[2])
     }
@@ -48,6 +71,8 @@ test_that("no peak detected at profile end", {
     counts.list[[sample.id]] <- data.frame(sample.id, sample.counts)
   }
   counts <- do.call(rbind, counts.list)
+  segs <- subset(converted$segments, peaks == max(peaks))
+  breaks <- subset(segs, min(chromStart) < chromStart)
   ggplot()+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
@@ -57,7 +82,15 @@ test_that("no peak detected at profile end", {
     geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                   ymin=0, ymax=count),
               fill="grey",
-              data=counts)
+              data=counts)+
+    geom_segment(aes(chromStart/1e3, mean,
+                     xend=chromEnd/1e3, yend=mean),
+                 color="green",
+                 data=segs)+
+    geom_vline(aes(xintercept=chromStart/1e3),
+               linetype="dashed",
+               color="green",
+               data=breaks)
 })
 
 test_that("ConvertModelList stops when segments make no sense", {
@@ -95,7 +128,7 @@ test_that("all samples with peaks can be selected", {
   for(bp in c(2, 5)){
     fit <- PeakSegJointHeuristic(H3K4me3.PGP.immune.chunk2, bp)
     converted <- ConvertModelList(fit)
-    segs27 <- subset(converted$segments, peaks==27)
+    segs27 <- subset(converted$segments, peaks == max(peaks))
     breaks27 <- subset(segs27, min(chromStart) < chromStart)
     ggplot()+
       theme_bw()+
@@ -123,9 +156,10 @@ test_that("all samples with peaks can be selected", {
       scale_y_continuous(limits=c(1, 27), breaks=c(1, 27))
     loss <- converted$loss
     loss$cummin <- cummin(loss$loss)
-    with(loss, expect_equal(loss, cummin))
-    exact <- with(loss, exactModelSelection(loss, peaks, peaks))
-    expect_true(27 %in% exact$peaks)
+    ## TDH 24 July 2015 do not allow infeasible models.
+    ##with(loss, expect_equal(loss, cummin))
+    ##exact <- with(loss, exactModelSelection(loss, peaks, peaks))
+    ##expect_true(27 %in% exact$peaks)
   }
 })
 

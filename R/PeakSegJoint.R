@@ -214,10 +214,10 @@ PeakSegJointHeuristic <- structure(function
 ### likelihood segmentation problem. Given S samples, this function
 ### computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
 ### samples with an overlapping peak (maximum of one peak per
-### sample). This solver runs steps 1-3, and step3 is not guaranteed
-### to return a feasible segmentation (seg1 < seg2 > seg3). NB: this
-### function is mostly for internal testing purposes. For real data
-### use PeakSegJointSeveral.
+### sample). This solver runs steps 1-3, and Step3 is guaranteed as of
+### 24 July 2015 to return a feasible segmentation (seg1 < seg2 >
+### seg3). NB: this function is mostly for internal testing
+### purposes. For real data use PeakSegJointSeveral.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
