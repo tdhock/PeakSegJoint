@@ -83,9 +83,9 @@ test_that("Step1 C result agrees with R (no zero counts)", {
   bin.factor <- 4L
   fit <- PeakSegJointHeuristicStep1(profiles, bin.factor)
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bases.per.bin <- 1L
   while(unfilled.bases/bases.per.bin/bin.factor >= 4){
@@ -109,17 +109,7 @@ test_that("Step1 C result agrees with R (no zero counts)", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -138,7 +128,7 @@ test_that("Step1 C result agrees with R (no zero counts)", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -155,7 +145,6 @@ test_that("Step1 C result agrees with R (no zero counts)", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
@@ -450,9 +439,9 @@ test_that("Step2 C result agrees with R (no zero counts)", {
   ## Begin R implementation of multiple sample constrained
   ## segmentation heuristic. Input: profiles data.frame.
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bases.per.bin <- 1L
   while(unfilled.bases/bases.per.bin/bin.factor >= 4){
@@ -476,17 +465,7 @@ test_that("Step2 C result agrees with R (no zero counts)", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -505,7 +484,7 @@ test_that("Step2 C result agrees with R (no zero counts)", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -522,7 +501,6 @@ test_that("Step2 C result agrees with R (no zero counts)", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))

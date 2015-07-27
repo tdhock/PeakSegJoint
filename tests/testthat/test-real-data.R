@@ -124,7 +124,7 @@ test_that("Several detects peaks", {
 
 data(H3K4me3.PGP.immune.chunk2)
 
-test_that("all samples with peaks can be selected", {
+test_that("all samples with peaks can not be selected", {
   for(bp in c(2, 5)){
     fit <- PeakSegJointHeuristic(H3K4me3.PGP.immune.chunk2, bp)
     converted <- ConvertModelList(fit)
@@ -195,9 +195,9 @@ test_that("21 peak loss < 20 peak loss", {
   ## segmentation heuristic. Input: profiles data.frame.
   profiles <- H3K36me3.AM.immune.chunk21
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 2L
   bases.per.bin <- 1L
@@ -222,18 +222,7 @@ test_that("21 peak loss < 20 peak loss", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -252,7 +241,7 @@ test_that("21 peak loss < 20 peak loss", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -269,7 +258,6 @@ test_that("21 peak loss < 20 peak loss", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
@@ -893,9 +881,9 @@ test_that("Step1 C result agrees with R", {
   profiles <- H3K36me3.AM.immune.chunk21
   fit <- PeakSegJointHeuristicStep1(profiles)
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 2L
   bases.per.bin <- 1L
@@ -920,18 +908,7 @@ test_that("Step1 C result agrees with R", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -950,7 +927,7 @@ test_that("Step1 C result agrees with R", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -967,7 +944,6 @@ test_that("Step1 C result agrees with R", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
@@ -1292,9 +1268,9 @@ test_that("8 peaks are feasible", {
   ## segmentation heuristic. Input: profiles data.frame.
   profiles <- H3K4me3.TDH.other.chunk8
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 3L
   bases.per.bin <- 1L
@@ -1319,18 +1295,7 @@ test_that("8 peaks are feasible", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -1349,7 +1314,7 @@ test_that("8 peaks are feasible", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -1366,7 +1331,6 @@ test_that("8 peaks are feasible", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
@@ -1993,9 +1957,9 @@ test_that("Step1 C result agrees with R", {
   profiles <- H3K4me3.TDH.other.chunk8
   fit <- PeakSegJointHeuristicStep1(profiles, 3)
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 3L
   bases.per.bin <- 1L
@@ -2020,18 +1984,7 @@ test_that("Step1 C result agrees with R", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart < unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -2050,7 +2003,7 @@ test_that("Step1 C result agrees with R", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -2067,7 +2020,6 @@ test_that("Step1 C result agrees with R", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))

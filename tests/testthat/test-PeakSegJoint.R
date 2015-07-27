@@ -38,9 +38,9 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
   ## segmentation heuristic. Input: profiles data.frame.
   profiles <- some.counts
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 2L
   bases.per.bin <- 1L
@@ -65,21 +65,9 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart <= unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
-  ## End pre-processing to add zeros.
 
   expect_identical(fit$bin_start_end[1], max.chromStart)
   expect_identical(fit$bin_start_end[2], min.chromEnd)
@@ -95,7 +83,8 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases,
+                   empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -112,11 +101,9 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
-    bases.vec <- with(bins, chromEnd-chromStart)
     stopifnot(bins$count >= 0)
     first.cumsums$count[, sample.i] <- cumsum(bins$count)
     one$count.norm <- one$count/max.count
@@ -156,6 +143,7 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
   flat.means <- flat.cumsums/unfilled.bases
 
   expect_equal(fit$sample_mean_vec, as.numeric(flat.means))
+  expect_equal(fit$last_cumsum_vec, as.numeric(flat.cumsums))
   
   flat.loss.vec <- OptimalPoissonLoss(flat.means, flat.cumsums)
   best.loss.list[["0"]] <- sum(flat.loss.vec)
@@ -679,7 +667,8 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
   zoom.peaks <- do.call(rbind, zoom.peak.list)
   zoom.loss <- do.call(rbind, zoom.loss.list)
   R.loss.vec <- as.numeric(zoom.loss$loss)
-  C.loss.vec <- sapply(fit$models, "[[", "loss")
+  C.loss.Inf <- sapply(fit$models, "[[", "loss")
+  C.loss.vec <- C.loss.Inf[C.loss.Inf != Inf]
   expect_equal(C.loss.vec, R.loss.vec)
   ggplot()+
     scale_color_manual(values=c(data="grey50",
@@ -752,9 +741,9 @@ test_that("Step1 C result agrees with R", {
   ## segmentation heuristic. Input: profiles data.frame.
   profiles <- some.counts
   unfilled.profile.list <- split(profiles, profiles$sample.id, drop=TRUE)
-  unfilled.chromStart <- max(sapply(unfilled.profile.list, with, chromStart[1]))
+  unfilled.chromStart <- min(sapply(unfilled.profile.list, with, chromStart[1]))
   unfilled.chromEnd <-
-    min(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
+    max(sapply(unfilled.profile.list, with, chromEnd[length(chromEnd)]))
   unfilled.bases <- unfilled.chromEnd-unfilled.chromStart
   bin.factor <- 2L
   bases.per.bin <- 1L
@@ -779,18 +768,7 @@ test_that("Step1 C result agrees with R", {
       subset(unfilled.profile.list[[sample.id]],
              unfilled.chromStart < chromEnd &
                chromStart <= unfilled.chromEnd)
-    one.sample$chromStart[1] <- unfilled.chromStart
-    one.sample$chromEnd[nrow(one.sample)] <- unfilled.chromEnd
-    stopifnot(with(one.sample, sum(chromEnd-chromStart)) == unfilled.bases)
-    first.row <- last.row <- one.sample[1,]
-    first.row$chromStart <- max.chromStart
-    first.row$chromEnd <- unfilled.chromStart
-    first.row$count <- 0L
-    last.row$chromStart <- unfilled.chromEnd
-    last.row$chromEnd <- min.chromEnd
-    last.row$count <- 0L
-    profile.list[[sample.id]] <-
-      rbind(first.row, one.sample, last.row)
+    profile.list[[sample.id]] <- one.sample
   }
   bases <- min.chromEnd-max.chromStart
   ## End pre-processing to add zeros.
@@ -809,7 +787,7 @@ test_that("Step1 C result agrees with R", {
              sample.id=names(profile.list)))
   for(sample.id in names(profile.list)){
     one <- profile.list[[sample.id]]
-    bins <- binSum(one, max.chromStart, n.bins=bases)
+    bins <- binSum(one, max.chromStart, n.bins=bases, empty.as.zero=TRUE)
     stopifnot(bins$chromEnd == small.chromEnd)
     small.bins[, sample.id] <- bins$count
   }
@@ -826,11 +804,9 @@ test_that("Step1 C result agrees with R", {
     max.count <- max(one$count)
     bins <- binSum(one, max.chromStart, bases.per.bin, n.bins)
     stopifnot(n.bins == nrow(bins))
-    bins[nrow(bins), "chromEnd"] <- min.chromEnd
     bins$mean <- with(bins, count/(chromEnd-chromStart))
     bins$mean.norm <- bins$mean/max.count
     bin.list[[sample.id]] <- data.frame(sample.id, rbind(bins, NA))
-    bases.vec <- with(bins, chromEnd-chromStart)
     stopifnot(bins$count >= 0)
     first.cumsums$count[, sample.i] <- cumsum(bins$count)
     one$count.norm <- one$count/max.count
@@ -1032,7 +1008,8 @@ test_that("Step1 C result agrees with R", {
     best.loss.list[[peaks.str]] <- loss.best$total.loss
   }
   R.loss.vec <- as.numeric(best.loss.list)
-  C.loss.vec <- sapply(fit$models, "[[", "loss")
+  C.loss.Inf <- sapply(fit$models, "[[", "loss")
+  C.loss.vec <- C.loss.Inf[C.loss.Inf != Inf]
   expect_equal(C.loss.vec, R.loss.vec)
   
   best.peaks <- do.call(rbind, best.peak.list)
@@ -1111,6 +1088,7 @@ test_that("Step1 C result agrees with R", {
   }
   R.last.cumsums <- as.integer(last.cumsums$count[fit$sample.id])
   C.last.cumsums <- fit$last_cumsum_vec
+  C.last.cumsums[is.na(R.last.cumsums)] <- NA
   expect_equal(C.last.cumsums, R.last.cumsums)
   ## for 0, 1, ..., maxPeaks, run the bin pyramid grid search,
   ## around the peaks found in this first step.

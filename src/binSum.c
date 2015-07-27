@@ -118,6 +118,12 @@ int binSum
       bin_end += bin_size;
     }
   }
+  /* printf("binSum %d data", n_profiles); */
+  /* for(bin_i=0; bin_i < n_bins; bin_i++){ */
+  /*   printf(" %d", bin_total[bin_i]); */
+  /* } */
+  /* printf("\n"); */
+
   // If EMPTY_AS_ZERO flag, return now (untouched totals are zero).
   if(status_for_empty_bin == EMPTY_AS_ZERO){
     free(bin_touched);

@@ -30,11 +30,11 @@ int PeakSegJointHeuristicStep1(
   for(int sample_i=1; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
     chromStart = get_min_chromStart(profile);
-    if(unfilled_chromStart < chromStart){
+    if(chromStart < unfilled_chromStart){
       unfilled_chromStart = chromStart;
     }
     chromEnd = get_max_chromEnd(profile);
-    if(chromEnd < unfilled_chromEnd){
+    if(unfilled_chromEnd < chromEnd){
       unfilled_chromEnd = chromEnd;
     }
   }
@@ -76,7 +76,7 @@ int PeakSegJointHeuristicStep1(
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;
-  int extra_count;
+  //int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
   model_list->bin_start_end[0] = seg1_chromStart;
@@ -90,20 +90,27 @@ int PeakSegJointHeuristicStep1(
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
     count_vec = sample_count_mat + n_bins*sample_i;
-    //printf("initial sample_i=%d\n", sample_i);
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
 		    count_vec,
 		    bases_per_bin, n_bins, seg1_chromStart, 
-		    ERROR_EMPTY_BIN);
+		    EMPTY_AS_ZERO);
+    /* printf("initial sample_i=%d start=%d\n", sample_i, seg1_chromStart); */
+    /* for(int bin_i=0; bin_i < n_bins; bin_i++){ */
+    /*   printf("%d ", count_vec[bin_i]); */
+    /* } */
+    /* printf("\n"); */
     if(status != 0){
       free(sample_count_mat);
       return status;
     }
     /* Profiles may not have the same first chromStart and last
-     * chromEnd, so subtract any values that are before or after the
-     * maximum region that overlaps all profiles.
+     * chromEnd, so assume any values outside the observed range are
+     * zeros.
      */
+
+    /* The old code below would be useful for the case where we would
+     * want to subtract away those data:
 
     status = binSum(profile->chromStart, profile->chromEnd,
 		    profile->coverage, profile->n_entries,
@@ -129,6 +136,7 @@ int PeakSegJointHeuristicStep1(
       return status;
     }
     count_vec[n_bins - 1] -= extra_count;
+    */
   }//for sample_i
   int bin_i, offset;
   double mean_value, loss_value;
