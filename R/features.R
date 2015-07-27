@@ -3,8 +3,8 @@ featureMatrix <- structure(function(profile.list){
   stopifnot(is.list(profile.list))
   stopifnot(is.data.frame(profile.list[[1]]))
   features.by.sample <- list()
-  min.chromEnd <- min(sapply(profile.list, with, chromEnd[length(chromEnd)]))
-  max.chromStart <- max(sapply(profile.list, with, chromStart[1]))
+  min.chromEnd <- max(sapply(profile.list, with, chromEnd[length(chromEnd)]))
+  max.chromStart <- min(sapply(profile.list, with, chromStart[1]))
   bases <- min.chromEnd-max.chromStart
   for(sample.id in names(profile.list)){
     ## Compute feature vector for learning using this segmentation
@@ -27,13 +27,10 @@ featureMatrix <- structure(function(profile.list){
       c(loss0, loss0)
     })
     stopifnot(length(loss) == 2)
-    too.long <- with(sample.counts, rep(count, chromEnd-chromStart))
-    too.long.pos <- with(sample.counts, {
-      (chromStart[1]+1):chromEnd[length(chromEnd)]
-    })
-    n.bins <- min.chromEnd-max.chromStart
     bins <-
-      binSum(sample.counts, max.chromStart, n.bins=n.bins)
+      binSum(sample.counts, max.chromStart,
+             bin.size=1L, n.bins=bases,
+             empty.as.zero=TRUE)
     long <- bins$count
     stopifnot(length(long) == bases)
     feature.vec <-

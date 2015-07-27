@@ -10,7 +10,7 @@ argv <-
                         "3"),
               package="PeakSegDP")
 
-argv <- "~/exampleData/PeakSegJoint-chunks/1"
+argv <- "~/exampleData/PeakSegJoint-chunks/3"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K36me3_AM_immune/21"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
@@ -144,6 +144,7 @@ problems.with.regions <- do.call(rbind, problems.with.regions.list)
 
 blank <- unique(counts[, .(sample.id)])
 SegmentStep2 <- function(row.i){
+  ##print(row.i)
   problem <- step2.problems[row.i, ]
   problem[, problemStart1 := problemStart + 1L]
   setkey(problem, problemStart1, problemEnd)
