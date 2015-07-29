@@ -58,7 +58,7 @@ train.errors <-
   data.frame(bases.per.problem=as.integer(names(err.vec)),
              errors=err.vec,
              regions=sum(chunk.best$regions))
-chosen.i <- pick.best.index(err.vec)
+chosen.i <- max(which(err.vec == min(err.vec)))
 res.str <- names(err.vec)[chosen.i]
 bases.per.problem <- as.integer(res.str)
 train.errors.picked <- train.errors[chosen.i, ]
@@ -236,10 +236,10 @@ error.metrics <- function(chunk.name.vec, fit){
     }
     error.vec.list[[chunk.name]] <- metric.vec.list
   }#chunk.name
-  fp.mat <- do.call(rbind, lapply(error.vec.list, "[[", "fp"))
-  fn.mat <- do.call(rbind, lapply(error.vec.list, "[[", "fn"))
-  fn.possible.mat <- do.call(rbind, lapply(error.vec.list, "[[", "possible.tp"))
-  fp.possible.mat <- do.call(rbind, lapply(error.vec.list, "[[", "possible.fp"))
+  fp.mat <- do.call(cbind, lapply(error.vec.list, "[[", "fp"))
+  fn.mat <- do.call(cbind, lapply(error.vec.list, "[[", "fn"))
+  fn.possible.mat <- do.call(cbind, lapply(error.vec.list, "[[", "possible.tp"))
+  fp.possible.mat <- do.call(cbind, lapply(error.vec.list, "[[", "possible.fp"))
   false.positives <- rowSums(fp.mat)
   false.negatives <- rowSums(fn.mat)
   false.positives.possible <- rowSums(fp.possible.mat)
