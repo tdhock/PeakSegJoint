@@ -1,17 +1,19 @@
 context("qsub-pipeline")
 
-pred.RData <- 
-  system.file("exampleData", "PeakSegJoint.predictions.RData",
-              package="PeakSegJoint")
-unlink(pred.RData)
-AllSteps <- system.file("exec", "00_AllSteps_qsub.R",
-                        mustWork=TRUE,
-                        package="PeakSegJoint")
 exampleData <-
-  system.file("exampleData", "manually_annotated_region_labels.txt",
+  system.file("exampleData",
               mustWork=TRUE,
               package="PeakSegJoint")
-cmd <- paste("QSUB='echo INTERACTIVE && bash' Rscript", AllSteps, exampleData)
+
+pred.RData <- file.path(exampleData, "PeakSegJoint.predictions.RData")
+unlink(pred.RData)
+
+AllSteps <-
+  system.file("exec", "00_AllSteps_qsub.R",
+              mustWork=TRUE,
+              package="PeakSegJoint")
+labels.txt <- file.path(exampleData, "manually_annotated_region_labels.txt")
+cmd <- paste("QSUB='echo INTERACTIVE && bash' Rscript", AllSteps, labels.txt)
 system(cmd)
 
 test_that("pipeline generates predicted peaks", {
