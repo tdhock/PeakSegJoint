@@ -46,7 +46,7 @@ readBigWigSamples <- function(problem){
 }
 
 Step1Problem <- function(problem.i){
-  ##cat(sprintf("%10d / %10d problems\n", problem.i, nrow(chrom.problems)))
+  cat(sprintf("%10d / %10d Step1 problems\n", problem.i, nrow(chrom.problems)))
   problem <- chrom.problems[problem.i, ]
   profile.list <- readBigWigSamples(problem)
   peak.only <- peak.or.null(profile.list)
@@ -75,6 +75,7 @@ if(all(sapply(step1.results.list, is.null))){
   ##                data=step2.problems)
 
   SegmentStep2 <- function(row.i){
+    cat(sprintf("%10d / %10d Step2 problems\n", row.i, nrow(step2.problems)))
     problem <- step2.problems[row.i, ]
     profile.list <- readBigWigSamples(problem)
     fit <- tryCatch({
