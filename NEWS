@@ -1,3 +1,20 @@
+TODO
+
+Support for data sets with two or more label files.
+
+Support for making predictions on samples with no labels at all --
+these samples should be used in both the fitting and prediction steps.
+
+2015.07.30
+
+test-qsub-pipeline.R makes sure the exec/*.R pipeline scripts run with
+no errors.
+
+PeakSegJoint.c changed so that the likelihood function is defined from
+the first base with data to the last base with data, on any sample
+(before, it was ALL samples, and this is problematic now that we
+assume the input is a sparse profile).
+
 2015.07.14
 
 Remove "read one sample coverage file and save the coverage profile
