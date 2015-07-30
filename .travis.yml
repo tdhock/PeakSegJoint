@@ -13,7 +13,7 @@ before_install:
 
 install:
   - travis-tool.sh install_deps
-  - travis-tool.sh install_github tdhock/PeakSegDP tdhock/PeakError
+  - travis-tool.sh install_github tdhock/PeakSegDP tdhock/PeakError tdhock/ggplot2 tdhock/animint@toby-many-selectors
 
 script:
   - Rscript -e "devtools::install(); source('tests/testthat.R', chdir = TRUE)"
