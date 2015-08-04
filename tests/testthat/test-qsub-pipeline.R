@@ -29,9 +29,9 @@ AllSteps <-
 cmd <- paste("QSUB='echo INTERACTIVE && bash' Rscript", AllSteps, labels.txt)
 system(cmd)
 
-test_that("pipeline generates predicted peaks", {
+test_that("pipeline trained on 4 samples predicts for 8 samples", {
   load(pred.RData)
-  expect_equal(nrow(all.peaks.mat), 4)
+  expect_equal(nrow(all.peaks.mat), 8)
   starts <- unique(all.peaks.df$chromStart)
   expect_equal(length(starts), ncol(all.peaks.mat))
 })
