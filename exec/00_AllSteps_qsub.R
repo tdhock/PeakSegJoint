@@ -3,16 +3,21 @@ library(PeakSegJoint)
 ## Make and run qsub scripts for all steps of the PeakSegJoint pipeline.
 R.bin <- R.home("bin")
 Rscript <- file.path(R.bin, "Rscript")
-labels.txt.file <- # interactive default for debugging.
-  system.file(file.path("exampleData", "manually_annotated_region_labels.txt"),
+argv <- # interactive default for debugging.
+  system.file("exampleData", "manually_annotated_region_labels.txt",
+              package="PeakSegJoint")
+argv <- # interactive default for debugging.
+  system.file("exampleData",
+              c("other_labels.txt", "manually_annotated_region_labels.txt"),
               package="PeakSegJoint")
 argv <- commandArgs(trailingOnly=TRUE)
 if(length(argv) != 1){
   stop("usage: AllSteps_qsub.R path/to/labels.txt
 where there are path/to/*/*.bigwig files")
 }
-labels.txt.file <- normalizePath(argv[1], mustWork=TRUE)
-data.dir <- dirname(labels.txt.file)
+labels.file.vec <- normalizePath(argv, mustWork=TRUE)
+
+data.dir <- dirname(labels.file.vec[1])
 
 ## Step0 generates some files for every chunk, which we need to
 ## examine to make the step2 commands, so we run it interactively.
@@ -20,7 +25,8 @@ Step0 <-
   system.file(file.path("exec", "Step0-convert-labels.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-cmd <- paste(Rscript, Step0, labels.txt.file)
+labels.files <- paste(labels.file.vec, collapse=" ")
+cmd <- paste(Rscript, Step0, labels.files)
 status <- system(cmd)
 if(status != 0){
   stop("error in Step0, most likely problem with labels")
