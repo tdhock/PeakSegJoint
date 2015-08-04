@@ -11,7 +11,7 @@ argv <- # interactive default for debugging.
               c("other_labels.txt", "manually_annotated_region_labels.txt"),
               package="PeakSegJoint")
 argv <- commandArgs(trailingOnly=TRUE)
-if(length(argv) != 1){
+if(length(argv) == 0){
   stop("usage: AllSteps_qsub.R path/to/labels.txt
 where there are path/to/*/*.bigwig files")
 }
