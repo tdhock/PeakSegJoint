@@ -1,4 +1,5 @@
 argv <- "~/projects/blueprint/labels/H3K27ac_TDH_MonoMacroMyeloid/trackDb.txt"
+argv <- "~/R/PeakSegJoint/inst/exampleData/other_trackDb.txt"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -67,8 +68,8 @@ track.pattern <-
          "(?<value>.*?)",
          "\n")
 
-track.vec <- strsplit(trackDb.str, "\n\n")[[1]]
-subtrack.vec <- track.vec[-1]
+track.vec <- strsplit(trackDb.str, "\n\\s*\n")[[1]]
+subtrack.vec <- paste0(track.vec[-1], "\n")
 
 match.list <- str_match_all_perl(subtrack.vec, track.pattern)
 
@@ -89,7 +90,7 @@ for(match.mat in match.list){
     rownames(match) <- match[, "variable"]
     cell.type <- match["sampleType", "value"]
     u <- value.vec[["bigDataUrl"]]
-    bigwig.base <- sub("[.]bw$", ".bigwig", basename(u))
+    bigwig.base <- sub("[.](bw|bigWig)$", ".bigwig", basename(u))
     bigwig.dir <- file.path(data.dir, cell.type)
     dir.create(bigwig.dir, showWarnings=FALSE)
     bigwig.path <- file.path(bigwig.dir, bigwig.base)
