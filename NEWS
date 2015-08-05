@@ -1,5 +1,7 @@
 TODO
 
+2015.08.05
+
 Support for data sets with two or more label files.
 
 Support for making predictions on samples with no labels at all --
