@@ -29,7 +29,27 @@ bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 names(bigwig.file.vec) <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
 
 setkey(test.problems, chrom)
-chrom.problems <- test.problems[chrom]
+all.chrom.problems <- test.problems[chrom]
+
+## Look at a bigwig file to see where the first chromStart and last
+## chromEnd are, and then only process the problems which have some
+## data.
+bg.tmp <- tempfile()
+cmd <-
+  sprintf("bigWigToBedGraph %s %s -chrom=%s",
+          bigwig.file.vec[1], bg.tmp, chrom)
+system(cmd)
+first <- system(paste("head -1", bg.tmp), intern=TRUE)
+last <- system(paste("tail -1", bg.tmp), intern=TRUE)
+unlink(bg.tmp)
+first.last <- paste(c(first, last), collapse="\n")
+two <- read.table(text=first.last)
+names(two) <- c("chrom", "chromStart", "chromEnd", "count")
+first.chromStart <- two$chromStart[1]
+last.chromEnd <- two$chromEnd[2]
+chrom.problems <-
+  all.chrom.problems[problemStart < last.chromEnd &
+                       first.chromStart < problemEnd, ]
 
 readBigWigSamples <- function(problem){
   counts.by.sample <- list()
@@ -46,7 +66,7 @@ readBigWigSamples <- function(problem){
 }
 
 Step1Problem <- function(problem.i){
-  message(sprintf("%10d / %10d Step1 problems\n",
+  message(sprintf("%10d / %10d Step1 problems",
                   problem.i, nrow(chrom.problems)))
   problem <- chrom.problems[problem.i, ]
   profile.list <- readBigWigSamples(problem)
@@ -76,7 +96,7 @@ if(all(sapply(step1.results.list, is.null))){
   ##                data=step2.problems)
 
   SegmentStep2 <- function(row.i){
-    message(sprintf("%10d / %10d Step2 problems\n",
+    message(sprintf("%10d / %10d Step2 problems",
                     row.i, nrow(step2.problems)))
     problem <- step2.problems[row.i, ]
     profile.list <- readBigWigSamples(problem)

@@ -6,7 +6,7 @@ options(xtable.print.results=FALSE)
 argv <-
   system.file(file.path("exampleData",
                         "PeakSegJoint-chunks"),
-              package="PeakSegDP")
+              package="PeakSegJoint")
 
 argv <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
 argv <- "~/exampleData/PeakSegJoint-chunks"
@@ -22,6 +22,7 @@ if(length(argv) != 1){
 }
 
 chunks.dir <- normalizePath(argv[1])
+data.dir <- dirname(chunks.dir)
 
 problems.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "problems.RData"))
 
@@ -301,12 +302,31 @@ estimate.regularization <- function(train.validation){
 }
 
 ## Divide chunks into train+validation/test, compute test error.
+map.RData <- file.path(data.dir, "chunk.file.map.RData")
+load(map.RData)
+chunks.by.file <- split(chunk.file.map, chunk.file.map$labels.file)
 all.chunk.names <- names(problems.by.chunk)
-outer.folds <- 4
-if(length(all.chunk.names) < outer.folds){
-  outer.folds <- length(all.chunk.names)
+names(all.chunk.names) <- basename(dirname(all.chunk.names))
+if(length(chunks.by.file) == 1){
+  outer.folds <- 4
+  if(length(all.chunk.names) < outer.folds){
+    outer.folds <- length(all.chunk.names)
+  }
+  outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
+  names(outer.fold.id) <- names(all.chunk.names)
+  fold.msg <- "randomly selected folds"
+}else{
+  outer.folds <- length(chunks.by.file)
+  outer.fold.id <- rep(NA, l=length(all.chunk.names))
+  names(outer.fold.id) <- names(all.chunk.names)
+  for(file.i in seq_along(chunks.by.file)){
+    file.chunks <- chunks.by.file[[file.i]]
+    outer.fold.id[paste(file.chunks$chunk.id)] <- file.i
+  }
+  fold.msg <- "one fold for each labels file"
 }
-outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
+test.error.msg <-
+  paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
 test.error.list <- list()
 test.peaks.list <- list()
 test.regions.list <- list()
@@ -361,7 +381,8 @@ for(problems.RData in names(test.regions.list)){
                fp=sum(fp),
                possible.fp=sum(possible.fp),
                fn=sum(fn),
-               possible.fn=sum(possible.tp))
+               possible.fn=sum(possible.tp),
+               test.fold=outer.fold.id[[chunk.id]])
   })
 }
 test.row.df <- do.call(rbind, test.row.list)
@@ -382,7 +403,7 @@ test.html.out <-
         "<p>Regions, false postives, and false negatives",
         "count labels (peakStart, peakEnd, peaks, noPeaks).</p>",
         "<p>Test error was estimated using",
-        outer.folds, "fold cross-validation.",
+        test.error.msg,
         "</p>",
         "<h1>Test error details for each chunk of labels</h1>",
         test.html.table)
@@ -400,7 +421,6 @@ full.fit <-
                              factor.regularization=1.1,
                              verbose=0)
 
-data.dir <- dirname(chunks.dir)
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
