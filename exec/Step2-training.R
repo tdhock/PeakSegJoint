@@ -313,6 +313,7 @@ if(length(chunks.by.file) == 1){
     outer.folds <- length(all.chunk.names)
   }
   outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
+  names(outer.fold.id) <- names(all.chunk.names)
   fold.msg <- "randomly selected folds"
 }else{
   outer.folds <- length(chunks.by.file)
