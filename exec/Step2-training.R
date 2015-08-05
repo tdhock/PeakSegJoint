@@ -57,7 +57,7 @@ err.mat <- do.call(rbind, err.mat.list)
 err.vec <- colSums(err.mat)
 train.errors <-
   data.frame(bases.per.problem=as.integer(names(err.vec)),
-             errors=err.vec,
+             errors=as.integer(err.vec),
              regions=sum(chunk.best$regions))
 chosen.i <- max(which(err.vec == min(err.vec)))
 res.str <- names(err.vec)[chosen.i]
