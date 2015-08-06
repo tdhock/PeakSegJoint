@@ -127,6 +127,11 @@ IntervalRegressionProblems <- structure(function
     regularization <- regularization * factor.regularization
   }
   param.mat <- do.call(cbind, param.vec.list)
+  if(verbose >= 1){
+    cat(paste0("Done computing parameter matrix (",
+               nrow(param.mat), " features x ",
+               ncol(param.mat), " regularization parameters)\n"))
+  }
   list(param.mat=param.mat,
        regularization.vec=do.call(c, regularization.vec.list),
        mean.vec=mean.vec,
@@ -216,7 +221,7 @@ IntervalRegressionMatrix <- function
  threshold=1e-2,
 ### When the stopping criterion gets below this threshold, the
 ### algorithm stops and declares the solution as optimal.
- max.iterations=1e4,
+ max.iterations=1e5,
 ### Error if the algorithm has not found an optimal solution after
 ### this many iterations.
  weight.vec=NULL,
@@ -225,7 +230,8 @@ IntervalRegressionMatrix <- function
 ### A numeric scalar or NULL, which means to compute Lipschitz as the
 ### mean of the squared L2-norms of the rows of the feature matrix.
  verbose=2
-### Print messages if >= 2.
+### Cat messages: for restarts and at the end if >= 1, and for every
+### iteration if >= 2.
  ){
   stopifnot(is.matrix(features))
   stopifnot(is.numeric(features))
@@ -340,16 +346,24 @@ IntervalRegressionMatrix <- function
     if(iterate.count > max.iterations){
       Lipschitz <- Lipschitz * 1.5
       iterate.count <- 1
-      cat(max.iterations," iterations, increasing Lipschitz.\n")
+      if(verbose >= 1){
+        cat(max.iterations, "iterations, increasing Lipschitz.",
+            "crit =", stopping.crit, "\n")
+      }
     }
     if(any(!is.finite(this.iterate))){
-      cat("infinite parameter, restarting with bigger Lipschitz.\n")
+      if(verbose >= 1){
+        cat("infinite parameter, restarting with bigger Lipschitz.\n")
+      }
       iterate.count <- 1
       stopping.crit <- threshold
       last.iterate <- this.iterate <- y <- initial.param.vec
       this.t <- 1
       Lipschitz <- Lipschitz * 1.5
     }
+  }
+  if(verbose >= 1){
+    cat("solution with crit =", stopping.crit, "\n")
   }
   this.iterate
 ### Numeric vector of scaled weights w of the affine function f_w(X) =
