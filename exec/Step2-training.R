@@ -10,6 +10,7 @@ argv <-
 
 argv <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
 argv <- "~/exampleData/PeakSegJoint-chunks"
+argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -151,14 +152,13 @@ train.problem.counts <- sapply(labeled.problems.by.chunk, length)
 print(train.problem.counts)
 stopifnot(train.problem.counts > 0)
 
-set.seed(1)
-
-tv.curves <- function(train.validation, n.folds=4){
+tv.curves <- function(train.validation, n.folds=4, seed=1){
   stopifnot(is.character(train.validation))
   stopifnot(2 <= length(train.validation))
   if(length(train.validation) < n.folds){
     n.folds <- length(train.validation)
   }
+  set.seed(seed)
   fold.id <- sample(rep(1:n.folds, l=length(train.validation)))
 
   one.fold <- function(validation.fold){
@@ -301,7 +301,7 @@ estimate.regularization <- function(train.validation){
   mean(picked.error$regularization)
 }
 
-## Divide chunks into train+validation/test, compute test error.
+## Divide chunks into train+validation/test.
 map.RData <- file.path(data.dir, "chunk.file.map.RData")
 load(map.RData)
 chunks.by.file <- split(chunk.file.map, chunk.file.map$labels.file)
@@ -327,32 +327,58 @@ if(length(chunks.by.file) == 1){
 }
 test.error.msg <-
   paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
+
+## For each test fold, hold it out and train a sequence of models with
+## increasingly more data, and compute test error of each.
 test.error.list <- list()
 test.peaks.list <- list()
 test.regions.list <- list()
 for(test.fold in 1:outer.folds){
-  cat(sprintf("estimating test error for fold %4d / %4d\n",
-              test.fold, outer.folds))
   is.test <- outer.fold.id == test.fold
-  sets <- list(train.validation=all.chunk.names[!is.test],
-               test=all.chunk.names[is.test])
-  mean.reg <- estimate.regularization(sets$train.validation)
-  tv.list <- do.call(c, labeled.problems.by.chunk[sets$train.validation])
-  tv.fit <-
-    IntervalRegressionProblems(tv.list,
-                               initial.regularization=mean.reg,
-                               factor.regularization=10000,
-                               verbose=0)
-  test.results <- error.metrics(sets$test, tv.fit)
-  test.regions.list[names(test.results$error.regions)] <-
-    test.results$error.regions
-  test.peaks.list[names(test.results$peaks)] <- test.results$peaks
-  test.metrics <-
-    subset(test.results$metrics, regularization == regularization[1])
-  rownames(test.metrics) <- NULL
-  test.error.list[[paste("test fold", test.fold)]] <-
-    data.frame(test.fold, test.metrics)
+  n.chunk.order.seeds <- 2
+  for(chunk.order.seed in 1:n.chunk.order.seeds){
+    set.seed(chunk.order.seed)
+    sets <- list(train.validation=sample(all.chunk.names[!is.test]),
+                 test=all.chunk.names[is.test])
+    if(length(sets$train.validation) < 2){
+      print(sets$train.validation)
+      stop("need at least 2 train chunks, please add more labels")
+    }
+    for(train.chunks in 2:length(sets$train.validation)){
+      cat("estimating test error:",
+          test.fold, "/", outer.folds, "folds,",
+          chunk.order.seed, "/", n.chunk.order.seeds, "seeds,",
+          train.chunks, "/", length(sets$train.validation), "chunks.\n")
+      some.train.validation <- sets$train.validation[1:train.chunks]
+      mean.reg <- estimate.regularization(some.train.validation)
+      tv.list <- do.call(c, labeled.problems.by.chunk[some.train.validation])
+      tv.fit <-
+        IntervalRegressionProblems(tv.list,
+                                   initial.regularization=mean.reg,
+                                   factor.regularization=10000,
+                                   verbose=0)
+      test.results <- error.metrics(sets$test, tv.fit)
+      test.regions.list[names(test.results$error.regions)] <-
+        test.results$error.regions
+      test.peaks.list[names(test.results$peaks)] <- test.results$peaks
+      test.metrics <-
+        subset(test.results$metrics, regularization == regularization[1])
+      rownames(test.metrics) <- NULL
+      test.error.list[[paste(train.chunks, chunk.order.seed, test.fold)]] <-
+        data.frame(test.fold, chunk.order.seed, train.chunks, test.metrics)
+    }
+  }
 }
+test.error.curves <- do.call(rbind, test.error.list)
+
+ggplot()+
+  ylab("percent incorrect")+
+  geom_line(aes(train.chunks, metric.value/possible*100,
+                group=chunk.order.seed),
+            data=test.error.curves)+
+  theme_bw()+
+  theme(panel.margin=grid::unit(0, "cm"))+
+  facet_grid(metric.name ~ test.fold, scales="free")
 
 incorrect <- as.integer(rowSums(sapply(test.error.list, "[[", "metric.value")))
 possible <- as.integer(rowSums(sapply(test.error.list, "[[", "possible")))
