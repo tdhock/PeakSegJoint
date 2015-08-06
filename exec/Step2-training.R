@@ -158,6 +158,10 @@ tv.curves <- function(train.validation, n.folds=4, seed=1){
   if(length(train.validation) < n.folds){
     n.folds <- length(train.validation)
   }
+  ## If the chunk numbers are not sorted, then two permutations of the
+  ## same train.validation vector will end up with two different
+  ## models.
+  train.validation <- sort(train.validation)
   set.seed(seed)
   fold.id <- sample(rep(1:n.folds, l=length(train.validation)))
 
