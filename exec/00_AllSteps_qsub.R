@@ -62,6 +62,11 @@ Step3v <-
               mustWork=TRUE,
               package="PeakSegJoint")
 
+Step3e <-
+  system.file(file.path("exec", "Step3e-estimate-test-error.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 chrom.ranges <- bigWigInfo(bigwig.file.vec[1])
 Step3 <-
