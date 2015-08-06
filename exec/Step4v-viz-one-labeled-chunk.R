@@ -8,7 +8,7 @@ argv <- commandArgs(trailingOnly=TRUE)
 print(argv)
 
 if(length(argv) != 1){
-  stop("usage: Step3v.R path/to/PeakSegJoint-chunks/1")
+  stop("usage: Step4v.R path/to/PeakSegJoint-chunks/1")
 }
 
 ann.colors <-
