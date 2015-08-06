@@ -1,3 +1,9 @@
+TODO
+
+In pipeline, after training, for every test fold, plot test error as a
+function of number of training chunks, in order to see if the model
+could be improved by adding more labels.
+
 2015.08.06
 
 BUGFIX for feature computation when one or more samples has no/zero
