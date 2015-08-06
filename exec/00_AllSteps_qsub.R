@@ -73,6 +73,8 @@ trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 cmd.list$Step3 <-
   c(structure(paste(Rscript, Step3v, chunk.dir.vec),
               names=paste0("chunk", basename(chunk.dir.vec), "viz")),
+    structure(paste(Rscript, Step3e, trained.model.RData),
+              names="testError"),
     structure(paste(Rscript, Step3, trained.model.RData, chrom.ranges$chrom),
               names=paste0(chrom.ranges$chrom, "predict")))
 

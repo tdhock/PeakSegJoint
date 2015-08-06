@@ -197,5 +197,9 @@ full.fit <-
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
+     ## for estimating test error later:
+     labeled.problems.by.chunk,
+     problems.by.chunk,
+     regions.by.chunk, 
      file=trained.model.RData)
 

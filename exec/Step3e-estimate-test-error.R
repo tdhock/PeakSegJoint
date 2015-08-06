@@ -1,3 +1,33 @@
+library(ggplot2)
+library(xtable)
+library(PeakSegJoint)
+options(xtable.print.results=FALSE)
+
+argv <-
+  system.file("exampleData",
+              "PeakSegJoint-chunks",
+              "trained.model.RData",
+              package="PeakSegJoint")
+
+argv <- "~/exampleData/PeakSegJoint-chunks/trained.model.RData"
+argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/trained.model.RData"
+
+argv <- commandArgs(trailingOnly=TRUE)
+
+print(argv)
+
+PPN.cores()
+
+if(length(argv) != 1){
+  stop("usage: Step3e.R path/to/PeakSegJoint-chunks/trained.model.RData")
+}
+
+trained.model.RData <- normalizePath(argv)
+chunks.dir <- dirname(trained.model.RData)
+data.dir <- dirname(chunks.dir)
+
+load(trained.model.RData)
+
 ## Divide chunks into train+validation/test.
 map.RData <- file.path(data.dir, "chunk.file.map.RData")
 load(map.RData)
@@ -47,14 +77,18 @@ for(test.fold in 1:outer.folds){
           chunk.order.seed, "/", n.chunk.order.seeds, "seeds,",
           train.chunks, "/", length(sets$train.validation), "chunks.\n")
       some.train.validation <- sets$train.validation[1:train.chunks]
-      mean.reg <- estimate.regularization(some.train.validation)
+      some.problems <- problems.by.chunk[some.train.validation]
+      some.regions <- regions.by.chunk[some.train.validation]
+      full.curves <- tv.curves(some.problems, some.regions)
+      picked.error <- best.on.validation(full.curves)
+      mean.reg <- mean(picked.error$regularization)
       tv.list <- do.call(c, labeled.problems.by.chunk[some.train.validation])
       tv.fit <-
         IntervalRegressionProblems(tv.list,
                                    initial.regularization=mean.reg,
                                    factor.regularization=10000,
                                    verbose=0)
-      test.results <- error.metrics(sets$test, tv.fit)
+      test.results <- error.metrics(some.problems, some.regions, tv.fit)
       test.regions.list[names(test.results$error.regions)] <-
         test.results$error.regions
       test.peaks.list[names(test.results$peaks)] <- test.results$peaks
@@ -71,28 +105,39 @@ most.chunks <-
   subset(test.error.curves,
          chunk.order.seed==1 & train.chunks==max(train.chunks))
 
-ggplot()+
-  ggtitle(paste("test error for",
-                n.chunk.order.seeds,
-                "random orderings of the labeled train chunks"))+
-  geom_text(aes(train.chunks, metric.value/possible*100,
-                label=sprintf("%.1f%%", metric.value/possible*100)),
-            data=most.chunks,
-            vjust=-1)+
-  ylab("percent incorrect (test error)")+
-  scale_x_continuous("number of labeled chunks in train set")+
-  geom_line(aes(train.chunks, metric.value/possible*100,
-                group=chunk.order.seed),
-            data=test.error.curves)+
-  theme_bw()+
-  theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(metric.name ~ test.fold, labeller=function(var, val){
-    if(var=="test.fold"){
-      paste("test fold", val)
-    }else{
-      paste(val)
-    }
-  }, scales="free")
+gg.test <- 
+  ggplot()+
+    ggtitle(paste("test error for",
+                  n.chunk.order.seeds,
+                  "random orderings of the labeled train chunks"))+
+    geom_text(aes(train.chunks, metric.value/possible*100,
+                  label=sprintf("%.1f%%", metric.value/possible*100)),
+              data=most.chunks,
+              vjust=-1)+
+    ylab("percent incorrect (test error)")+
+    scale_x_continuous("number of labeled chunks in train set")+
+    geom_line(aes(train.chunks, metric.value/possible*100,
+                  group=chunk.order.seed),
+              data=test.error.curves)+
+    geom_point(aes(train.chunks, metric.value/possible*100,
+                  group=chunk.order.seed),
+              data=test.error.curves)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(metric.name ~ test.fold, labeller=function(var, val){
+      if(var=="test.fold"){
+        paste("test fold", val)
+      }else{
+        paste(val)
+      }
+    }, scales="free")
+test.out.dir <- file.path(chunks.dir, "figure-test-errors")
+dir.create(test.out.dir, showWarnings=FALSE)
+test.png <-
+  file.path(test.out.dir, "figure-test-error-decreases.png")
+png(test.png, width=1000, h=600, units="px")
+print(gg.test)
+dev.off()
 
 most.list <- split(most.chunks, most.chunks$test.fold)
 incorrect <- as.integer(rowSums(sapply(most.list, "[[", "metric.value")))
@@ -102,8 +147,6 @@ test.error.summary <-
   data.frame(row.names=most.list[[1]]$metric.name,
              incorrect, possible, percent.incorrect)
 
-test.out.dir <- file.path(chunks.dir, "figure-test-errors")
-dir.create(test.out.dir, showWarnings=FALSE)
 test.index.html <- file.path(test.out.dir, "index.html")
 test.row.list <- list()
 for(problems.RData in names(test.regions.list)){
@@ -146,6 +189,7 @@ test.html.out <-
         "<p>Test error was estimated using",
         test.error.msg,
         "</p>",
+        '<img src="figure-test-error-decreases.png" />',
         "<h1>Test error details for each chunk of labels</h1>",
         test.html.table)
 cat(test.html.out, file=test.index.html)
@@ -153,4 +197,5 @@ cat(test.html.out, file=test.index.html)
 stopifnot(test.error.summary["incorrect.regions", "possible"] ==
             sum(sapply(regions.by.chunk, nrow)))
 
-save(test.error.curves, file="test.error.curves.RData")
+save(test.error.curves,
+     file=file.path(test.out.dir, "test.error.curves.RData"))
