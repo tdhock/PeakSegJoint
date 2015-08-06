@@ -27,7 +27,7 @@ AllSteps <-
               package="PeakSegJoint")
 
 unlink(pred.RData)
-cmd <- paste("QSUB='echo INTERACTIVE && bash' Rscript", AllSteps, labels.txt)
+cmd <- paste("QSUB='echo SEQUENTIAL && bash' Rscript", AllSteps, labels.txt)
 system(cmd)
 
 test_that("pipeline trained on 4 samples predicts for 8 samples", {
