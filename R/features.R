@@ -3,8 +3,16 @@ featureMatrix <- structure(function(profile.list){
   stopifnot(is.list(profile.list))
   stopifnot(is.data.frame(profile.list[[1]]))
   features.by.sample <- list()
-  min.chromEnd <- max(sapply(profile.list, with, chromEnd[length(chromEnd)]))
-  max.chromStart <- min(sapply(profile.list, with, chromStart[1]))
+  ## We would get the following when one sample has no coverage rows:
+  ## Warning messages:
+  ## 1: In max(chromEnd) : no non-missing arguments to max; returning -Inf
+  ## 2: In min(chromStart) : no non-missing arguments to min; returning Inf
+  suppressWarnings({
+    sample.chromEnds <- sapply(profile.list, with, max(chromEnd))
+    sample.chromStarts <- sapply(profile.list, with, min(chromStart))
+  })
+  min.chromEnd <- as.integer(max(sample.chromEnds))
+  max.chromStart <- as.integer(min(sample.chromStarts))
   bases <- min.chromEnd-max.chromStart
   for(sample.id in names(profile.list)){
     ## Compute feature vector for learning using this segmentation
