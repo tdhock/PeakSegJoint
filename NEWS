@@ -1,4 +1,7 @@
-TODO
+2015.08.06
+
+BUGFIX for feature computation when one or more samples has no/zero
+coverage data.
 
 2015.08.05
 
