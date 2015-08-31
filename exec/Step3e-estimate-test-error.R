@@ -71,7 +71,8 @@ for(test.fold in 1:outer.folds){
       print(sets$train.validation)
       stop("need at least 2 train chunks, please add more labels")
     }
-    for(train.chunks in 2:length(sets$train.validation)){
+    train.chunks.vec <- 2:length(sets$train.validation)
+    for(train.chunks in train.chunks.vec){
       cat("estimating test error:",
           test.fold, "/", outer.folds, "folds,",
           chunk.order.seed, "/", n.chunk.order.seeds, "seeds,",
@@ -115,7 +116,11 @@ gg.test <-
               data=most.chunks,
               vjust=-1)+
     ylab("percent incorrect (test error)")+
-    scale_x_continuous("number of labeled chunks in train set")+
+    scale_x_continuous("number of labeled chunks in train set",
+                       breaks=function(lim.vec){
+                         ##print(lim.vec)
+                         ceiling(lim.vec[1]):floor(lim.vec[2])
+                       })+
     geom_line(aes(train.chunks, metric.value/possible*100,
                   group=chunk.order.seed),
               data=test.error.curves)+
