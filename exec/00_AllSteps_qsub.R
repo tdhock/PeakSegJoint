@@ -114,7 +114,7 @@ for(step.name in names(cmd.list)){
     is.viz <- grepl("viz", cmd.name)
     cmd <- cmd.vec[[cmd.name]]
     is.prediction <- grepl(Step3, cmd)
-    walltime <- if(is.prediction){
+    walltime <- if(step.name == "Step3"){
       "08:00:00"
     }else{
       "01:00:00"
