@@ -2,6 +2,7 @@ library(animint)
 library(PeakSegJoint)
 
 argv <- "~/exampleData/PeakSegJoint-chunks/3"
+argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/15"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -17,7 +18,7 @@ ann.colors <-
     peakEnd="#ff4c4c",
     peaks="#a445ee")
 
-chunk.dir <- argv
+chunk.dir <- normalizePath(argv)
 chunks.dir <- dirname(chunk.dir)
 data.dir <- dirname(chunks.dir)
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
@@ -31,7 +32,8 @@ regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
 width.pixels <- 1500
-bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+bigwig.glob <- file.path(data.dir, "*", "*.bigwig")
+bigwig.file.vec <- Sys.glob(bigwig.glob)
 limits.by.sample <- list()
 for(bigwig.file in bigwig.file.vec){
   sample.counts <-
@@ -81,6 +83,9 @@ for(bigwig.file in bigwig.file.vec){
   })
 }
 some.counts <- do.call(rbind, counts.by.sample)
+if(is.null(some.counts)){
+  stop("no coverage data to plot in ", bigwig.glob)
+}
 
 step2.problems.by.res <- list()
 prob.labels.by.res <- list()
@@ -339,11 +344,6 @@ print(system.time({
 
 animint.dir <- file.path(chunk.dir, "figure-train-errors")
 
-cat("compiling data viz\n")
-print(system.time({
-  animint2dir(viz, out.dir=animint.dir)
-}))
-
 first.peaks.all <-
   sample.peaks[bases.per.problem == first.selection.list$bases.per.problem, ]
 first.peaks.all[, selector.name := peakvar(problem.name) ]
@@ -425,6 +425,13 @@ png.name <- paste0(animint.dir, ".png")
 png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
 print(train.fig)
 dev.off()
+
+cat("compiling data viz\n")
+print(system.time({
+  animint2dir(viz, out.dir=animint.dir)
+}))
+
+## Done with train error viz.
 
 chunk.id <- basename(chunk.dir)
 test.base <- file.path(chunks.dir, "figure-test-errors", chunk.id)
