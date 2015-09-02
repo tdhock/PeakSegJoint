@@ -84,8 +84,13 @@ Step1Problem <- function(problem.i){
   }
 }
 
+row.numbers <- 1:nrow(chrom.problems)
+
+## step1.results.list <-
+##   mclapply(row.numbers, Step1Problem)
+
 step1.results.list <-
-  mclapply.or.stop(seq_along(chrom.problems$problem.name), Step1Problem)
+  lapply(row.numbers, Step1Problem)
 
 if(all(sapply(step1.results.list, is.null))){
   print(chrom.problems)
@@ -129,7 +134,7 @@ if(all(sapply(step1.results.list, is.null))){
     }
   }
   step2.peak.list <-
-    mclapply.or.stop(seq_along(step2.problems$problem.name), SegmentStep2)
+    lapply(seq_along(step2.problems$problem.name), SegmentStep2)
 
   pred.peaks <- do.call(rbind, step2.peak.list)
 
