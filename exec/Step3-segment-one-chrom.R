@@ -89,16 +89,11 @@ row.numbers <- 1:nrow(chrom.problems)
 efficient.mclapply <- function(X, FUN){
   N <- length(X)
   mc.cores <- getOption("mc.cores")
-  X.list <- splitIndices(N, N/mc.cores)
+  i.list <- splitIndices(N, N/mc.cores)
   result.list <- list()
-  for(i in seq_along(X.list)){
-    i.vec <- X.list[[i]]
-    X.vec <- X[i.vec]
-    small.list <- mclapply(X.vec, FUN)
-    small.N <- length(small.list)
-    result.N <- length(result.list)
-    result.i <- (result.N+1):(result.N+small.N)
-    result.list[result.i] <- small.list
+  for(i in seq_along(i.list)){
+    i.vec <- i.list[[i]]
+    result.list[i.vec] <- mclapply(X[i.vec], FUN)
   }
   result.list
 }
