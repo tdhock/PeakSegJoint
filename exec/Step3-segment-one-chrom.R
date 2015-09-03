@@ -74,8 +74,8 @@ readBigWigSamples <- function(problem){
 }
 
 Step1Problem <- function(problem.i){
-  message(sprintf("%10d / %10d Step1 problems",
-                  problem.i, nrow(chrom.problems)))
+  ## message(sprintf("%10d / %10d Step1 problems",
+  ##                 problem.i, nrow(chrom.problems)))
   problem <- chrom.problems[problem.i, ]
   profile.list <- readBigWigSamples(problem)
   peak.only <- peak.or.null(profile.list)
@@ -86,11 +86,25 @@ Step1Problem <- function(problem.i){
 
 row.numbers <- 1:nrow(chrom.problems)
 
-## step1.results.list <-
-##   mclapply(row.numbers, Step1Problem)
+efficient.mclapply <- function(X, FUN){
+  N <- length(X)
+  mc.cores <- getOption("mc.cores")
+  X.list <- splitIndices(N, N/mc.cores)
+  result.list <- list()
+  for(i in seq_along(X.list)){
+    i.vec <- X.list[[i]]
+    X.vec <- X[i.vec]
+    small.list <- mclapply(X.vec, FUN)
+    small.N <- length(small.list)
+    result.N <- length(result.list)
+    result.i <- (result.N+1):(result.N+small.N)
+    result.list[result.i] <- small.list
+  }
+  result.list
+}
 
 step1.results.list <-
-  lapply(row.numbers, Step1Problem)
+  efficient.mclapply(row.numbers, Step1Problem)
 
 if(all(sapply(step1.results.list, is.null))){
   print(chrom.problems)
@@ -134,7 +148,7 @@ if(all(sapply(step1.results.list, is.null))){
     }
   }
   step2.peak.list <-
-    lapply(seq_along(step2.problems$problem.name), SegmentStep2)
+    efficient.mclapply(seq_along(step2.problems$problem.name), SegmentStep2)
 
   pred.peaks <- do.call(rbind, step2.peak.list)
 
