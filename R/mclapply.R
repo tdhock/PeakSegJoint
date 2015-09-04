@@ -3,6 +3,9 @@
 ### memory problems (swapping, or getting jobs killed on the cluster)
 ### when using mclapply(1:N, FUN) where N is large.
 maxjobs.mclapply <- function(X, FUN, maxjobs=getOption("mc.cores")){
+  maxjobs <- as.integer(maxjobs)
+  if(!is.finite(maxjobs))maxjobs <- 1L
+  if(maxjobs == 1L)return(lapply(X, FUN))
   N <- length(X)
   i.list <- splitIndices(N, N/maxjobs)
   result.list <- list()
