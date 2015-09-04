@@ -1,8 +1,11 @@
-TODO
+2015.09.04
 
 In pipeline, after training, for every test fold, plot test error as a
 function of number of training chunks, in order to see if the model
 could be improved by adding more labels.
+
+Use maxjobs.mclapply, a thin wrapper around mclapply which limits its
+memory usage, and avoids getting jobs killed on the cluster.
 
 2015.08.06
 
