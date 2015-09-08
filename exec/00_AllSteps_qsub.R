@@ -57,8 +57,8 @@ chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
 cmd.list$Step2 <-
   c(training=paste(Rscript, Step2, chunks.dir))
 
-Step3v <-
-  system.file(file.path("exec", "Step3v-viz-one-labeled-chunk.R"),
+Step3e <-
+  system.file(file.path("exec", "Step3e-estimate-test-error.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 
@@ -70,9 +70,11 @@ Step3 <-
               package="PeakSegJoint")
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 
+## We want Step3-predict and Step3e-estimate-test-error to start
+## immediate after Step2-training, which is what the next line does:
 cmd.list$Step3 <-
-  c(structure(paste(Rscript, Step3v, chunk.dir.vec),
-              names=paste0("chunk", basename(chunk.dir.vec), "viz")),
+  c(structure(paste(Rscript, Step3e, trained.model.RData),
+              names="testError"),
     structure(paste(Rscript, Step3, trained.model.RData, chrom.ranges$chrom),
               names=paste0(chrom.ranges$chrom, "predict")))
 
@@ -80,11 +82,17 @@ Step4 <-
   system.file(file.path("exec", "Step4-write-bed-files.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-
+Step4v <-
+  system.file(file.path("exec", "Step4v-viz-one-labeled-chunk.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+## TODO: start Step4v immediately after Step3e finishes!
 pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
 cmd.list$Step4 <-
-  structure(paste(Rscript, Step4, pred.dir),
-            names="bed")
+  c(structure(paste(Rscript, Step4, pred.dir),
+              names="bed"),
+    structure(paste(Rscript, Step4v, chunk.dir.vec),
+              names=paste0("chunk", basename(chunk.dir.vec), "viz")))
 
 qsub <- Sys.getenv("QSUB")
 if(qsub == ""){
@@ -106,8 +114,8 @@ for(step.name in names(cmd.list)){
     is.viz <- grepl("viz", cmd.name)
     cmd <- cmd.vec[[cmd.name]]
     is.prediction <- grepl(Step3, cmd)
-    walltime <- if(is.prediction){
-      "08:00:00"
+    walltime <- if(step.name == "Step3"){
+      "10:00:00"
     }else{
       "01:00:00"
     }

@@ -22,14 +22,22 @@ trained.model.RData <- argv[1]
 chrom <- argv[2]
 
 objs <- load(trained.model.RData)
+bases.per.problem <- train.errors.picked$bases.per.problem
 
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 names(bigwig.file.vec) <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
 
-setkey(test.problems, chrom)
-all.chrom.problems <- test.problems[chrom]
+## Look at one bigwig file to determine the size of this chrom.
+bigwig.file <- bigwig.file.vec[1]
+chrom.ranges <- bigWigInfo(bigwig.file)
+rownames(chrom.ranges) <- chrom.ranges$chrom
+chrom.range <- chrom.ranges[chrom, ]
+all.chrom.problems <- with(chrom.range, {
+  getProblems(chrom, chromStart, chromEnd, bases.per.problem,
+              chrom.size=chromEnd)
+})
 
 ## Look at a bigwig file to see where the first chromStart and last
 ## chromEnd are, and then only process the problems which have some
@@ -37,7 +45,7 @@ all.chrom.problems <- test.problems[chrom]
 bg.tmp <- tempfile()
 cmd <-
   sprintf("bigWigToBedGraph %s %s -chrom=%s",
-          bigwig.file.vec[1], bg.tmp, chrom)
+          bigwig.file, bg.tmp, chrom)
 system(cmd)
 first <- system(paste("head -1", bg.tmp), intern=TRUE)
 last <- system(paste("tail -1", bg.tmp), intern=TRUE)
@@ -76,8 +84,10 @@ Step1Problem <- function(problem.i){
   }
 }
 
+row.numbers <- 1:nrow(chrom.problems)
+
 step1.results.list <-
-  mclapply.or.stop(seq_along(chrom.problems$problem.name), Step1Problem)
+  mclapply.or.stop(row.numbers, Step1Problem)
 
 if(all(sapply(step1.results.list, is.null))){
   print(chrom.problems)

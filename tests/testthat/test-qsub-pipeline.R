@@ -27,7 +27,7 @@ AllSteps <-
               package="PeakSegJoint")
 
 unlink(pred.RData)
-cmd <- paste("QSUB='echo INTERACTIVE && bash' Rscript", AllSteps, labels.txt)
+cmd <- paste("QSUB='echo SEQUENTIAL && bash' Rscript", AllSteps, labels.txt)
 system(cmd)
 
 test_that("pipeline trained on 4 samples predicts for 8 samples", {
@@ -42,10 +42,15 @@ test.errors.dir <-
               mustWork=TRUE,
               package="PeakSegJoint")
 
-test_that("pipeline trained on 4 samples generates 3 test error plots", {
-  test.errors.files <- dir(test.errors.dir)
+test.errors.files <- dir(test.errors.dir)
+
+test_that("pipeline trained on 3 chunks generates 3 test error plots", {
   expected.files <- paste0(1:3, ".png")
   expect_true(all(expected.files %in% test.errors.files))
+})
+
+test_that("pipeline trained on 3 chunks generates test error summary", {
+  expect_true("figure-test-error-decreases.png" %in% test.errors.files)
 })
 
 test_that("pipeline trained on 1 file does 3 fold CV", {
@@ -68,10 +73,15 @@ test_that("pipeline trained on 8 samples predicts for 8 samples", {
   expect_equal(length(starts), ncol(all.peaks.mat))
 })
 
-test_that("pipeline trained on 8 samples generates 6 test error plots", {
-  test.errors.files <- dir(test.errors.dir)
+test.errors.files <- dir(test.errors.dir)
+
+test_that("pipeline trained on 6 chunks generates 6 test error plots", {
   expected.files <- paste0(1:6, ".png")
   expect_true(all(expected.files %in% test.errors.files))
+})
+
+test_that("pipeline trained on 6 chunks generates test error summary", {
+  expect_true("figure-test-error-decreases.png" %in% test.errors.files)
 })
 
 test_that("pipeline trained on 2 files does 2 fold CV", {
