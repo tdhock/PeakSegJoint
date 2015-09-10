@@ -19,7 +19,7 @@ print(argv)
 
 if(length(argv) == 0){
   stop("usage: convert-labels.R path/to/labels.txt
-where there are path/to/celltype/*.bigwig files")
+where there are path/to/sample_group/*.bigwig files")
 }
 
 g.pos.pattern <-
@@ -30,7 +30,7 @@ g.pos.pattern <-
          "(?<chromEnd>[0-9 ,]+)",
          " ",
          "(?<annotation>[a-zA-Z]+)",
-         "(?<types>.*)")
+         "(?<sample_groups>.*)")
 
 ## Parse the first occurance of pattern from each of several strings
 ## using (named) capturing regular expressions, returning a matrix
@@ -61,9 +61,9 @@ for(labels.file in argv){
   ## directory as labels.file.
   bigwig.files <- Sys.glob(file.path(dirname(labels.file), "*", "*.bigwig"))
   sample.id <- sub("[.]bigwig$", "", basename(bigwig.files))
-  cell.type <- basename(dirname(bigwig.files))
-  sample.df <- data.frame(sample.id, cell.type)
-  samples.by.type <- split(sample.df, sample.df$cell.type)
+  sample.group <- basename(dirname(bigwig.files))
+  sample.df <- data.frame(sample.id, sample.group)
+  samples.by.group <- split(sample.df, sample.df$sample.group)
 
   cat("Reading ", labels.file, "\n", sep="")
   labels.lines <- readLines(labels.file)
@@ -90,7 +90,7 @@ for(labels.file in argv){
                chromStart=as.integer(match.mat[, "chromStart"]),
                chromEnd=as.integer(match.mat[, "chromEnd"]),
                annotation=match.mat[, "annotation"],
-               types=match.mat[, "types"],
+               sample.groups=match.mat[, "sample_groups"],
                chunk.id=label.df$chunk.id,
                stringsAsFactors=FALSE)
   match.by.chrom <- split(match.df, match.df$chrom)
@@ -115,14 +115,15 @@ for(labels.file in argv){
     }
   }
 
-  ## determine total set of cell types with positive=Peak annotations.
-  stripped <- gsub(" *$", "", gsub("^ *", "", match.df$types))
+  ## determine total set of sample groups with positive=Peak
+  ## annotations.
+  stripped <- gsub(" *$", "", gsub("^ *", "", match.df$sample.groups))
   is.noPeaks <- stripped == ""
-  type.list <- strsplit(stripped, split=" ")
-  names(type.list) <- rownames(match.df)
-  cell.types <- unique(unlist(type.list))
-  cat("cell types with peak annotations: ",
-      paste(cell.types, collapse=", "),
+  sample.group.list <- strsplit(stripped, split=" ")
+  names(sample.group.list) <- rownames(match.df)
+  sample.group.vec <- unique(unlist(sample.group.list))
+  cat("sample groups with peak annotations: ",
+      paste(sample.group.vec, collapse=", "),
       "\n",
       sep="")
 
@@ -138,24 +139,24 @@ for(labels.file in argv){
     regions.list <- list()
     for(ann.i in 1:nrow(chunk.df)){
       chunk.row <- chunk.df[ann.i, ]
-      type.vec <- type.list[[rownames(chunk.row)]]
-      is.observed <- cell.types %in% type.vec
-      observed <- cell.types[is.observed]
-      not.observed <- cell.types[!is.observed]
+      groups.up.vec <- sample.group.list[[rownames(chunk.row)]]
+      is.observed <- sample.group.vec %in% groups.up.vec
+      observed <- sample.group.vec[is.observed]
+      not.observed <- sample.group.vec[!is.observed]
       to.assign <- list()
       ann <- chunk.row$annotation
       to.assign[observed] <- ann
       to.assign[not.observed] <- "noPeaks"
-      for(cell.type in names(to.assign)){
-        relevant.samples <- samples.by.type[[cell.type]]
+      for(sample.group in names(to.assign)){
+        relevant.samples <- samples.by.group[[sample.group]]
         if(length(relevant.samples) == 0){
-          glob.str <- file.path(cell.type, "*.bigwig")
+          glob.str <- file.path(sample.group, "*.bigwig")
           stop("no ", glob.str, " files (but labels are present)")
         }
-        annotation <- to.assign[[cell.type]]
-        regions.list[[paste(ann.i, cell.type)]] <- 
+        annotation <- to.assign[[sample.group]]
+        regions.list[[paste(ann.i, sample.group)]] <- 
           data.table(sample.id=paste(relevant.samples$sample.id),
-                     cell.type,
+                     sample.group,
                      chrom=chunk.row$chrom,
                      chromStart=chunk.row$chromStart,
                      chromEnd=chunk.row$chromEnd,
