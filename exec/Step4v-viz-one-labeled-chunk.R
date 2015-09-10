@@ -12,6 +12,10 @@ if(length(argv) != 1){
   stop("usage: Step4v.R path/to/PeakSegJoint-chunks/1")
 }
 
+facet.labels <- function(var, val){
+  sub("_.*", "", val)
+}
+
 ann.colors <-
   c(noPeaks="#f6f4bf",
     peakStart="#ffafaf",
@@ -298,9 +302,7 @@ print(system.time({
            theme_bw()+
            theme_animint(width=width.pixels, height=height.pixels)+
            theme(panel.margin=grid::unit(0, "cm"))+
-           facet_grid(sample.id ~ ., labeller=function(var, val){
-             sub("McGill0", "", sub(" ", "\n", val))
-           }, scales="free")+
+           facet_grid(sample.id ~ ., labeller=facet.labels, scales="free")+
            geom_line(aes(base/1e3, count),
                      data=some.counts,
                      color="grey50")+
@@ -391,9 +393,7 @@ train.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., labeller=function(var, val){
-      sub("McGill0", "", sub(" ", "\n", val))
-    }, scales="free")+
+    facet_grid(sample.id ~ ., labeller=facet.labels, scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
@@ -461,9 +461,7 @@ test.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., labeller=function(var, val){
-      sub("McGill0", "", sub(" ", "\n", val))
-    }, scales="free")+
+    facet_grid(sample.id ~ ., labeller=facet.labels, scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
