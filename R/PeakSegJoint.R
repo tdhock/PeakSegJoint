@@ -8,7 +8,12 @@ ProfileList <- function
   if(is.data.frame(profiles)){
     profiles <- as.data.frame(profiles)
     stopifnot(!is.null(profiles$sample.id))
-    profiles <- split(profiles, profiles$sample.id, drop=TRUE)
+    sample.path <- if("sample.group" %in% names(profiles)){
+      with(profiles, paste0(sample.group, "/", sample.id))
+    }else{
+      profiles$sample.id
+    }
+    profiles <- split(profiles, sample.path, drop=TRUE)
   }
   stopifnot(is.list(profiles))
   for(profile.i in seq_along(profiles)){
@@ -364,32 +369,35 @@ ConvertModelList <- function
       has.peak <- seq_along(model.list$sample.id) %in% sample.i.vec
       samples.with.peaks <- model.list$sample.id[sample.i.vec]
       samples.without.peaks <- model.list$sample.id[!has.peak]
+      parsePath <- function(sample.path){
+        sample.id <- sub(".*/", "", sample.path)
+        maybe.group <- sub("/.*", "", sample.path)
+        sample.group <- ifelse(maybe.group == sample.path, NA, maybe.group)
+        data.frame(peaks, sample.id, sample.group)
+      }
       peakStart <- model$peak_start_end[1]
       peakEnd <- model$peak_start_end[2]
       if(peaks > 0){
+        meta <- parsePath(samples.with.peaks)
         seg.list[[paste(peaks, 1)]] <-
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=seg1.chromStart,
                      chromEnd=peakStart,
                      mean=model$seg1_mean_vec)
         peak.list[[peaks.str]] <- seg.list[[paste(peaks, 2)]] <- 
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=peakStart,
                      chromEnd=peakEnd,
                      mean=model$seg2_mean_vec)
         seg.list[[paste(peaks, 3)]] <- 
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=peakEnd,
                      chromEnd=seg3.chromEnd,
                      mean=model$seg3_mean_vec)
       }
       if(length(samples.without.peaks)){
         seg.list[[paste(peaks, "flat")]] <- 
-          data.frame(peaks,
-                     sample.id=samples.without.peaks,
+          data.frame(parsePath(samples.without.peaks),
                      chromStart=seg1.chromStart,
                      chromEnd=seg3.chromEnd,
                      mean=model.list$sample_mean_vec[!has.peak])
