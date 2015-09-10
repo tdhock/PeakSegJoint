@@ -23,9 +23,11 @@ IntervalRegressionProblems <- structure(function
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization) == 1)
   stopifnot(initial.regularization > 0)
-  stopifnot(is.numeric(factor.regularization))
-  stopifnot(length(factor.regularization) == 1)
-  stopifnot(factor.regularization > 1)
+  if(!is.null(factor.regularization)){
+    stopifnot(is.numeric(factor.regularization))
+    stopifnot(length(factor.regularization) == 1)
+    stopifnot(factor.regularization > 1)
+  }
   stopifnot(length(problem.list) > 0)
   n.input.features <- ncol(problem.list[[1]]$features)
 
@@ -124,7 +126,11 @@ IntervalRegressionProblems <- structure(function
     }
     param.vec.list[[paste(regularization)]] <- param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
-    regularization <- regularization * factor.regularization
+    if(is.null(factor.regularization)){
+      n.nonzero <- 1 #stops while loop.
+    }else{
+      regularization <- regularization * factor.regularization
+    }
   }
   param.mat <- do.call(cbind, param.vec.list)
   if(verbose >= 1){

@@ -87,9 +87,10 @@ for(test.fold in 1:outer.folds){
       tv.fit <-
         IntervalRegressionProblems(tv.list,
                                    initial.regularization=mean.reg,
-                                   factor.regularization=10000,
+                                   factor.regularization=NULL,
                                    verbose=0)
-      test.results <- error.metrics(some.problems, some.regions, tv.fit)
+      test.regions <- regions.by.chunk[sets$test]
+      test.results <- error.metrics(some.problems, test.regions, tv.fit)
       test.regions.list[names(test.results$error.regions)] <-
         test.results$error.regions
       test.peaks.list[names(test.results$peaks)] <- test.results$peaks

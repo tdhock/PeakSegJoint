@@ -167,8 +167,13 @@ error.metrics <- function
   outside.target.mat <- do.call(rbind, outside.target.list)
   incorrect.regions <- false.positives + false.negatives
   incorrect.regions.possible <- sum(regions.vec)
-  incorrect.targets <- colSums(outside.target.mat)
-  incorrect.targets.possible <- nrow(outside.target.mat)
+  ## TODO: is this necessary?
+  if(length(outside.target.list) == 0){
+    incorrect.targets <- incorrect.targets.possible <- 0
+  }else{
+    incorrect.targets <- colSums(outside.target.mat)
+    incorrect.targets.possible <- nrow(outside.target.mat)
+  }
   metrics <- function(...){
     df.list <- list()
     for(metric.name in c(...)){
