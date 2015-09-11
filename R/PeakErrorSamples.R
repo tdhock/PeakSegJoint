@@ -7,19 +7,24 @@ PeakErrorSamples <- function
  ){
   stopifnot(is.data.frame(peaks))
   stopifnot(is.data.frame(regions))
-  regions.by.sample <- split(regions, regions$sample.id, drop=TRUE)
-  peaks.by.sample <- split(peaks, peaks$sample.id, drop=TRUE)
+  getID <- function(df){
+    with(df, paste0(sample.group, "/", sample.id))
+  }
+  regions.by.sample <- split(regions, getID(regions), drop=TRUE)
+  peaks.by.sample <- split(peaks, getID(peaks), drop=TRUE)
   error.by.sample <- list()
-  for(sample.id in names(regions.by.sample)){
-    sample.regions <- regions.by.sample[[sample.id]]
-    sample.peaks <- if(sample.id %in% names(peaks.by.sample)){
-      peaks.by.sample[[sample.id]]
+  for(sample.path in names(regions.by.sample)){
+    sample.regions <- regions.by.sample[[sample.path]]
+    sample.peaks <- if(sample.path %in% names(peaks.by.sample)){
+      peaks.by.sample[[sample.path]]
     }else{
       Peaks()
     }
     sample.error <- PeakErrorChrom(sample.peaks, sample.regions)
-    error.by.sample[[sample.id]] <-
-      data.frame(sample.id, sample.error)
+    sample.id <- sub(".*/", "", sample.path)
+    sample.group <- sub("/.*", "", sample.path)
+    error.by.sample[[sample.path]] <-
+      data.frame(sample.id, sample.group, sample.error)
   }
   err <- do.call(rbind, error.by.sample)
   rownames(err) <- NULL

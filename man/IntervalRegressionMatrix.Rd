@@ -8,7 +8,7 @@ to the targets, and ||w||_1 is the L1-norm of the weight vector
 (excluding the first element, which is the un-regularized
 intercept or bias term).}
 \usage{IntervalRegressionMatrix(features, targets, initial.param.vec, 
-    regularization, threshold = 0.01, max.iterations = 10000, 
+    regularization, threshold = 0.01, max.iterations = 1e+05, 
     weight.vec = NULL, Lipschitz = NULL, verbose = 2)}
 \arguments{
   \item{features}{Scaled numeric feature matrix (problems x features). The first
@@ -23,7 +23,8 @@ this many iterations.}
   \item{weight.vec}{A numeric vector of weights for each training example.}
   \item{Lipschitz}{A numeric scalar or NULL, which means to compute Lipschitz as the
 mean of the squared L2-norms of the rows of the feature matrix.}
-  \item{verbose}{Print messages if >= 2.}
+  \item{verbose}{Cat messages: for restarts and at the end if >= 1, and for every
+iteration if >= 2.}
 }
 
 \value{Numeric vector of scaled weights w of the affine function f_w(X) =

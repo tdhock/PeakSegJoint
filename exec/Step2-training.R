@@ -191,7 +191,7 @@ train.list <- do.call(c, labeled.problems.by.chunk)
 full.fit <-
   IntervalRegressionProblems(train.list,
                              initial.regularization=mean.reg,
-                             factor.regularization=1.1,
+                             factor.regularization=NULL,
                              verbose=0)
 
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")

@@ -15,7 +15,8 @@ repeatedly call IntervalRegressionMatrix, using warm restarts.}
 vector of length 2), and optionally weight (numeric length 1).}
   \item{initial.regularization}{Initial regularization parameter.}
   \item{factor.regularization}{Increase regularization by this factor after finding an optimal
-solution.}
+solution. Or NULL to compute just one model
+(initial.regularization).}
   \item{verbose}{Print messages if >= 1.}
   \item{\dots}{Other parameters to pass to IntervalRegressionMatrix.}
 }
@@ -62,13 +63,16 @@ for(set.name in names(sets)){
                regularization=fit$regularization,
                percent.error)
 }
+
+## Coefficients of the best models.
 min.validation <- 
   subset(set.error.list$validation,
          percent.error==min(percent.error))
 best.models <- fit$param.mat[, rownames(min.validation)]
 best.nonzero <- best.models[apply(best.models!=0, 1, any), ]
 print(best.nonzero)
-##TODO: lasso plot, tallrect for optimal coef range?
+
+## Plot train/validation error curves.
 set.error <- do.call(rbind, set.error.list)
 library(ggplot2)
 ggplot()+
@@ -77,4 +81,14 @@ ggplot()+
   geom_line(aes(-log10(regularization), percent.error,
                 group=set.name, linetype=set.name),
             data=set.error)
+
+## Fit model with the chosen regularization to the full
+## train+validation set.
+chosen.regularization <- max(min.validation$regularization)
+full.fit <-
+  IntervalRegressionProblems(H3K4me3.PGP.immune.4608,
+                             initial.regularization=chosen.regularization,
+                             factor.regularization=NULL)
+print(full.fit$param.mat)
+
 }

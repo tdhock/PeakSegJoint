@@ -13,7 +13,8 @@ IntervalRegressionProblems <- structure(function
 ### Initial regularization parameter.
  factor.regularization=1.5,
 ### Increase regularization by this factor after finding an optimal
-### solution.
+### solution. Or NULL to compute just one model
+### (initial.regularization).
  verbose=1,
 ### Print messages if >= 1.
  ...
@@ -23,9 +24,11 @@ IntervalRegressionProblems <- structure(function
   stopifnot(is.numeric(initial.regularization))
   stopifnot(length(initial.regularization) == 1)
   stopifnot(initial.regularization > 0)
-  stopifnot(is.numeric(factor.regularization))
-  stopifnot(length(factor.regularization) == 1)
-  stopifnot(factor.regularization > 1)
+  if(!is.null(factor.regularization)){
+    stopifnot(is.numeric(factor.regularization))
+    stopifnot(length(factor.regularization) == 1)
+    stopifnot(factor.regularization > 1)
+  }
   stopifnot(length(problem.list) > 0)
   n.input.features <- ncol(problem.list[[1]]$features)
 
@@ -124,7 +127,11 @@ IntervalRegressionProblems <- structure(function
     }
     param.vec.list[[paste(regularization)]] <- param.vec
     regularization.vec.list[[paste(regularization)]] <- regularization
-    regularization <- regularization * factor.regularization
+    if(is.null(factor.regularization)){
+      n.nonzero <- 1 #stops while loop.
+    }else{
+      regularization <- regularization * factor.regularization
+    }
   }
   param.mat <- do.call(cbind, param.vec.list)
   if(verbose >= 1){
@@ -185,13 +192,16 @@ IntervalRegressionProblems <- structure(function
                  regularization=fit$regularization,
                  percent.error)
   }
+
+  ## Coefficients of the best models.
   min.validation <- 
     subset(set.error.list$validation,
            percent.error==min(percent.error))
   best.models <- fit$param.mat[, rownames(min.validation)]
   best.nonzero <- best.models[apply(best.models!=0, 1, any), ]
   print(best.nonzero)
-  ##TODO: lasso plot, tallrect for optimal coef range?
+
+  ## Plot train/validation error curves.
   set.error <- do.call(rbind, set.error.list)
   library(ggplot2)
   ggplot()+
@@ -200,6 +210,16 @@ IntervalRegressionProblems <- structure(function
     geom_line(aes(-log10(regularization), percent.error,
                   group=set.name, linetype=set.name),
               data=set.error)
+
+  ## Fit model with the chosen regularization to the full
+  ## train+validation set.
+  chosen.regularization <- max(min.validation$regularization)
+  full.fit <-
+    IntervalRegressionProblems(H3K4me3.PGP.immune.4608,
+                               initial.regularization=chosen.regularization,
+                               factor.regularization=NULL)
+  print(full.fit$param.mat)
+  
 })
 
 IntervalRegressionMatrix <- function

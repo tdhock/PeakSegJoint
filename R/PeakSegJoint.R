@@ -8,7 +8,12 @@ ProfileList <- function
   if(is.data.frame(profiles)){
     profiles <- as.data.frame(profiles)
     stopifnot(!is.null(profiles$sample.id))
-    profiles <- split(profiles, profiles$sample.id, drop=TRUE)
+    sample.path <- if("sample.group" %in% names(profiles)){
+      with(profiles, paste0(sample.group, "/", sample.id))
+    }else{
+      profiles$sample.id
+    }
+    profiles <- split(profiles, sample.path, drop=TRUE)
   }
   stopifnot(is.list(profiles))
   for(profile.i in seq_along(profiles)){
@@ -175,20 +180,60 @@ PeakSegJointSeveral <- structure(function
       PeakSegJointHeuristicStep2(H3K4me3.TDH.other.chunk8, bf)
   }
   loss.list <- list()
-  segs.list <- list()
+  segs.by.peaks.fit <- list()
   for(fit.name in names(fit.list)){
     fit <- fit.list[[fit.name]]
     loss.list[[fit.name]] <- sapply(fit$models, "[[", "loss")
     converted <- ConvertModelList(fit)
-    segs.list[[fit.name]] <-
-      data.frame(fit.name,
-                 subset(converted$segments, peaks == 2))
+    segs.by.peaks <- with(converted, split(segments, segments$peaks))
+    for(peaks in names(segs.by.peaks)){
+      model.segs <- segs.by.peaks[[peaks]]
+      if(is.data.frame(model.segs)){
+        segs.by.peaks.fit[[peaks]][[fit.name]] <-
+          data.frame(fit.name, model.segs)
+      }
+    }
   }
   do.call(rbind, loss.list)
-  segs <- do.call(rbind, segs.list)
+
+  segs1 <- do.call(rbind, segs.by.peaks.fit[["1"]])
+  breaks1 <- subset(segs1, min(chromStart) < chromStart)
+  library(ggplot2)
+  ggplot()+
+    ggtitle(paste("PeakSegJointSeveral runs PeakSegJointHeuristic",
+                  "and keeps only the most likely model"))+
+    geom_step(aes(chromStart/1e3, count),
+              color="grey50",
+              data=H3K4me3.TDH.other.chunk8)+
+    geom_vline(aes(xintercept=chromStart/1e3),
+               data=breaks1,
+               color="green",
+               linetype="dashed")+
+    geom_segment(aes(chromStart/1e3, mean,
+                     xend=chromEnd/1e3, yend=mean),
+                 size=1,
+                 color="green",
+                 data=segs1)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ fit.name, labeller=function(var, val){
+      if(var=="sample.id"){
+        sub("McGill0", "", val)
+      }else{
+        ifelse(val=="several", "best of several", paste("bin.factor =", val))
+      }
+    }, scales="free")
+
+  segs.by.peaks <- list()
+  for(peaks in 8:10){
+    segs.by.peaks[[paste(peaks)]] <-
+      data.frame(peaks, segs.by.peaks.fit[[paste(peaks)]][["several"]])
+  }
+  segs <- do.call(rbind, segs.by.peaks)
   breaks <- subset(segs, min(chromStart) < chromStart)
   library(ggplot2)
   ggplot()+
+    ggtitle("PeakSegJoint models with 8-10 peaks")+
     geom_step(aes(chromStart/1e3, count),
               color="grey50",
               data=H3K4me3.TDH.other.chunk8)+
@@ -203,9 +248,14 @@ PeakSegJointSeveral <- structure(function
                  data=segs)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ fit.name, labeller=function(var, val){
-      sub("McGill0", "", val)
+    facet_grid(sample.id ~ peaks, labeller=function(var, val){
+      if(var=="sample.id"){
+        sub("McGill0", "", val)
+      }else{
+        paste(val, "peaks")
+      }
     }, scales="free")
+  
 })
 
 PeakSegJointHeuristic <- structure(function
@@ -364,32 +414,35 @@ ConvertModelList <- function
       has.peak <- seq_along(model.list$sample.id) %in% sample.i.vec
       samples.with.peaks <- model.list$sample.id[sample.i.vec]
       samples.without.peaks <- model.list$sample.id[!has.peak]
+      parsePath <- function(sample.path){
+        sample.id <- sub(".*/", "", sample.path)
+        maybe.group <- sub("/.*", "", sample.path)
+        sample.group <- ifelse(maybe.group == sample.path, NA, maybe.group)
+        data.frame(peaks, sample.id, sample.group)
+      }
       peakStart <- model$peak_start_end[1]
       peakEnd <- model$peak_start_end[2]
       if(peaks > 0){
+        meta <- parsePath(samples.with.peaks)
         seg.list[[paste(peaks, 1)]] <-
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=seg1.chromStart,
                      chromEnd=peakStart,
                      mean=model$seg1_mean_vec)
         peak.list[[peaks.str]] <- seg.list[[paste(peaks, 2)]] <- 
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=peakStart,
                      chromEnd=peakEnd,
                      mean=model$seg2_mean_vec)
         seg.list[[paste(peaks, 3)]] <- 
-          data.frame(peaks,
-                     sample.id=samples.with.peaks,
+          data.frame(meta,
                      chromStart=peakEnd,
                      chromEnd=seg3.chromEnd,
                      mean=model$seg3_mean_vec)
       }
       if(length(samples.without.peaks)){
         seg.list[[paste(peaks, "flat")]] <- 
-          data.frame(peaks,
-                     sample.id=samples.without.peaks,
+          data.frame(parsePath(samples.without.peaks),
                      chromStart=seg1.chromStart,
                      chromEnd=seg3.chromEnd,
                      mean=model.list$sample_mean_vec[!has.peak])

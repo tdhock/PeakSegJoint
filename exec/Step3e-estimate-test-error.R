@@ -26,7 +26,7 @@ trained.model.RData <- normalizePath(argv)
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 
-load(trained.model.RData)
+model.objs <- load(trained.model.RData)
 
 ## Divide chunks into train+validation/test.
 map.RData <- file.path(data.dir, "chunk.file.map.RData")
@@ -39,6 +39,7 @@ if(length(chunks.by.file) == 1){
   if(length(all.chunk.names) < outer.folds){
     outer.folds <- length(all.chunk.names)
   }
+  set.seed(1)
   outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
   names(outer.fold.id) <- names(all.chunk.names)
   fold.msg <- "randomly selected folds"
@@ -60,13 +61,15 @@ test.error.msg <-
 test.error.list <- list()
 test.peaks.list <- list()
 test.regions.list <- list()
+n.chunk.order.seeds <- 2
 for(test.fold in 1:outer.folds){
   is.test <- outer.fold.id == test.fold
-  n.chunk.order.seeds <- 2
+  sets <- list(test=all.chunk.names[is.test])
+  test.regions <- regions.by.chunk[sets$test]
+  test.problems <- problems.by.chunk[sets$test]
   for(chunk.order.seed in 1:n.chunk.order.seeds){
     set.seed(chunk.order.seed)
-    sets <- list(train.validation=sample(all.chunk.names[!is.test]),
-                 test=all.chunk.names[is.test])
+    sets$train.validation <- sample(all.chunk.names[!is.test])
     if(length(sets$train.validation) < 2){
       print(sets$train.validation)
       stop("need at least 2 train chunks, please add more labels")
@@ -87,9 +90,9 @@ for(test.fold in 1:outer.folds){
       tv.fit <-
         IntervalRegressionProblems(tv.list,
                                    initial.regularization=mean.reg,
-                                   factor.regularization=10000,
+                                   factor.regularization=NULL,
                                    verbose=0)
-      test.results <- error.metrics(some.problems, some.regions, tv.fit)
+      test.results <- error.metrics(test.problems, test.regions, tv.fit)
       test.regions.list[names(test.results$error.regions)] <-
         test.results$error.regions
       test.peaks.list[names(test.results$peaks)] <- test.results$peaks

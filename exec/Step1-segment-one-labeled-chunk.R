@@ -7,8 +7,9 @@ library(PeakError)
 argv <-
   system.file(file.path("exampleData",
                         "PeakSegJoint-chunks",
-                        "3"),
-              package="PeakSegDP")
+                        "1"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
 
 argv <- "~/exampleData/PeakSegJoint-chunks/3"
 argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K36me3_AM_immune/21"
@@ -39,10 +40,12 @@ regions[, chromStart1 := chromStart + 1L]
 
 counts.by.sample <- list()
 for(bigwig.file in bigwig.file.vec){
-  counts <-
+  sample.counts <-
     readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
   sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
-  counts.by.sample[[sample.id]] <- data.table(sample.id, counts)
+  sample.group <- basename(dirname(bigwig.file))
+  counts.by.sample[[paste(sample.id, sample.group)]] <-
+    data.table(sample.id, sample.group, sample.counts)
 }
 counts <- do.call(rbind, counts.by.sample)
 counts[, chromStart1 := chromStart + 1L]

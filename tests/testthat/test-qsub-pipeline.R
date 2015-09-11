@@ -1,4 +1,5 @@
 library(testthat)
+library(PeakSegJoint)
 context("qsub-pipeline")
 
 exampleData <-

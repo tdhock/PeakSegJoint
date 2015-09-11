@@ -5,7 +5,10 @@ PeakSegJointError <- function
  problem.regions
 ### data.frame of annotated region labels.
  ){
-  regions.by.sample <- split(problem.regions, problem.regions$sample.id)
+  getID <- function(df){
+    with(df, paste0(sample.group, "/", sample.id))
+  }
+  regions.by.sample <- split(problem.regions, getID(problem.regions))
   peaks.by.peaks <- with(converted, if(is.null(peaks)){
     list()
   }else{
@@ -18,19 +21,21 @@ PeakSegJointError <- function
       list()
     }else{
       model.peaks <- peaks.by.peaks[[peaks.str]]
-      split(model.peaks, model.peaks$sample.id)
+      split(model.peaks, getID(model.peaks))
     }
     error.by.sample <- list()
-    for(sample.id in names(regions.by.sample)){
-      sample.regions <- regions.by.sample[[sample.id]]
-      sample.peaks <- if(sample.id %in% names(peaks.by.sample)){
-        peaks.by.sample[[sample.id]]
+    for(sample.path in names(regions.by.sample)){
+      sample.regions <- regions.by.sample[[sample.path]]
+      sample.peaks <- if(sample.path %in% names(peaks.by.sample)){
+        peaks.by.sample[[sample.path]]
       }else{
         Peaks()
       }
       model.error <- PeakErrorChrom(sample.peaks, sample.regions)
-      error.by.sample[[sample.id]] <-
-        data.frame(sample.id, model.error)
+      sample.id <- sub(".*/", "", sample.path)
+      sample.group <- sub("/.*", "", sample.path)
+      error.by.sample[[sample.path]] <-
+        data.frame(sample.id, sample.group, model.error)
     }
     model.error <- do.call(rbind, error.by.sample)
     error.regions.list[[peaks.str]] <- model.error

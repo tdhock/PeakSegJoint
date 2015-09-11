@@ -112,6 +112,9 @@ error.metrics <- function
     chunk.regions <- regions.by.chunk[[chunk.name]]
     regions.list[[chunk.name]] <- nrow(chunk.regions)
     chunk.problems <- problems.by.chunk[[chunk.name]]
+    if(is.null(chunk.problems)){
+      stop("no problem data for chunk ", chunk.name)
+    }
     peaks.by.regularization <- list()
     for(problem.name in names(chunk.problems)){
       problem <- chunk.problems[[problem.name]]

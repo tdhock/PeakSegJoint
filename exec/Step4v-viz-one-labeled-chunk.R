@@ -1,8 +1,12 @@
 library(animint)
 library(PeakSegJoint)
 
-argv <- "~/exampleData/PeakSegJoint-chunks/3"
 argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/15"
+exampleData <-
+  system.file("exampleData",
+              mustWork=TRUE,
+              package="PeakSegJoint")
+argv <- file.path(exampleData, "PeakSegJoint-chunks", "3")
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -10,6 +14,10 @@ print(argv)
 
 if(length(argv) != 1){
   stop("usage: Step4v.R path/to/PeakSegJoint-chunks/1")
+}
+
+facet.labels <- function(var, val){
+  sub("_.*", "", val)
 }
 
 ann.colors <-
@@ -71,13 +79,15 @@ for(bigwig.file in bigwig.file.vec){
   sample.counts <-
     readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
   sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+  sample.group <- basename(dirname(bigwig.file))
   a.data <- with(sample.counts, {
     approx(chromStart+1, count,
            as.integer(seq(limits$min, limits$max, l=width.pixels)),
            method="constant", rule=2)
   })
-  counts.by.sample[[sample.id]] <- with(a.data, {
+  counts.by.sample[[paste(sample.id, sample.group)]] <- with(a.data, {
     data.table(sample.id,
+               sample.group,
                base=x,
                count=y)
   })
@@ -97,11 +107,12 @@ regions.by.problem <- list()
 for(res.str in names(step2.data.list)){
   res.data <- step2.data.list[[res.str]]
   step2.problems.by.res[[res.str]] <- 
-    data.table(sample.id="problems", res.data$problems)
+    data.table(sample.id="problems", sample.group="", res.data$problems)
   bases.vec <- with(res.data$problems, problemEnd-problemStart)
   bases.per.problem <- as.integer(res.str)
   prob.labels.by.res[[res.str]] <-
     data.table(sample.id="problems",
+               sample.group="",
                bases.per.problem,
                mean.bases=as.integer(mean(bases.vec)),
                problems=nrow(res.data$problems))
@@ -156,6 +167,7 @@ prob.regions.names <-
     "chromStart", "chromEnd")
 prob.regions <- unique(data.frame(all.regions)[, prob.regions.names])
 prob.regions$sample.id <- "problems"
+prob.regions$sample.group <- ""
 
 all.modelSelection <- do.call(rbind, modelSelection.by.problem)
 modelSelection.errors <- all.modelSelection[!is.na(errors), ]
@@ -186,6 +198,7 @@ prob.peaks.names <-
     "chromStart", "chromEnd")
 problem.peaks <- unique(data.frame(sample.peaks)[, prob.peaks.names])
 problem.peaks$sample.id <- "problems"
+problem.peaks$sample.group <- ""
 
 max.height.pixels <- 1000
 ideal.pixels.per.facet <- 100
@@ -298,9 +311,8 @@ print(system.time({
            theme_bw()+
            theme_animint(width=width.pixels, height=height.pixels)+
            theme(panel.margin=grid::unit(0, "cm"))+
-           facet_grid(sample.id ~ ., labeller=function(var, val){
-             sub("McGill0", "", sub(" ", "\n", val))
-           }, scales="free")+
+           facet_grid(sample.group + sample.id ~ .,
+                      labeller=facet.labels, scales="free")+
            geom_line(aes(base/1e3, count),
                      data=some.counts,
                      color="grey50")+
@@ -391,9 +403,8 @@ train.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., labeller=function(var, val){
-      sub("McGill0", "", sub(" ", "\n", val))
-    }, scales="free")+
+    facet_grid(sample.group + sample.id ~ .,
+               labeller=facet.labels, scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
@@ -461,9 +472,8 @@ test.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., labeller=function(var, val){
-      sub("McGill0", "", sub(" ", "\n", val))
-    }, scales="free")+
+    facet_grid(sample.group + sample.id ~ .,
+               labeller=facet.labels, scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
