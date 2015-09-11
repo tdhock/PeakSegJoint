@@ -192,13 +192,16 @@ IntervalRegressionProblems <- structure(function
                  regularization=fit$regularization,
                  percent.error)
   }
+
+  ## Coefficients of the best models.
   min.validation <- 
     subset(set.error.list$validation,
            percent.error==min(percent.error))
   best.models <- fit$param.mat[, rownames(min.validation)]
   best.nonzero <- best.models[apply(best.models!=0, 1, any), ]
   print(best.nonzero)
-  ##TODO: lasso plot, tallrect for optimal coef range?
+
+  ## Plot train/validation error curves.
   set.error <- do.call(rbind, set.error.list)
   library(ggplot2)
   ggplot()+
@@ -207,6 +210,16 @@ IntervalRegressionProblems <- structure(function
     geom_line(aes(-log10(regularization), percent.error,
                   group=set.name, linetype=set.name),
               data=set.error)
+
+  ## Fit model with the chosen regularization to the full
+  ## train+validation set.
+  chosen.regularization <- max(min.validation$regularization)
+  full.fit <-
+    IntervalRegressionProblems(H3K4me3.PGP.immune.4608,
+                               initial.regularization=chosen.regularization,
+                               factor.regularization=NULL)
+  print(full.fit$param.mat)
+  
 })
 
 IntervalRegressionMatrix <- function
