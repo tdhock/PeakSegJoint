@@ -112,6 +112,9 @@ error.metrics <- function
     chunk.regions <- regions.by.chunk[[chunk.name]]
     regions.list[[chunk.name]] <- nrow(chunk.regions)
     chunk.problems <- problems.by.chunk[[chunk.name]]
+    if(is.null(chunk.problems)){
+      stop("no problem data for chunk ", chunk.name)
+    }
     peaks.by.regularization <- list()
     for(problem.name in names(chunk.problems)){
       problem <- chunk.problems[[problem.name]]
@@ -167,13 +170,8 @@ error.metrics <- function
   outside.target.mat <- do.call(rbind, outside.target.list)
   incorrect.regions <- false.positives + false.negatives
   incorrect.regions.possible <- sum(regions.vec)
-  ## TODO: is this necessary?
-  if(length(outside.target.list) == 0){
-    incorrect.targets <- incorrect.targets.possible <- 0
-  }else{
-    incorrect.targets <- colSums(outside.target.mat)
-    incorrect.targets.possible <- nrow(outside.target.mat)
-  }
+  incorrect.targets <- colSums(outside.target.mat)
+  incorrect.targets.possible <- nrow(outside.target.mat)
   metrics <- function(...){
     df.list <- list()
     for(metric.name in c(...)){
