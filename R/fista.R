@@ -13,7 +13,8 @@ IntervalRegressionProblems <- structure(function
 ### Initial regularization parameter.
  factor.regularization=1.5,
 ### Increase regularization by this factor after finding an optimal
-### solution.
+### solution. Or NULL to compute just one model
+### (initial.regularization).
  verbose=1,
 ### Print messages if >= 1.
  ...

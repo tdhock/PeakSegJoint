@@ -15,7 +15,8 @@ repeatedly call IntervalRegressionMatrix, using warm restarts.}
 vector of length 2), and optionally weight (numeric length 1).}
   \item{initial.regularization}{Initial regularization parameter.}
   \item{factor.regularization}{Increase regularization by this factor after finding an optimal
-solution.}
+solution. Or NULL to compute just one model
+(initial.regularization).}
   \item{verbose}{Print messages if >= 1.}
   \item{\dots}{Other parameters to pass to IntervalRegressionMatrix.}
 }
