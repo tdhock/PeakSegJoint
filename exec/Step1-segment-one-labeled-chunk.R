@@ -8,7 +8,6 @@ argv <-
   system.file(file.path("exampleData",
                         "PeakSegJoint-chunks",
                         "1"),
-              mustWork=TRUE,
               package="PeakSegJoint")
 
 argv <- "~/exampleData/PeakSegJoint-chunks/3"
