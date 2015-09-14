@@ -1,3 +1,14 @@
+2015.09.14
+
+exec/Step*.R scripts re-organized so that the genome prediction
+problem may be split into any number of jobs, rather than just one job
+per chromosome. The number of jobs can be specified as the environment
+variable JOBS or the R variable n.jobs when running
+00_AllSteps_qsub.R.
+
+readBigWig is faster since we now use stdout + fread, rather than
+writing bedGraph to an intermediate file.
+
 2015.09.11
 
 Re-factor lots of the code so that we can handle an individual that
