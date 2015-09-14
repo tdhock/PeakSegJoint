@@ -168,6 +168,10 @@ for(step.name in names(cmd.list)){
         cmd.name, " ",
         "submitted as job ",
         qsub.id, "\n", sep="")
+    is.viz <- grepl("viz", cmd.name)
+    if(!is.viz){
+      depend.list[[cmd.name]] <- qsub.id
+    }
   }
 }
 
