@@ -42,7 +42,7 @@ write.table(just.ends, chrom.file, quote=FALSE,
             row.names=FALSE, col.names=FALSE)
 
 peaks.by.path <- split(all.peaks.df, all.peaks.df$sample.path)
-for(sample.path in names(peaks.by.sample)){
+for(sample.path in names(peaks.by.path)){
   sample.peaks <- peaks.by.path[[sample.path]]
   ord <- with(sample.peaks, order(chrom, chromStart))
   sorted.peaks <- sample.peaks[ord, ]
