@@ -1,3 +1,13 @@
+### Run fread but do not stop for an error on an empty file.
+fread.or.null <- function(...){
+  tryCatch({
+    fread(...)
+  }, error=function(e){
+    structure(NULL,
+              error=e)
+  })
+}
+
 readBigWig <- function
 ### Read part of a bigWig file into R as a data.table (assumes
 ### bigWigToBedGraph is present on your PATH).
@@ -7,18 +17,14 @@ readBigWig <- function
 ### chromosome to read.
  start,
 ### position before reading.
- end,
-### last position to read.
- bedGraph.file=tempfile()
+ end
 ### plain text file where coverage is saved before reading into R.
  ){
   stopifnot(length(bigwig.file) == 1)
   stopifnot(length(chrom) == 1)
   stopifnot(length(start) == 1)
   stopifnot(length(end) == 1)
-  stopifnot(length(bedGraph.file) == 1)
   stopifnot(is.character(bigwig.file))
-  stopifnot(is.character(bedGraph.file))
   stopifnot(is.character(chrom))
   start <- as.integer(start)
   end <- as.integer(end)
@@ -26,34 +32,21 @@ readBigWig <- function
   stopifnot(start < end)
   stopifnot(end < Inf)
   cmd <-
-    sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s %s",
+    sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s /dev/stdout",
             chrom, start, end,
-            bigwig.file, bedGraph.file)
-  status <- system(cmd)
-  if(status != 0){
-    stop("error code ", status, " for\n", cmd)
-  }
-  dt <- if(file.info(bedGraph.file)$size == 0){
-    data.table(chrom=character(),
-               chromStart=integer(),
-               chromEnd=integer(),
-               count=integer())
-  }else{
-    bg <- fread(bedGraph.file)
-    setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
-    stopifnot(0 <= bg$norm)
-    nonzero <- bg[0 < norm, ]
-    min.nonzero.norm <- min(nonzero[, norm])
-    nonzero[, count := as.integer(norm/min.nonzero.norm) ]
-    nonzero[, .(
-      chrom,
-      chromStart,
-      chromEnd,
-      count
-      )]
-  }
-  unlink(bedGraph.file)
-  dt
+            bigwig.file)
+  bg <- fread.or.null(cmd)
+  setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
+  stopifnot(0 <= bg$norm)
+  nonzero <- bg[0 < norm, ]
+  min.nonzero.norm <- min(nonzero[, norm])
+  nonzero[, count := as.integer(norm/min.nonzero.norm) ]
+  nonzero[, .(
+    chrom,
+    chromStart,
+    chromEnd,
+    count
+    )]
 ### data.table with columns chrom chromStart chromEnd count.
 }
 
@@ -64,12 +57,29 @@ bigWigInfo <- function
  ){
   stopifnot(is.character(bigwig.file))
   stopifnot(length(bigwig.file) == 1)
-  cmd <- paste("bigWigInfo", bigwig.file, "-chroms")
-  info.lines <- system(cmd, intern=TRUE)
-  chrom.lines <- grep("^\t", info.lines, value=TRUE)
-  chrom.df <- read.table(text=chrom.lines)
-  names(chrom.df) <- c("chrom", "chromStart", "chromEnd")
-  chrom.df$chrom <- paste(chrom.df$chrom)
-  chrom.df
+  cmd <- paste("bigWigInfo", bigwig.file, "-chroms | grep '^\\s'")
+  chroms <- fread(cmd, header=FALSE, sep=" ")
+  setnames(chroms, c("chrom", "chromStart", "chromEnd"))
+  chroms$chrom <- sub("\\s*", "", chroms$chrom)
+  chroms
+}
+
+### read a bunch of bigwig files into R as a list of data.frames that
+### can be passed to PeakSegJointSeveral.
+readBigWigSamples <- function(problem, bigwig.file.vec){
+  counts.by.sample <- list()
+  for(sample.id in names(bigwig.file.vec)){
+    bigwig.file <- bigwig.file.vec[[sample.id]]
+    sample.counts <- with(problem, {
+      readBigWig(bigwig.file, chrom,
+                 problemStart, problemEnd)
+    })
+    ## Make a data.frame and not a data.table, since we will pass this
+    ## to the C segmentation code directly.
+    counts.by.sample[[sample.id]] <- with(sample.counts, {
+      data.frame(chromStart, chromEnd, count)
+    })
+  }
+  counts.by.sample
 }
 
