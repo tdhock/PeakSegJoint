@@ -1,7 +1,7 @@
 library(PeakSegJoint)
 
 getenv.or <- function(env.var, default){
-  env.value <- Sys.getenv("QSUB")
+  env.value <- Sys.getenv(env.var)
   if(env.value == ""){
     default
   }else{
