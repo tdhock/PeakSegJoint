@@ -44,7 +44,7 @@ OverlappingProblem <- function(problem.i){
 }
 
 overlapping.peaks.list <-
-  maxjobs.mclapply(1:nrow(job.problems), OverlappingProblem)
+  mclapply.or.stop(1:nrow(job.problems), OverlappingProblem)
 overlapping.peaks <- do.call(rbind, overlapping.peaks.list)
 
 job.RData <-

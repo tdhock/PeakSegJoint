@@ -55,18 +55,21 @@ SegmentFinal <- function(row.i){
     stopifnot(nrow(selected) == 1)
     peak.df <- subset(info$peaks, peaks == selected$peaks)
     if(nrow(peak.df)){
-      data.table(chrom, peak.df)
+      data.table(chrom=problem$chrom, peak.df)
     }
   }
 }
 final.peak.list <-
   mclapply.or.stop(seq_along(job.problems$problem.name), SegmentFinal)
 pred.peaks <- do.call(rbind, final.peak.list)
-stopifnot(all(!is.na(pred.peaks$sample.group)))
 
 if(is.null(pred.peaks) || 0 == nrow(pred.peaks)){
   warning("no predicted peaks")
 }else{
+  ## If for some reason we do not have sample.group info, there is a
+  ## problem!
+  stopifnot(all(!is.na(pred.peaks$sample.group)))
+
   ## big.problem <- with(step1.results, {
   ##   data.table(problemStart=min(problemStart),
   ##              problemEnd=max(problemEnd))
