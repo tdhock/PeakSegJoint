@@ -11,13 +11,13 @@ print(argv)
 PPN.cores()
 
 if(length(argv) != 2){
-  stop("usage: Step3.R PeakSegJoint-chunks/combined.problems.RData jobNum")
+  stop("usage: Step5.R PeakSegJoint-chunks/combined.problems.RData jobNum")
 }
 
 combined.problems.RData <- normalizePath(argv[1])
 jobNum <- argv[2]
 
-load(combined.problems.RData)
+objs <- load(combined.problems.RData)
 job.problems <- combined.problems[[jobNum]]
 
 data.dir <- dirname(combined.problems.RData)

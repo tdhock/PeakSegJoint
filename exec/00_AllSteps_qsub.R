@@ -106,8 +106,9 @@ Step5v <-
               package="PeakSegJoint")
 pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
 dir.create(pred.dir, showWarnings=FALSE)
+combined.problems.RData <- file.path(data.dir, "combined.problems.RData")
 cmd.list$Step5 <-
-  c(structure(paste(Rscript, Step5, trained.model.RData, job.vec),
+  c(structure(paste(Rscript, Step5, combined.problems.RData, job.vec),
               names=paste0("finalJob", job.vec)),
     structure(paste(Rscript, Step5v, chunk.dir.vec),
               names=paste0("chunk", basename(chunk.dir.vec), "viz")))
