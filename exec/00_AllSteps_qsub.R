@@ -12,7 +12,7 @@ getenv.or <- function(env.var, default){
 ## Some arbitrary parameters that affect how long (and how much
 ## embarrassing paralellelism) the computation will take.
 n.jobs <- as.integer(getenv.or("JOBS", 200))
-short.time <- "01:00:00"
+short.time <- "02:00:00"
 long.time <- "10:00:00"
 qsub <- getenv.or("QSUB", "qsub")
 
