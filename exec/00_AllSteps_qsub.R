@@ -1,14 +1,20 @@
 library(PeakSegJoint)
 
+getenv.or <- function(env.var, default){
+  env.value <- Sys.getenv("QSUB")
+  if(env.value == ""){
+    default
+  }else{
+    env.value
+  }
+}
+
 ## Some arbitrary parameters that affect how long (and how much
 ## embarrassing paralellelism) the computation will take.
-n.jobs <- 200
+n.jobs <- as.integer(getenv.or("JOBS", 200))
 short.time <- "01:00:00"
 long.time <- "10:00:00"
-qsub <- Sys.getenv("QSUB")
-if(qsub == ""){
-  qsub <- "qsub"
-}
+qsub <- getenv.or("QSUB", "qsub")
 
 ## Make and run qsub scripts for all steps of the PeakSegJoint pipeline.
 R.bin <- R.home("bin")

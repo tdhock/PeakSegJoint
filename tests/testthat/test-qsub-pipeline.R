@@ -26,9 +26,11 @@ AllSteps <-
   system.file("exec", "00_AllSteps_qsub.R",
               mustWork=TRUE,
               package="PeakSegJoint")
-
 unlink(pred.RData)
-cmd <- paste("QSUB='echo SEQUENTIAL && bash' Rscript", AllSteps, labels.txt)
+
+Rscript <- "QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript"
+
+cmd <- paste(Rscript, AllSteps, labels.txt)
 system(cmd)
 
 test_that("pipeline trained on 4 samples predicts for 8 samples", {
@@ -63,7 +65,7 @@ test_that("pipeline trained on 1 file does 3 fold CV", {
 
 unlink(pred.RData)
 cmd <-
-  paste("QSUB='echo INTERACTIVE && bash' Rscript",
+  paste(Rscript,
         AllSteps, labels.txt, other.txt)
 system(cmd)
 
