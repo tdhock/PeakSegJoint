@@ -1,5 +1,15 @@
 library(PeakSegJoint)
 
+## Some arbitrary parameters that affect how long (and how much
+## embarrassing paralellelism) the computation will take.
+n.jobs <- 200
+short.time <- "01:00:00"
+long.time <- "10:00:00"
+qsub <- Sys.getenv("QSUB")
+if(qsub == ""){
+  qsub <- "qsub"
+}
+
 ## Make and run qsub scripts for all steps of the PeakSegJoint pipeline.
 R.bin <- R.home("bin")
 Rscript <- file.path(R.bin, "Rscript")
@@ -55,49 +65,60 @@ Step2 <-
               package="PeakSegJoint")
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
 cmd.list$Step2 <-
-  c(training=paste(Rscript, Step2, chunks.dir))
+  c(training=paste(Rscript, Step2, chunks.dir, n.jobs))
 
 Step3e <-
   system.file(file.path("exec", "Step3e-estimate-test-error.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-
-bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
-chrom.ranges <- bigWigInfo(bigwig.file.vec[1])
 Step3 <-
-  system.file(file.path("exec", "Step3-segment-one-chrom.R"),
+  system.file(file.path("exec", "Step3-overlapping-problems.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
-
-## We want Step3-predict and Step3e-estimate-test-error to start
-## immediate after Step2-training, which is what the next line does:
+## We want Step3-overlapping-problems and Step3e-estimate-test-error
+## to start immediately after Step2-training, which is what the next
+## line does:
+job.vec <- 1:n.jobs
 cmd.list$Step3 <-
   c(structure(paste(Rscript, Step3e, trained.model.RData),
               names="testError"),
-    structure(paste(Rscript, Step3, trained.model.RData, chrom.ranges$chrom),
-              names=paste0(chrom.ranges$chrom, "predict")))
+    structure(paste(Rscript, Step3, trained.model.RData, job.vec),
+              names=paste0("oJob", job.vec)))
 
 Step4 <-
-  system.file(file.path("exec", "Step4-write-bed-files.R"),
+  system.file(file.path("exec", "Step4-combine-overlapping.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-Step4v <-
-  system.file(file.path("exec", "Step4v-viz-one-labeled-chunk.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-## TODO: start Step4v immediately after Step3e finishes!
-pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
+oJob.dir <- file.path(data.dir, "PeakSegJoint-overlapping")
+dir.create(oJob.dir, showWarnings=FALSE)
 cmd.list$Step4 <-
-  c(structure(paste(Rscript, Step4, pred.dir),
-              names="bed"),
-    structure(paste(Rscript, Step4v, chunk.dir.vec),
+ structure(paste(Rscript, Step4, oJob.dir, n.jobs),
+           names="combine")
+
+Step5 <-
+  system.file(file.path("exec", "Step5-final-problems.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+Step5v <-
+  system.file(file.path("exec", "Step5v-viz-one-labeled-chunk.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
+dir.create(pred.dir, showWarnings=FALSE)
+cmd.list$Step5 <-
+  c(structure(paste(Rscript, Step5, trained.model.RData, job.vec),
+              names=paste0("finalJob", job.vec)),
+    structure(paste(Rscript, Step5v, chunk.dir.vec),
               names=paste0("chunk", basename(chunk.dir.vec), "viz")))
 
-qsub <- Sys.getenv("QSUB")
-if(qsub == ""){
-  qsub <- "qsub"
-}
+Step6 <-
+  system.file(file.path("exec", "Step6-write-bed-files.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+cmd.list$Step6 <-
+  c(structure(paste(Rscript, Step6, pred.dir),
+              names="bed"))
 
 depend.list <- list()
 for(step.name in names(cmd.list)){
@@ -111,13 +132,11 @@ for(step.name in names(cmd.list)){
   depend.list <- list()
   cmd.vec <- cmd.list[[step.name]]
   for(cmd.name in names(cmd.vec)){
-    is.viz <- grepl("viz", cmd.name)
     cmd <- cmd.vec[[cmd.name]]
-    is.prediction <- grepl(Step3, cmd)
-    walltime <- if(step.name == "Step3"){
-      "10:00:00"
+    walltime <- if(grepl("Job", cmd.name)){
+      long.time
     }else{
-      "01:00:00"
+      short.time
     }
     last.args <- sub(".*[.]R ", "", cmd)
     last.file <- sub(" ", "-", last.args)
@@ -142,9 +161,6 @@ for(step.name in names(cmd.list)){
         cmd.name, " ",
         "submitted as job ",
         qsub.id, "\n", sep="")
-    if(!is.viz){
-      depend.list[[cmd.name]] <- qsub.id
-    }
   }
 }
 

@@ -4,13 +4,14 @@ library(PeakSegJoint)
 options(xtable.print.results=FALSE)
 
 argv <-
-  system.file(file.path("exampleData",
-                        "PeakSegJoint-chunks"),
-              package="PeakSegJoint")
+  c(system.file(file.path("exampleData",
+                          "PeakSegJoint-chunks"),
+                package="PeakSegJoint"),
+    "200")
 
-argv <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
-argv <- "~/exampleData/PeakSegJoint-chunks"
-argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks"
+argv <- c("PeakSegJoint-chunks/H3K36me3_TDH_immune", "200")
+argv <- c("~/exampleData/PeakSegJoint-chunks", "200")
+argv <- c("~/projects/H3K27ac_TDH/PeakSegJoint-chunks", "200")
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -18,11 +19,12 @@ print(argv)
 
 PPN.cores()
 
-if(length(argv) != 1){
-  stop("usage: Step3.R path/to/PeakSegJoint-chunks")
+if(length(argv) != 2){
+  stop("usage: Step2.R path/to/PeakSegJoint-chunks numJobs")
 }
 
 chunks.dir <- normalizePath(argv[1])
+numJobs <- as.integer(argv[2])
 data.dir <- dirname(chunks.dir)
 
 problems.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "problems.RData"))
@@ -194,12 +196,50 @@ full.fit <-
                              factor.regularization=NULL,
                              verbose=0)
 
+## get chrom size info from a bigwig, so we can generate a list of
+## segmentation problems and divide them into jobs.
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+bigwig.file <- bigwig.file.vec[1]
+chrom.ranges <- bigWigInfo(bigwig.file)
+ranges.by.chrom <- split(chrom.ranges, chrom.ranges$chrom)
+problems.by.chrom <- list()
+for(chrom in names(ranges.by.chrom)){
+  chrom.range <- ranges.by.chrom[[chrom]]
+  all.chrom.problems <- with(chrom.range, {
+    getProblems(chrom, chromStart, chromEnd, bases.per.problem,
+                chrom.size=chromEnd)
+  })
+  ## Look at a bigwig file to see where the first chromStart and last
+  ## chromEnd are, and then only process the problems which have some
+  ## data.
+  cmd <-
+    sprintf("bigWigToBedGraph %s /dev/stdout -chrom=%s",
+            bigwig.file, chrom)
+  head.cmd <- paste(cmd, "| head -1")
+  tail.cmd <- paste(cmd, "| tail -1")
+  head.dt <- fread.or.null(head.cmd)
+  tail.dt <- fread.or.null(tail.cmd)
+  two <- rbind(head.dt, tail.dt)
+  setnames(two, c("chrom", "chromStart", "chromEnd", "count"))
+  first.chromStart <- two$chromStart[1]
+  last.chromEnd <- two$chromEnd[2]
+  problems.by.chrom[[chrom]] <- 
+    all.chrom.problems[problemStart < last.chromEnd &
+                         first.chromStart < problemEnd, ]
+}
+overlapping.problems <- do.call(rbind, problems.by.chrom)
+overlapping.problems$job <- sort(rep(1:numJobs, l=nrow(overlapping.problems)))
+table(overlapping.problems$job)
+problems.by.job <- split(overlapping.problems, overlapping.problems$job)
+
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
      ## for estimating test error later:
      labeled.problems.by.chunk,
      problems.by.chunk,
-     regions.by.chunk, 
+     regions.by.chunk,
+     ## for parallelizing prediction on jobs:
+     problems.by.job,
      file=trained.model.RData)
 
