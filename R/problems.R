@@ -164,17 +164,13 @@ peak.or.null <- function
     NULL
   })
   if(!is.null(fit)){
-    models <- fit$models[-1]
-    loss.vec <- sapply(models, "[[", "loss")
-    is.feasible <- is.finite(loss.vec)
-    peak.mat <- sapply(models, "[[", "peak_start_end")
-    rownames(peak.mat) <- c("chromStart", "chromEnd")  
-    feasible.mat <- peak.mat[, is.feasible, drop=FALSE]
-    if(ncol(feasible.mat) > 0){
-      peak.vec <- feasible.mat[, ncol(feasible.mat)]
-      data.table(t(peak.vec))
+    model <- fit$models[[2]] # model with 1 peak.
+    if(is.finite(model$loss)){
+      peak.vec <- model$peak_start_end
+      data.table(chromStart=peak.vec[1],
+                 chromEnd=peak.vec[2])
     }
   }
-### the peak of the most complex model, or NULL if there are no
-### feasible models.
+### data.table(chromStart, chromEnd) = the peak of the most complex
+### model, or NULL if there are no feasible models.
 }
