@@ -208,6 +208,7 @@ height.pixels <- as.integer(if(max.height.pixels < ideal.height){
 }else{
   ideal.height
 })
+height.pixels <- (facet.rows+1)*30
 
 peakvar <- function(position){
   paste0(gsub("[-:]", ".", position), "peaks")
@@ -433,7 +434,7 @@ train.fig <-
                data=peaks.not.na, size=4, color="deepskyblue")
 
 png.name <- paste0(animint.dir, ".png")
-png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
+png(png.name, width=1000, h=height.pixels, units="px")
 print(train.fig)
 dev.off()
 
