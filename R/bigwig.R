@@ -36,17 +36,24 @@ readBigWig <- function
             chrom, start, end,
             bigwig.file)
   bg <- fread.or.null(cmd)
-  setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
-  stopifnot(0 <= bg$norm)
-  nonzero <- bg[0 < norm, ]
-  min.nonzero.norm <- min(nonzero[, norm])
-  nonzero[, count := as.integer(norm/min.nonzero.norm) ]
-  nonzero[, .(
-    chrom,
-    chromStart,
-    chromEnd,
-    count
-    )]
+  if(is.null(bg)){
+    data.table(chrom=character(),
+               chromStart=integer(),
+               chromEnd=integer(),
+               count=integer())
+  }else{
+    setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
+    stopifnot(0 <= bg$norm)
+    nonzero <- bg[0 < norm, ]
+    min.nonzero.norm <- min(nonzero[, norm])
+    nonzero[, count := as.integer(norm/min.nonzero.norm) ]
+    nonzero[, .(
+      chrom,
+      chromStart,
+      chromEnd,
+      count
+      )]
+  }
 ### data.table with columns chrom chromStart chromEnd count.
 }
 
