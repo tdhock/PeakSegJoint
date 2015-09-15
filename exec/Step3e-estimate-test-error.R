@@ -63,16 +63,30 @@ for(chunk.name in names(problems.by.chunk)){
   labeled.problems.by.chunk[[chunk.name]] <- by.problem[has.target]
 }
 
+## get chrom ranges for plot.
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
+bigwig.file <- bigwig.file.vec[1]
+chrom.ranges <- bigWigInfo(bigwig.file)
+
 ## For each test fold, hold it out and train a sequence of models with
 ## increasingly more data, and compute test error of each.
 test.error.list <- list()
 test.peaks.list <- list()
 test.regions.list <- list()
+test.folds.list <- list()
 n.chunk.order.seeds <- 2
 for(test.fold in 1:outer.folds){
   is.test <- outer.fold.id == test.fold
   sets <- list(test=all.chunk.names[is.test])
   test.regions <- regions.by.chunk[sets$test]
+  for(chunk.name in names(test.regions)){
+    region.dt <- test.regions[[chunk.name]]
+    test.folds.list[[paste(test.fold, chunk.name)]] <- region.dt[, {
+      data.table(chrom=chrom[1],
+                 test.fold,
+                 position=(min(chromStart)+max(chromEnd))/2)
+    }]
+  }
   test.problems <- problems.by.chunk[sets$test]
   for(chunk.order.seed in 1:n.chunk.order.seeds){
     set.seed(chunk.order.seed)
@@ -112,6 +126,7 @@ for(test.fold in 1:outer.folds){
   }
 }
 test.error.curves <- do.call(rbind, test.error.list)
+test.folds <- do.call(rbind, test.folds.list)
 most.chunks <-
   subset(test.error.curves,
          chunk.order.seed==1 & train.chunks==max(train.chunks))
@@ -152,6 +167,28 @@ test.png <-
   file.path(test.out.dir, "figure-test-error-decreases.png")
 png(test.png, width=1000, h=600, units="px")
 print(gg.test)
+dev.off()
+
+chunk.counts <- table(test.folds$test.fold)
+ggfolds <- ggplot()+
+  ggtitle("Distribution of folds across chromosomes")+
+  theme_bw()+
+  theme(panel.margin=grid::unit(0, "cm"))+
+  facet_grid(test.fold ~ ., labeller=function(var, val){
+    n.chunks <- chunk.counts[paste(val)]
+    paste0("test fold ", val, "\n", n.chunks, " chunks")
+  }, scales="free", space="free")+
+  geom_segment(aes(chromStart/1e6, chrom,
+                   xend=chromEnd/1e6, yend=chrom),
+               data=chrom.ranges)+
+  geom_point(aes(position/1e6, chrom),
+             pch=1,
+             data=test.folds)+
+  xlab("position on chromosome (mega bases = Mb)")
+folds.png <-
+  file.path(test.out.dir, "figure-folds.png")
+png(folds.png, width=1000, h=600, units="px")
+print(ggfolds)
 dev.off()
 
 most.list <- split(most.chunks, most.chunks$test.fold)
@@ -204,7 +241,9 @@ test.html.out <-
         "<p>Test error was estimated using",
         test.error.msg,
         "</p>",
-        '<img src="figure-test-error-decreases.png" />',
+        '<img src="figure-folds.png" alt="folds" />',
+        '<br />',
+        '<img src="figure-test-error-decreases.png" alt="error" />',
         "<h1>Test error details for each chunk of labels</h1>",
         test.html.table)
 cat(test.html.out, file=test.index.html)
