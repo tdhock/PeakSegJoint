@@ -56,6 +56,13 @@ if(length(chunks.by.file) == 1){
 test.error.msg <-
   paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
 
+labeled.problems.by.chunk <- list()
+for(chunk.name in names(problems.by.chunk)){
+  by.problem <- problems.by.chunk[[chunk.name]]
+  has.target <- sapply(by.problem, function(L)is.numeric(L$target))
+  labeled.problems.by.chunk[[chunk.name]] <- by.problem[has.target]
+}
+
 ## For each test fold, hold it out and train a sequence of models with
 ## increasingly more data, and compute test error of each.
 test.error.list <- list()

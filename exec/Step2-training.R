@@ -135,6 +135,9 @@ for(chunk.i in seq_along(problems.RData.vec)){
   if(! "step2.data.list" %in% objs){
     stop("step.data.list not found in ", problems.RData)
   }
+  if(! "step2.error.list" %in% objs){
+    stop("step.error.list not found in ", problems.RData)
+  }
   res.data <- step2.data.list[[res.str]]
   for(problem.i in 1:nrow(res.data$problems)){
     prob.info <- res.data$problems[problem.i, ]
@@ -236,7 +239,6 @@ trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
      ## for estimating test error later:
-     labeled.problems.by.chunk,
      problems.by.chunk,
      regions.by.chunk,
      ## for parallelizing prediction on jobs:
