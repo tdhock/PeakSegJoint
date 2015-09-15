@@ -30,7 +30,9 @@ bases.per.problem <- train.errors.picked$bases.per.problem
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
-names(bigwig.file.vec) <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
+sample.group.vec <- basename(dirname(bigwig.file.vec))
+sample.id.vec <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
+names(bigwig.file.vec) <- paste0(sample.group.vec, "/", sample.id.vec)
 
 OverlappingProblem <- function(problem.i){
   message(sprintf("%10d / %10d overlapping problems",
