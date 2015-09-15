@@ -1,3 +1,13 @@
+2015.09.15
+
+Plot test fold distribution across chromosomes on test error summary
+page.
+
+peak.or.null returns model with 1 peak (not S peaks as was before).
+
+bugfix with train error animint for data sets with many (>100)
+samples.
+
 2015.09.14
 
 exec/Step*.R scripts re-organized so that the genome prediction
