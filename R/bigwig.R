@@ -3,8 +3,7 @@ fread.or.null <- function(...){
   tryCatch({
     fread(...)
   }, error=function(e){
-    structure(NULL,
-              error=e)
+    NULL
   })
 }
 
