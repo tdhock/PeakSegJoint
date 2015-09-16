@@ -115,9 +115,11 @@ for(test.fold in 1:outer.folds){
                                    factor.regularization=NULL,
                                    verbose=0)
       test.results <- error.metrics(test.problems, test.regions, tv.fit)
-      test.regions.list[names(test.results$error.regions)] <-
-        test.results$error.regions
-      test.peaks.list[names(test.results$peaks)] <- test.results$peaks
+      if(train.chunks == length(sets$train.validation)){
+        test.regions.list[names(test.results$error.regions)] <-
+          test.results$error.regions
+        test.peaks.list[names(test.results$peaks)] <- test.results$peaks
+      }
       test.metrics <-
         subset(test.results$metrics, regularization == regularization[1])
       rownames(test.metrics) <- NULL
