@@ -34,6 +34,8 @@ chunk.best.list <- list()
 bpp.list <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
+  message(sprintf("%4d / %4d chunks %s", chunk.i, length(problems.RData.vec),
+                  problems.RData))
   chunk.dir <- dirname(problems.RData)
   chunk.id <- basename(chunk.dir)
   index.html <-
@@ -206,7 +208,10 @@ bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
 ranges.by.chrom <- split(chrom.ranges, chrom.ranges$chrom)
 problems.by.chrom <- list()
-for(chrom in names(ranges.by.chrom)){
+for(chrom.i in seq_along(ranges.by.chrom)){
+  chrom <- names(ranges.by.chrom)[[chrom.i]]
+  message(sprintf("%4d / %4d chroms %s", chrom.i, length(ranges.by.chrom),
+                  chrom))
   chrom.range <- ranges.by.chrom[[chrom]]
   all.chrom.problems <- with(chrom.range, {
     getProblems(chrom, chromStart, chromEnd, bases.per.problem,
