@@ -17,7 +17,8 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) != 2){
   stop("usage: Step2.R path/to/PeakSegJoint-chunks numJobs")
