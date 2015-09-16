@@ -88,7 +88,7 @@ trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 job.vec <- 1:n.jobs
 cmd.list$Step3 <-
   c(structure(paste(Rscript, Step3e, trained.model.RData),
-              names="testError"),
+              names="testJob"),
     structure(paste(Rscript, Step3, trained.model.RData, job.vec),
               names=paste0("oJob", job.vec)))
 
