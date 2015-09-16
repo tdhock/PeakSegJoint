@@ -18,12 +18,18 @@ other peak detection algorithms for ChIP-seq data analysis:
 - *Joint peak detection in any number of samples or cell types* so the
   model can be easily interpreted to find similarities or differences
   between samples (PeakSegJoint outputs a binary matrix, samples x
-  peaks). In contrast, single-sample peak detection methods are
-  limited to
+  peaks). In contrast, it is not easy to find similarities and
+  differences between samples using single-sample peak detection
+  methods (e.g. [[https://github.com/taoliu/MACS][MACS]]), and other multi-sample peak detection methods
+  are limited to one (e.g. [[https://github.com/mahmoudibrahim/jamm][JAMM]]) or two (e.g. [[https://code.google.com/p/pepr-chip-seq/][PePr]]) cell types
+  (assuming all samples of the same cell type are replicates with the
+  same peak pattern).
 
 ** Example output
 
-[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-train-errors/][Train error data viz, four samples of H3K4me3 data]].
+[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-train-errors/][Train error data viz, 8 samples of H3K4me3 data]].
+
+[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-test-errors/][Test error data viz, 8 samples of H3K4me3 data]].
 
 ** R installation instructions and usage examples
 
