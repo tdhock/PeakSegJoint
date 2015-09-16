@@ -11,9 +11,9 @@ getenv.or <- function(env.var, default){
 
 ## Some arbitrary parameters that affect how long (and how much
 ## embarrassing paralellelism) the computation will take.
-n.jobs <- as.integer(getenv.or("JOBS", 400))
+n.jobs <- as.integer(getenv.or("JOBS", 1000))
 short.time <- "02:00:00"
-long.time <- "100:00:00"
+long.time <- "20:00:00"
 qsub <- getenv.or("QSUB", "qsub")
 
 ## Make and run qsub scripts for all steps of the PeakSegJoint pipeline.
