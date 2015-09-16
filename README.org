@@ -57,7 +57,7 @@ can use [[http://bedtools.readthedocs.org/en/latest/content/tools/genomecov.html
 a genome browser. The coverage data can be either normalized
 (non-integer values) or raw (integer valued count data), with or
 without lines for zero coverage. Create a track hub to visualize them
-on UCSC ([[https://github.com/tdhock/blueprint/blob/master/labels/H3K27ac_TDH_MonoMacroMyeloid/trackDb.txt][example]]).
+on UCSC ([[https://github.com/tdhock/blueprint/blob/master/portal/H3K27ac_TDH/MantleNeutrophilErythroblast_trackDb.txt][example]]).
 
 Then, visually identify several regions with and without peaks, saving
 those labels to a file. [[file:inst/exampleData/manually_annotated_region_labels.txt][Example labels file]]: there are two cell types,
@@ -69,7 +69,7 @@ sub-directories that have names that match the labels file. [[file:inst/exampleD
 data set]]: the tcell subdirectory contains two bigwig files, and the
 bcell subdirectory contains two bigwig files. To download the bigwig
 files listed in a track hub, save the track hub to the same directory
-as the labels file ([[https://github.com/tdhock/blueprint/tree/master/labels/H3K27ac_TDH_MonoMacroMyeloid][example]]), and then run [[file:exec/downloadTrackDbBigWigs.R][downloadTrackDbBigWigs.R]]:
+as the labels file ([[https://github.com/tdhock/blueprint/tree/master/portal/H3K27ac_TDH][example]]), and then run [[file:exec/downloadTrackDbBigWigs.R][downloadTrackDbBigWigs.R]]:
 
 #+BEGIN_SRC shell
 Rscript downloadTrackDbBigWigs.R path/to/trackDb.txt
@@ -90,7 +90,7 @@ headers to reflect your cluster configuration.
 ** Run PeakSegJoint on your laptop
 
 If you don't have access to a cluster with qsub, you can still run the
-[[file:exec/][steps]] in sequence on one computer. For example [[https://github.com/tdhock/PeakSegJoint/blob/master/tests/testthat/test-qsub-pipeline.R#L14][test-qsub-pipeline.R]]
+[[file:exec/][steps]] in sequence on one computer. For example [[file:tests/testthat/test-qsub-pipeline.R][test-qsub-pipeline.R]]
 uses bash instead of qsub, via
 
 #+BEGIN_SRC shell
