@@ -16,7 +16,8 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-PPN.cores()
+ppn <- PPN.cores()
+options(mc.cores=ppn/2)
 
 if(length(argv) != 1){
   stop("usage: Step3e.R path/to/PeakSegJoint-chunks/trained.model.RData")
