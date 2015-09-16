@@ -248,8 +248,11 @@ test.html.out <-
         test.html.table)
 cat(test.html.out, file=test.index.html)
 
+save(test.error.curves,
+     regions.by.chunk,
+     test.error.summary,
+     file=file.path(test.out.dir, "test.error.curves.RData"))
+
 stopifnot(test.error.summary["incorrect.regions", "possible"] ==
             sum(sapply(regions.by.chunk, nrow)))
 
-save(test.error.curves,
-     file=file.path(test.out.dir, "test.error.curves.RData"))
