@@ -9,7 +9,7 @@ argv <- commandArgs(trailingOnly=TRUE)
 print(argv)
 
 ppn <- PPN.cores()
-options(mc.cores=ppn/2)
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) != 2){
   stop("usage: Step5.R PeakSegJoint-chunks/combined.problems.RData jobNum")
