@@ -6,6 +6,7 @@ exampleData <-
   system.file("exampleData",
               mustWork=TRUE,
               package="PeakSegJoint")
+exampleData <- "~/exampleData"
 argv <- file.path(exampleData, "PeakSegJoint-chunks", "3")
 
 argv <- commandArgs(trailingOnly=TRUE)
@@ -39,7 +40,7 @@ robjs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
-width.pixels <- 1500
+width.pixels <- 1000
 bigwig.glob <- file.path(data.dir, "*", "*.bigwig")
 bigwig.file.vec <- Sys.glob(bigwig.glob)
 limits.by.sample <- list()
@@ -82,7 +83,7 @@ for(bigwig.file in bigwig.file.vec){
   sample.group <- basename(dirname(bigwig.file))
   a.data <- with(sample.counts, {
     approx(chromStart+1, count,
-           as.integer(seq(limits$min, limits$max, l=width.pixels)),
+           as.integer(seq(limits$min, limits$max, l=width.pixels/2)),
            method="constant", rule=2)
   })
   counts.by.sample[[paste(sample.id, sample.group)]] <- with(a.data, {
