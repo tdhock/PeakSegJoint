@@ -25,6 +25,8 @@ for(job.RData in job.RData.vec){
   peaks.by.job[[job.RData]] <- overlapping.peaks
 }
 all.overlapping.peaks <- do.call(rbind, peaks.by.job)
+message(nrow(all.overlapping.peaks), " peaks in ",
+        length(job.RData.vec), " RData files.")
 
 peaks.by.chrom <- split(all.overlapping.peaks, all.overlapping.peaks$chrom)
 clustered.by.chrom <- list()
