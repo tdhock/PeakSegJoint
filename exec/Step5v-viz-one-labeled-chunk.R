@@ -239,7 +239,9 @@ print(system.time({
 
          modelSelection=ggplot()+
            ggtitle("select number of samples with 1 peak")+
+           theme_bw()+
            theme_animint(height=300)+
+           theme(panel.margin=grid::unit(0, "lines"))+
            geom_segment(aes(min.log.lambda, peaks,
                             xend=max.log.lambda, yend=peaks,
                             showSelected=problem.name,
@@ -313,8 +315,13 @@ print(system.time({
            theme_bw()+
            theme_animint(width=width.pixels, height=height.pixels)+
            theme(panel.margin=grid::unit(0, "cm"))+
-           facet_grid(sample.group + sample.id ~ .,
-                      labeller=facet.labels, scales="free")+
+           facet_grid(sample.group + sample.id ~ ., labeller=function(var, val){
+             if(var=="sample.group"){
+               substr(val, 1, 2)
+             }else{
+               ""
+             }
+           }, scales="free")+
            geom_line(aes(base/1e3, count),
                      data=some.counts,
                      color="grey50")+
@@ -405,8 +412,8 @@ train.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.group + sample.id ~ .,
-               labeller=facet.labels, scales="free")+
+    facet_grid(sample.group + sample.id ~ ., labeller=facet.labels,
+               scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
