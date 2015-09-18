@@ -39,6 +39,8 @@ for(chrom in names(peaks.by.chrom)){
 final.problems <- do.call(rbind, clustered.by.chrom)
 final.problems$job <- sort(rep(1:numJobs, l=nrow(final.problems)))
 
+message(nrow(final.problems), " final segmentation problems.")
+
 combined.problems <- split(final.problems, final.problems$job)
 
 out.RData <- file.path(data.dir, "combined.problems.RData")
