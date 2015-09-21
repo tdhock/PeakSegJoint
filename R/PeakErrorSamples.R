@@ -21,6 +21,9 @@ PeakErrorSamples <- function
       Peaks()
     }
     sample.error <- PeakErrorChrom(sample.peaks, sample.regions)
+    if("chrom" %in% names(sample.regions)){
+      sample.error$chrom <- sample.regions$chrom
+    }
     sample.id <- sub(".*/", "", sample.path)
     sample.group <- sub("/.*", "", sample.path)
     error.by.sample[[sample.path]] <-
