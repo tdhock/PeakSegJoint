@@ -19,7 +19,7 @@ if(length(argv) != 2){
   stop("usage: Step3.R PeakSegJoint-chunks/trained.model.RData jobNum")
 }
 
-trained.model.RData <- normalizePath(argv[1])
+trained.model.RData <- normalizePath(argv[1], mustWork=TRUE)
 jobNum <- argv[2]
 
 objs <- load(trained.model.RData)

@@ -4,7 +4,6 @@ library(PeakSegJoint)
 argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/15"
 exampleData <-
   system.file("exampleData",
-              mustWork=TRUE,
               package="PeakSegJoint")
 exampleData <- "~/exampleData"
 argv <- file.path(exampleData, "PeakSegJoint-chunks", "3")
@@ -27,7 +26,7 @@ ann.colors <-
     peakEnd="#ff4c4c",
     peaks="#a445ee")
 
-chunk.dir <- normalizePath(argv)
+chunk.dir <- normalizePath(argv, mustWork=TRUE)
 chunks.dir <- dirname(chunk.dir)
 data.dir <- dirname(chunks.dir)
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")

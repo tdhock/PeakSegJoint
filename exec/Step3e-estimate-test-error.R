@@ -20,7 +20,7 @@ if(length(argv) != 3){
   stop("usage: Step3e.R path/to/PeakSegJoint-chunks/trained.model.RData chunk.order.seed test.fold")
 }
 
-trained.model.RData <- normalizePath(argv[1])
+trained.model.RData <- normalizePath(argv[1], mustWork=TRUE)
 chunk.order.seed <- as.integer(argv[2])
 test.fold <- as.integer(argv[3])
 chunks.dir <- dirname(trained.model.RData)

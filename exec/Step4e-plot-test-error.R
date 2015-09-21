@@ -4,7 +4,6 @@ library(xtable)
 options(xtable.print.results=FALSE)
 
 argv <- system.file("exampleData", "PeakSegJoint-chunks",
-                    mustWork=TRUE,
                     package="PeakSegJoint")
 
 argv <- commandArgs(trailingOnly=TRUE)
@@ -13,7 +12,7 @@ if(length(argv) != 1){
   stop("Usage: Step4e.R path/to/PeakSegJoint-chunks")
 }
 
-chunks.dir <- normalizePath(argv[1])
+chunks.dir <- normalizePath(argv[1], mustWork=TRUE)
 data.dir <- dirname(chunks.dir)
 
 regions.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "regions.RData"))

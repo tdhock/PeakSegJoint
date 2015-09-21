@@ -1,7 +1,6 @@
 library(PeakSegJoint)
 
 argv <- system.file("exampleData", "PeakSegJoint-predictions",
-                    mustWork=TRUE,
                     package="PeakSegJoint")
 
 argv <- "~/genomepipelines/H3K4me3_TDH_immune/PeakSegJoint-predictions"

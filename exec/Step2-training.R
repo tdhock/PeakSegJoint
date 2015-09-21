@@ -24,7 +24,7 @@ if(length(argv) != 2){
   stop("usage: Step2.R path/to/PeakSegJoint-chunks numJobs")
 }
 
-chunks.dir <- normalizePath(argv[1])
+chunks.dir <- normalizePath(argv[1], mustWork=TRUE)
 numJobs <- as.integer(argv[2])
 data.dir <- dirname(chunks.dir)
 

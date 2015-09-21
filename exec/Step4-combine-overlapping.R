@@ -13,7 +13,7 @@ if(length(argv) != 2){
   stop("usage: Step4.R path/to/PeakSegJoint-overlapping numJobs")
 }
 
-overlapping.dir <- normalizePath(argv[1])
+overlapping.dir <- normalizePath(argv[1], mustWork=TRUE)
 numJobs <- as.integer(argv[2])
 
 data.dir <- dirname(overlapping.dir)
