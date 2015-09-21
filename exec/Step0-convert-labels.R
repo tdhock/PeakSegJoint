@@ -267,5 +267,36 @@ for(labels.file in names(regions.by.file)){
 }
 chunk.file.map <- do.call(rbind, chunk.file.list)
 rownames(chunk.file.map) <- NULL
+
+## Divide chunks into train+validation/test.
+chunks.by.file <- split(chunk.file.map, chunk.file.map$labels.file)
+all.chunk.names <- chunk.file.map$chunk.id
+if(length(chunks.by.file) == 1){
+  outer.folds <- 4
+  if(length(all.chunk.names) < outer.folds){
+    outer.folds <- length(all.chunk.names)
+  }
+  set.seed(1)
+  outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
+  names(outer.fold.id) <- all.chunk.names
+  fold.msg <- "randomly selected folds"
+}else{
+  outer.folds <- length(chunks.by.file)
+  outer.fold.id <- rep(NA, l=length(all.chunk.names))
+  names(outer.fold.id) <- all.chunk.names
+  for(file.i in seq_along(chunks.by.file)){
+    file.chunks <- chunks.by.file[[file.i]]
+    outer.fold.id[paste(file.chunks$chunk.id)] <- file.i
+  }
+  fold.msg <- "one fold for each labels file"
+}
+test.error.msg <-
+  paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
+
 RData.file <- file.path(dirname(labels.file), "chunk.file.map.RData")
-save(chunk.file.map, file=RData.file)
+save(chunk.file.map,
+     outer.folds,
+     outer.fold.id,
+     fold.msg,
+     test.error.msg,
+     file=RData.file)

@@ -1,16 +1,13 @@
-library(ggplot2)
-library(xtable)
 library(PeakSegJoint)
-options(xtable.print.results=FALSE)
 
-argv <-
+model.path <-
   system.file("exampleData",
               "PeakSegJoint-chunks",
               "trained.model.RData",
               package="PeakSegJoint")
-
-argv <- "~/exampleData/PeakSegJoint-chunks/trained.model.RData"
-argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/trained.model.RData"
+model.path <- "~/exampleData/PeakSegJoint-chunks/trained.model.RData"
+model.path <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/trained.model.RData"
+argv <- c(model.path, "1", "1")
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -19,11 +16,13 @@ print(argv)
 ppn <- PPN.cores()
 if(!is.na(ppn))options(mc.cores=ppn/2)
 
-if(length(argv) != 1){
-  stop("usage: Step3e.R path/to/PeakSegJoint-chunks/trained.model.RData")
+if(length(argv) != 3){
+  stop("usage: Step3e.R path/to/PeakSegJoint-chunks/trained.model.RData chunk.order.seed test.fold")
 }
 
-trained.model.RData <- normalizePath(argv)
+trained.model.RData <- normalizePath(argv[1])
+chunk.order.seed <- as.integer(argv[2])
+test.fold <- as.integer(argv[3])
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 
@@ -35,27 +34,7 @@ load(map.RData)
 chunks.by.file <- split(chunk.file.map, chunk.file.map$labels.file)
 all.chunk.names <- names(problems.by.chunk)
 names(all.chunk.names) <- basename(dirname(all.chunk.names))
-if(length(chunks.by.file) == 1){
-  outer.folds <- 4
-  if(length(all.chunk.names) < outer.folds){
-    outer.folds <- length(all.chunk.names)
-  }
-  set.seed(1)
-  outer.fold.id <- sample(rep(1:outer.folds, l=length(all.chunk.names)))
-  names(outer.fold.id) <- names(all.chunk.names)
-  fold.msg <- "randomly selected folds"
-}else{
-  outer.folds <- length(chunks.by.file)
-  outer.fold.id <- rep(NA, l=length(all.chunk.names))
-  names(outer.fold.id) <- names(all.chunk.names)
-  for(file.i in seq_along(chunks.by.file)){
-    file.chunks <- chunks.by.file[[file.i]]
-    outer.fold.id[paste(file.chunks$chunk.id)] <- file.i
-  }
-  fold.msg <- "one fold for each labels file"
-}
-test.error.msg <-
-  paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
+cv.chunk.names <- all.chunk.names[paste(chunk.file.map$chunk.id)]
 
 labeled.problems.by.chunk <- list()
 for(chunk.name in names(problems.by.chunk)){
@@ -64,198 +43,86 @@ for(chunk.name in names(problems.by.chunk)){
   labeled.problems.by.chunk[[chunk.name]] <- by.problem[has.target]
 }
 
-## get chrom ranges for plot.
-bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
-bigwig.file <- bigwig.file.vec[1]
-chrom.ranges <- bigWigInfo(bigwig.file)
-
 ## For each test fold, hold it out and train a sequence of models with
 ## increasingly more data, and compute test error of each.
-test.error.list <- list()
-test.peaks.list <- list()
-test.regions.list <- list()
-test.folds.list <- list()
-n.chunk.order.seeds <- 2
-for(test.fold in 1:outer.folds){
-  is.test <- outer.fold.id == test.fold
-  sets <- list(test=all.chunk.names[is.test])
-  test.regions <- regions.by.chunk[sets$test]
-  for(chunk.name in names(test.regions)){
-    region.dt <- test.regions[[chunk.name]]
-    test.folds.list[[paste(test.fold, chunk.name)]] <- region.dt[, {
-      data.table(chrom=chrom[1],
-                 test.fold,
-                 position=(min(chromStart)+max(chromEnd))/2)
-    }]
-  }
-  test.problems <- problems.by.chunk[sets$test]
-  for(chunk.order.seed in 1:n.chunk.order.seeds){
-    set.seed(chunk.order.seed)
-    sets$train.validation <- sample(all.chunk.names[!is.test])
-    if(length(sets$train.validation) < 2){
-      print(sets$train.validation)
-      stop("need at least 2 train chunks, please add more labels")
-    }
-    train.chunks.vec <- 2:length(sets$train.validation)
-    for(train.chunks in train.chunks.vec){
-      cat("estimating test error:",
-          test.fold, "/", outer.folds, "folds,",
-          chunk.order.seed, "/", n.chunk.order.seeds, "seeds,",
-          train.chunks, "/", length(sets$train.validation), "chunks.\n")
-      some.train.validation <- sets$train.validation[1:train.chunks]
-      some.problems <- problems.by.chunk[some.train.validation]
-      some.regions <- regions.by.chunk[some.train.validation]
-      full.curves <- tv.curves(some.problems, some.regions)
-      picked.error <- best.on.validation(full.curves)
-      mean.reg <- mean(picked.error$regularization)
-      tv.list <- do.call(c, labeled.problems.by.chunk[some.train.validation])
-      tv.fit <-
-        IntervalRegressionProblems(tv.list,
-                                   initial.regularization=mean.reg,
-                                   factor.regularization=NULL,
-                                   verbose=0)
-      test.results <- error.metrics(test.problems, test.regions, tv.fit)
-      if(train.chunks == length(sets$train.validation)){
-        test.regions.list[names(test.results$error.regions)] <-
-          test.results$error.regions
-        test.peaks.list[names(test.results$peaks)] <- test.results$peaks
-      }
-      test.metrics <-
-        subset(test.results$metrics, regularization == regularization[1])
-      rownames(test.metrics) <- NULL
-      test.error.list[[paste(train.chunks, chunk.order.seed, test.fold)]] <-
-        data.frame(test.fold, chunk.order.seed, train.chunks, test.metrics)
-    }
-  }
-}
-test.error.curves <- do.call(rbind, test.error.list)
-test.folds <- do.call(rbind, test.folds.list)
-most.chunks <-
-  subset(test.error.curves,
-         chunk.order.seed==1 & train.chunks==max(train.chunks))
+test.metrics.curve.list <- list()
 
-gg.test <- 
-  ggplot()+
-    ggtitle(paste("test error for",
-                  n.chunk.order.seeds,
-                  "random orderings of the labeled train chunks"))+
-    geom_text(aes(train.chunks, metric.value/possible*100,
-                  label=sprintf("%.1f%%", metric.value/possible*100)),
-              data=most.chunks,
-              vjust=-1)+
-    ylab("percent incorrect (test error)")+
-    scale_x_continuous("number of labeled chunks in train set",
-                       breaks=function(lim.vec){
-                         ##print(lim.vec)
-                         ceiling(lim.vec[1]):floor(lim.vec[2])
-                       })+
-    geom_line(aes(train.chunks, metric.value/possible*100,
-                  group=chunk.order.seed),
-              data=test.error.curves)+
-    geom_point(aes(train.chunks, metric.value/possible*100,
-                  group=chunk.order.seed),
-              data=test.error.curves)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ test.fold, labeller=function(var, val){
-      if(var=="test.fold"){
-        paste("test fold", val)
-      }else{
-        paste(val)
-      }
-    }, scales="free")
+is.test <- outer.fold.id == test.fold
+set.seed(chunk.order.seed)
+sets <-
+  list(test=cv.chunk.names[is.test],
+       train.validation=sample(cv.chunk.names[!is.test]))
+test.regions <- regions.by.chunk[sets$test]
+test.problems <- problems.by.chunk[sets$test]
+
+if(length(sets$train.validation) < 2){
+  print(sets$train.validation)
+  stop("need at least 2 train chunks, please add more labels")
+}
+train.chunks.vec <- 2:length(sets$train.validation)
+for(train.chunks in train.chunks.vec){
+  print(system.time({
+    cat("estimating test error:",
+        train.chunks, "/", length(sets$train.validation), "chunks.\n")
+    some.train.validation <- sets$train.validation[1:train.chunks]
+    some.problems <- problems.by.chunk[some.train.validation]
+    some.regions <- regions.by.chunk[some.train.validation]
+    full.curves <- tv.curves(some.problems, some.regions)
+    picked.error <- best.on.validation(full.curves)
+    mean.reg <- mean(picked.error$regularization)
+    tv.list <- do.call(c, labeled.problems.by.chunk[some.train.validation])
+    tv.fit <-
+      IntervalRegressionProblems(tv.list,
+                                 initial.regularization=mean.reg,
+                                 factor.regularization=NULL,
+                                 verbose=0)
+    test.results <- error.metrics(test.problems, test.regions, tv.fit)
+    test.results$metrics$test.fold <- test.fold
+    test.results$metrics$chunk.order.seed <- chunk.order.seed
+    test.results$metrics$train.chunks <- train.chunks
+    stopifnot(test.results$metrics["incorrect.regions", "possible"] ==
+                sum(sapply(test.regions, nrow)))
+    test.metrics.curve.list[[paste(train.chunks)]] <- test.results$metrics
+  }))
+}
+test.metrics.curve <- do.call(rbind, test.metrics.curve.list)
+rownames(test.metrics.curve) <- NULL
+
 test.out.dir <- file.path(chunks.dir, "figure-test-errors")
-dir.create(test.out.dir, showWarnings=FALSE)
-test.png <-
-  file.path(test.out.dir, "figure-test-error-decreases.png")
-png(test.png, width=1000, h=600, units="px")
-print(gg.test)
-dev.off()
+seed.RData <-
+  file.path(test.out.dir,
+            paste0("seed", chunk.order.seed, "fold", test.fold, ".RData"))
 
-chunk.counts <- table(test.folds$test.fold)
-ggfolds <- ggplot()+
-  ggtitle("Distribution of folds across chromosomes")+
-  theme_bw()+
-  theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(test.fold ~ ., labeller=function(var, val){
-    n.chunks <- chunk.counts[paste(val)]
-    paste0("test fold ", val, "\n", n.chunks, " chunks")
-  }, scales="free", space="free")+
-  geom_segment(aes(chromStart/1e6, chrom,
-                   xend=chromEnd/1e6, yend=chrom),
-               data=chrom.ranges)+
-  geom_point(aes(position/1e6, chrom),
-             pch=1,
-             data=test.folds)+
-  xlab("position on chromosome (mega bases = Mb)")
-folds.png <-
-  file.path(test.out.dir, "figure-folds.png")
-png(folds.png, width=1000, h=600, units="px")
-print(ggfolds)
-dev.off()
+save(test.results,
+     test.metrics.curve,
+     file=seed.RData)
 
-most.list <- split(most.chunks, most.chunks$test.fold)
-incorrect <- as.integer(rowSums(sapply(most.list, "[[", "metric.value")))
-possible <- as.integer(rowSums(sapply(most.list, "[[", "possible")))
-percent.incorrect <- incorrect / possible * 100
-test.error.summary <- 
-  data.frame(row.names=most.list[[1]]$metric.name,
-             incorrect, possible, percent.incorrect)
-
-test.index.html <- file.path(test.out.dir, "index.html")
-test.row.list <- list()
-for(problems.RData in names(test.regions.list)){
-  chunk.dir <- dirname(problems.RData)
-  chunk.id <- basename(chunk.dir)
-  test.error.figure <-
-    sprintf('<img src="%s.png" alt="chunk%s" />', chunk.id, chunk.id)
-  error.regions <- test.regions.list[[problems.RData]]
-  chunk.peaks <- test.peaks.list[[problems.RData]]
-  out.RData <- file.path(test.out.dir, paste0(chunk.id, ".RData"))
-  save(error.regions, chunk.peaks, file=out.RData)
-  test.row.list[[chunk.id]] <- with(error.regions, {
-    data.frame(test.error.figure,
-               errors=sum(fp+fn),
-               regions=length(fp),
-               fp=sum(fp),
-               possible.fp=sum(possible.fp),
-               fn=sum(fn),
-               possible.fn=sum(possible.tp),
-               test.fold=outer.fold.id[[chunk.id]])
-  })
-}
-test.row.df <- do.call(rbind, test.row.list)
-test.row.df <- test.row.df[order(test.row.df$errors, decreasing=TRUE), ]
-test.xt <- xtable(test.row.df)
-test.html.table <-
-  print(test.xt, type="html",
-        include.rownames=FALSE,
-        sanitize.text.function=identity)
-summary.xt <- xtable(test.error.summary)
-summary.html <- print(summary.xt, type="html",
-                      include.rownames=TRUE)
-test.html.out <-
-  paste("<h1>Test error summary</h1>",
-        summary.html,
-        "<p>Targets counts examples (genomic regions to segment)",
-        "in the interval regression problem.</p>",
-        "<p>Regions, false postives, and false negatives",
-        "count labels (peakStart, peakEnd, peaks, noPeaks).</p>",
-        "<p>Test error was estimated using",
-        test.error.msg,
-        "</p>",
-        '<img src="figure-folds.png" alt="folds" />',
-        '<br />',
-        '<img src="figure-test-error-decreases.png" alt="error" />',
-        "<h1>Test error details for each chunk of labels</h1>",
-        test.html.table)
-cat(test.html.out, file=test.index.html)
-
-save(test.error.curves,
-     regions.by.chunk,
-     test.error.summary,
-     file=file.path(test.out.dir, "test.error.curves.RData"))
-
-stopifnot(test.error.summary["incorrect.regions", "possible"] ==
-            sum(sapply(regions.by.chunk, nrow)))
+## ggplot()+
+##   ggtitle(paste("test error for one",
+##                 "random ordering of the labeled train chunks"))+
+##   geom_text(aes(train.chunks, metric.value/possible*100,
+##                 label=sprintf("%.1f%%", metric.value/possible*100)),
+##             data=test.results$metrics,
+##             vjust=-1)+
+##   ylab("percent incorrect (test error)")+
+##   scale_x_continuous("number of labeled chunks in train set",
+##                      breaks=function(lim.vec){
+##                        ##print(lim.vec)
+##                        ceiling(lim.vec[1]):floor(lim.vec[2])
+##                      })+
+##   geom_line(aes(train.chunks, metric.value/possible*100,
+##                 group=chunk.order.seed),
+##             data=test.metrics.curve)+
+##   geom_point(aes(train.chunks, metric.value/possible*100,
+##                  group=chunk.order.seed),
+##              data=test.metrics.curve)+
+##   theme_bw()+
+##   theme(panel.margin=grid::unit(0, "cm"))+
+##   facet_grid(metric.name ~ test.fold, labeller=function(var, val){
+##     if(var=="test.fold"){
+##       paste("test fold", val)
+##     }else{
+##       paste(val)
+##     }
+##   }, scales="free")
 
