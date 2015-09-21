@@ -1,7 +1,7 @@
 Package: PeakSegJoint
 Maintainer: Toby Dylan Hocking <toby.hocking@mail.mcgill.ca>
 Author: Toby Dylan Hocking
-Version: 2015.09.15
+Version: 2015.09.21
 License: GPL-3
 Title: Joint peak detection via constrained optimal segmentation
  and supervised penalty learning

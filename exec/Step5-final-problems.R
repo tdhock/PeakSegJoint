@@ -56,7 +56,7 @@ SegmentFinal <- function(row.i){
     stopifnot(nrow(selected) == 1)
     peak.df <- subset(info$peaks, peaks == selected$peaks)
     if(nrow(peak.df)){
-      data.table(chrom=problem$chrom, peak.df)
+      data.table(problem, peak.df)
     }
   }
 }

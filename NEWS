@@ -1,3 +1,8 @@
+2015.09.21
+
+Run test error estimation in parallel on chunk.order.seed and
+test.fold.
+
 2015.09.15
 
 Plot test fold distribution across chromosomes on test error summary
