@@ -59,7 +59,7 @@ getCount <- function(x){
   paste(non.zero, collapse="/")
 }
 str.vec <- apply(count.mat, 2, getCount)
-u.peaks$name <- count.vec[rownames(u.peaks)]
+u.peaks$name <- str.vec[rownames(u.peaks)]
 count.tab <- colSums(all.peaks.mat)
 u.peaks$score <- count.tab[rownames(u.peaks)]
 summary.bed <- file.path(data.dir, "PeakSegJoint.summary.bed")
