@@ -72,12 +72,15 @@ cmd <- paste(Rscript, AllSteps, labels.txt, other.txt)
 system(cmd)
 
 test_that("pipeline trained on 8 samples predicts for 8 samples", {
+  pred.RData <- file.path(six.chunks, "PeakSegJoint.predictions.RData")
   load(pred.RData)
   expect_equal(nrow(all.peaks.mat), 8)
   starts <- unique(all.peaks.df$chromStart)
   expect_equal(length(starts), ncol(all.peaks.mat))
 })
 
+test.errors.dir <- 
+  file.path(six.chunks, "PeakSegJoint-chunks", "figure-test-errors")
 test.errors.files <- dir(test.errors.dir)
 
 test_that("pipeline trained on 6 chunks generates 6 test error plots", {

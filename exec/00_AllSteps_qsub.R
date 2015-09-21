@@ -12,8 +12,6 @@ getenv.or <- function(env.var, default){
 ## Some arbitrary parameters that affect how long (and how much
 ## embarrassing paralellelism) the computation will take.
 n.jobs <- as.integer(getenv.or("JOBS", 1000))
-short.time <- 
-long.time <- "20:00:00"
 qsub <- getenv.or("QSUB", "qsub")
 n.chunk.order.seeds <- 2 # for estimating test error.
 
