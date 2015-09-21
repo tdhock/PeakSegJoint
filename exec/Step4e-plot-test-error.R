@@ -7,12 +7,22 @@ argv <- system.file("exampleData", "PeakSegJoint-chunks",
                     mustWork=TRUE,
                     package="PeakSegJoint")
 
+argv <- commandArgs(trailingOnly=TRUE)
+
 if(length(argv) != 1){
   stop("Usage: Step4e.R path/to/PeakSegJoint-chunks")
 }
 
 chunks.dir <- normalizePath(argv[1])
 data.dir <- dirname(chunks.dir)
+
+regions.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "regions.RData"))
+regions.list <- list()
+for(regions.RData in regions.RData.vec){
+  load(regions.RData)
+  chunk.id.str <- basename(dirname(regions.RData))
+  regions.list[[chunk.id.str]] <- regions
+}
 
 map.objs <- load(file.path(data.dir, "chunk.file.map.RData"))
 
@@ -26,12 +36,15 @@ test.metrics.most.list <- list()
 for(RData.file in RData.file.vec){
   objs <- load(RData.file)
   test.fold <- test.metrics.curve$test.fold[1]
-  test.metrics.most.list[[paste(test.fold)]] <-
-    test.results$metrics
+  test.metrics.most.list[[paste(test.fold)]] <- test.results$metrics
   test.metrics.curves.list[[RData.file]] <- test.metrics.curve
   test.peaks.list[names(test.results$peaks)] <- test.results$peaks
   for(chunk.name in names(test.results$error.regions)){
     error.regions <- test.results$error.regions[[chunk.name]]
+    chunk.id.str <- basename(dirname(chunk.name))
+    orig.regions <- regions.list[[chunk.id.str]]
+    stopifnot(nrow(orig.regions) == nrow(error.regions))
+    ##stopifnot(nrow(error.regions) == test.results$)
     test.regions.list[[chunk.name]] <- error.regions
     test.folds.list[[chunk.name]] <- with(error.regions, {
       data.table(chrom=chrom[1],
@@ -170,6 +183,9 @@ save(test.metrics.curves,
      test.error.summary,
      file=file.path(test.out.dir, "test.metrics.curves.RData"))
 
-stopifnot(test.error.summary["incorrect.regions", "possible"] ==
-            sum(sapply(test.regions.list, nrow)))
+totals <-
+  rbind(regions=sum(sapply(regions.list, nrow)),
+        test.regions=sum(sapply(test.regions.list, nrow)),
+        metrics=test.error.summary["incorrect.regions", "possible"])
+print(totals)
 

@@ -2,38 +2,43 @@ library(testthat)
 library(PeakSegJoint)
 context("qsub-pipeline")
 
-exampleData <-
+AllSteps <-
+  system.file("exec", "00_AllSteps_qsub.R",
+              mustWork=TRUE,
+              package="PeakSegJoint")
+Rscript <- "QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript"
+orig.exampleData <-
   system.file("exampleData",
               mustWork=TRUE,
               package="PeakSegJoint")
-labels.txt <- file.path(exampleData, "manually_annotated_region_labels.txt")
-overlapping.txt <- file.path(exampleData, "overlapping_labels.txt")
-other.txt <- file.path(exampleData, "other_labels.txt")
+exampleDir <- function(){
+  tdir <- tempfile()
+  dir.create(exampleData)
+  file.copy(orig.exampleData, tdir)
+  tdir
+}
+
+three.chunks <- exampleDir()
+labels.txt <- file.path(three.chunks, "manually_annotated_region_labels.txt")
+overlapping.txt <- file.path(three.chunks, "overlapping_labels.txt")
+
 Step0 <-
   system.file("exec", "Step0-convert-labels.R",
               mustWork=TRUE,
               package="PeakSegJoint")
 cmd.args <- paste(Step0, labels.txt, overlapping.txt)
+out.lines <- system2("Rscript", cmd.args, stderr=TRUE, stdout=TRUE)
 
 test_that("overlapping chunks in different files is an error", {
-  out.lines <- system2("Rscript", cmd.args, stderr=TRUE, stdout=TRUE)
   out.txt <- paste(out.lines, collapse="\n")
   expect_match(out.txt, "chunks in different label files should not overlap")
 })
-
-pred.RData <- file.path(exampleData, "PeakSegJoint.predictions.RData")
-AllSteps <-
-  system.file("exec", "00_AllSteps_qsub.R",
-              mustWork=TRUE,
-              package="PeakSegJoint")
-unlink(pred.RData)
-
-Rscript <- "QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript"
 
 cmd <- paste(Rscript, AllSteps, labels.txt)
 system(cmd)
 
 test_that("pipeline trained on 4 samples predicts for 8 samples", {
+  pred.RData <- file.path(three.chunks, "PeakSegJoint.predictions.RData")
   load(pred.RData)
   expect_equal(nrow(all.peaks.mat), 8)
   starts <- unique(all.peaks.df$chromStart)
@@ -41,10 +46,7 @@ test_that("pipeline trained on 4 samples predicts for 8 samples", {
 })
 
 test.errors.dir <- 
-  system.file("exampleData", "PeakSegJoint-chunks", "figure-test-errors",
-              mustWork=TRUE,
-              package="PeakSegJoint")
-
+  file.path(three.chunks, "PeakSegJoint-chunks", "figure-test-errors")
 test.errors.files <- dir(test.errors.dir)
 
 test_that("pipeline trained on 3 chunks generates 3 test error plots", {
@@ -63,10 +65,10 @@ test_that("pipeline trained on 1 file does 3 fold CV", {
   expect_match(cv.line, "3 fold")
 })
 
-unlink(pred.RData)
-cmd <-
-  paste(Rscript,
-        AllSteps, labels.txt, other.txt)
+six.chunks <- exampleDir()
+labels.txt <- file.path(six.chunks, "manually_annotated_region_labels.txt")
+other.txt <- file.path(six.chunks, "other_labels.txt")
+cmd <- paste(Rscript, AllSteps, labels.txt, other.txt)
 system(cmd)
 
 test_that("pipeline trained on 8 samples predicts for 8 samples", {
