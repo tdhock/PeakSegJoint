@@ -31,8 +31,8 @@ if(length(argv) == 0){
   stop("usage: AllSteps_qsub.R path/to/labels.txt
 where there are path/to/*/*.bigwig files")
 }
+##NEEDS TO BE ABSOLUTE!
 labels.file.vec <- normalizePath(argv, mustWork=TRUE)
-
 data.dir <- dirname(labels.file.vec[1])
 
 ## Step0 generates some files for every chunk, which we need to
@@ -48,12 +48,6 @@ if(status != 0){
   stop("error in Step0, most likely problem with labels")
 }
 
-## Starting with Step1, we add vectors of commands that will wait for
-## each other.
-cmd.list <- list()
-
-data.dir <- normalizePath(data.dir, mustWork=TRUE)#NEEDS TO BE ABSOLUTE!
-
 Step1 <-
   system.file(file.path("exec", "Step1-segment-one-labeled-chunk.R"),
               mustWork=TRUE,
@@ -61,107 +55,135 @@ Step1 <-
 regions.RData.vec <-
   Sys.glob(file.path(data.dir, "PeakSegJoint-chunks", "*", "regions.RData"))
 chunk.dir.vec <- dirname(regions.RData.vec)
-cmd.list$Step1 <-
-  structure(paste(Rscript, Step1, chunk.dir.vec),
-            names=paste0("chunk", basename(chunk.dir.vec)))
+problems.RData.vec <- file.path(chunk.dir.vec, "problems.RData")
 
 Step2 <- 
   system.file(file.path("exec", "Step2-training.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
-cmd.list$Step2 <-
-  c(training=paste(Rscript, Step2, chunks.dir, n.jobs))
+trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 
+## Step3e and Step4v make test error estimates and visualizations
+## using the labeled data.
 Step3e <-
   system.file(file.path("exec", "Step3e-estimate-test-error.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
+oJob.dir <- file.path(data.dir, "PeakSegJoint-overlapping")
+dir.create(oJob.dir, showWarnings=FALSE)
+Step4v <-
+  system.file(file.path("exec", "Step4v-viz-one-labeled-chunk.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
+
+job.vec <- 1:n.jobs
 Step3 <-
   system.file(file.path("exec", "Step3-overlapping-problems.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
-## We want Step3-overlapping-problems and Step3e-estimate-test-error
-## to start immediately after Step2-training, which is what the next
-## line does:
-job.vec <- 1:n.jobs
-cmd.list$Step3 <-
-  c(structure(paste(Rscript, Step3e, trained.model.RData),
-              names="testJob"),
-    structure(paste(Rscript, Step3, trained.model.RData, job.vec),
-              names=paste0("oJob", job.vec)))
-
 Step4 <-
   system.file(file.path("exec", "Step4-combine-overlapping.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-oJob.dir <- file.path(data.dir, "PeakSegJoint-overlapping")
-dir.create(oJob.dir, showWarnings=FALSE)
-cmd.list$Step4 <-
- structure(paste(Rscript, Step4, oJob.dir, n.jobs),
-           names="combine")
-
 Step5 <-
   system.file(file.path("exec", "Step5-final-problems.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-Step5v <-
-  system.file(file.path("exec", "Step5v-viz-one-labeled-chunk.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
 dir.create(pred.dir, showWarnings=FALSE)
 combined.problems.RData <- file.path(data.dir, "combined.problems.RData")
-cmd.list$Step5 <-
-  c(structure(paste(Rscript, Step5, combined.problems.RData, job.vec),
-              names=paste0("finalJob", job.vec)),
-    structure(paste(Rscript, Step5v, chunk.dir.vec),
-              names=paste0("chunk", basename(chunk.dir.vec), "viz")))
-
 Step6 <-
   system.file(file.path("exec", "Step6-write-bed-files.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
-cmd.list$Step6 <-
-  c(structure(paste(Rscript, Step6, pred.dir),
-              names="bed"))
+
+step <- function(step.name, jobs, depends=NULL){
+  list(step.name=step.name,
+       jobs=jobs,
+       depends=depends)
+}
+
+job <- function(command.line, name, produces){
+  prefix <- sub("[.][^.]*$", "", produces)
+  data.table(command.line, name, prefix)
+}
+
+cmd.list <-
+  list(step("Step1",
+            job(paste(Rscript, Step1, chunk.dir.vec),
+                paste0("chunk", basename(chunk.dir.vec)),
+                problems.RData.vec)),
+       step("Step2",
+            job(paste(Rscript, Step2, chunks.dir, n.jobs),
+                "training",
+                trained.model.RData),
+            "Step1"),
+       step("Step3e",
+            job(paste(Rscript, Step3e, trained.model.RData),
+                "testJob",
+                file.path(chunks.dir,
+                          "figure-test-errors",
+                          "test.error.curves.RData")),
+            "Step2"),
+       step("Step4v",
+            job(paste(Rscript, Step4v, chunk.dir.vec),
+                paste0("chunk", basename(chunk.dir.vec), "viz"),
+                file.path(chunk.dir.vec, "figure-train-errors.png")),
+            "Step3e"),
+       step("Step3",
+            job(paste(Rscript, Step3, trained.model.RData, job.vec),
+                paste0("oJob", job.vec),
+                file.path(oJob.dir, paste0(job.vec, ".RData"))),
+            "Step2"),
+       step("Step4",
+            job(paste(Rscript, Step4, oJob.dir, n.jobs),
+                "combine",
+                file.path(data.dir, "combined.problems.RData")),
+            "Step3"),
+       step("Step5",
+            job(paste(Rscript, Step5, combined.problems.RData, job.vec),
+                paste0("finalJob", job.vec),
+                file.path(pred.dir, paste0(job.vec, ".RData"))),
+            "Step4"),
+       step("Step6",
+            job(paste(Rscript, Step6, pred.dir),
+                "bed",
+                file.path(data.dir, "PeakSegJoint.predictions.RData")),
+            "Step5"))
 
 depend.list <- list()
-for(step.name in names(cmd.list)){
-  depend.txt <- if(length(depend.list)==0){
-    ""
-  }else{
-    depend.vec <- do.call(c, depend.list)
+for(step.list in cmd.list){
+  depend.txt <- if(length(step.list$depends)==1 && qsub == "qsub"){
+    depend.vec <- depend.list[[step.list$step.name]]
     pid.txt <- paste(depend.vec, collapse=":")
-    paste0("\n#PBS -W depend=afterok:", pid.txt)
+    paste0("-W depend=afterok:", pid.txt)
+  }else{
+    ""
   }
-  depend.list <- list()
-  cmd.vec <- cmd.list[[step.name]]
-  for(cmd.name in names(cmd.vec)){
-    cmd <- cmd.vec[[cmd.name]]
-    walltime <- if(grepl("Job", cmd.name)){
+  for(cmd.i in 1:nrow(step.list$jobs)){
+    cmd.row <- step.list$jobs[cmd.i, ]
+    walltime <- if(grepl("Job", cmd.row$name)){
       long.time
     }else{
       short.time
     }
-    last.args <- sub(".*[.]R ", "", cmd)
-    last.file <- sub(" ", "-", last.args)
-    prefix <- paste0(last.file, "-", step.name)
     script.txt <-
       paste0("#!/bin/bash
 #PBS -l nodes=1:ppn=4
 #PBS -l walltime=", walltime, "
-#PBS -A bws-221-ae", depend.txt, "
+#PBS -A bws-221-ae
 #PBS -m ae
 #PBS -M tdhock5@gmail.com
-#PBS -o ", prefix, ".out
-#PBS -e ", prefix, ".err
+#PBS -o ", cmd.row$prefix, ".out
+#PBS -e ", cmd.row$prefix, ".err
 #PBS -V                                        
-#PBS -N ", cmd.name, "\n", cmd, "\n")
-    script.file <- paste0(prefix, ".sh")
+#PBS -N ", cmd.row$name, "\n", cmd.row$command.line, "\n")
+    script.file <- paste0(cmd.row$prefix, ".sh")
+    script.dir <- dirname(script.file)
+    dir.create(script.dir, showWarnings=FALSE, recursive=TRUE)
     cat(script.txt, file=script.file)
-    qsub.cmd <- paste(qsub, script.file)
+    qsub.cmd <- paste(qsub, depend.txt, script.file)
     qsub.out <- system(qsub.cmd, intern=TRUE)
     status.code <- attr(qsub.out, "status")
     ## status.code is NULL if qsub.cmd exited with status 0.
@@ -169,14 +191,11 @@ for(step.name in names(cmd.list)){
       stop(qsub.cmd, " exited with status ", status.code)
     }
     qsub.id <- sub("[.].*", "", qsub.out[1])
-    cat(step.name, " ",
-        cmd.name, " ",
+    cat(step.list$step.name, " ",
+        cmd.row$name, " ",
         "submitted as job ",
         qsub.id, "\n", sep="")
-    is.viz <- grepl("viz", cmd.name)
-    if(!is.viz){
-      depend.list[[cmd.name]] <- qsub.id
-    }
+    depend.list[[step.list$step.name]][cmd.row$name] <- qsub.id
   }
 }
 

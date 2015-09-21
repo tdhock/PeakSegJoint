@@ -1,4 +1,3 @@
-library(data.table)
 library(PeakSegJoint)
 
 argv <- # interactive default for debugging.
