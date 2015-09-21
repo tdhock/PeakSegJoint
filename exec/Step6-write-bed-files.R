@@ -14,7 +14,8 @@ if(length(argv) != 1){
   stop("usage: Step6.R path/to/PeakSegJoint-predictions")
 }
 
-pred.dir <- normalizePath(argv, mustWork=TRUE)
+pred.dir <- normalizePath(argv[1], mustWork=TRUE)
+data.dir <- dirname(pred.dir)
 
 RData.file.vec <- Sys.glob(file.path(pred.dir, "*.RData"))
 
@@ -64,8 +65,6 @@ count.tab <- colSums(all.peaks.mat)
 u.peaks$score <- count.tab[rownames(u.peaks)]
 summary.bed <- file.path(data.dir, "PeakSegJoint.summary.bed")
 writeBoth(u.peaks, summary.bed)
-
-data.dir <- dirname(pred.dir)
 
 predictions.RData <- file.path(data.dir, "PeakSegJoint.predictions.RData")
 predictions.csv <- file.path(data.dir, "PeakSegJoint.predictions.csv")
