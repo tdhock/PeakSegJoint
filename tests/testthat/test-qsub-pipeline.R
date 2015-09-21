@@ -13,9 +13,9 @@ orig.exampleData <-
               package="PeakSegJoint")
 exampleDir <- function(){
   tdir <- tempfile()
-  dir.create(exampleData)
-  file.copy(orig.exampleData, tdir)
-  tdir
+  dir.create(tdir)
+  file.copy(orig.exampleData, tdir, recursive=TRUE)
+  file.path(tdir, "exampleData")
 }
 
 three.chunks <- exampleDir()
