@@ -163,6 +163,11 @@ for(step.name in names(cmd.list)){
     cat(script.txt, file=script.file)
     qsub.cmd <- paste(qsub, script.file)
     qsub.out <- system(qsub.cmd, intern=TRUE)
+    status.code <- attr(qsub.out, "status")
+    ## status.code is NULL if qsub.cmd exited with status 0.
+    if(length(status.code) == 1 && status.code != 0){
+      stop(qsub.cmd, " exited with status ", status.code)
+    }
     qsub.id <- sub("[.].*", "", qsub.out[1])
     cat(step.name, " ",
         cmd.name, " ",
