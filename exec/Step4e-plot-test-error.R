@@ -187,4 +187,5 @@ totals <-
         test.regions=sum(sapply(test.regions.list, nrow)),
         metrics=test.error.summary["incorrect.regions", "possible"])
 print(totals)
+stopifnot(totals[1] == totals)
 
