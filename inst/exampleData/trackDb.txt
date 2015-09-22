@@ -12,7 +12,7 @@ visibility full
     parent H3K4me3_chr11 on
     shortLabel bcell/McGill0091
     longLabel bcell McGill0091
-    bigDataUrl https://github.com/tdhock/PeakSegJoint/blob/master/inst/exampleData/bcell/McGill0091.bigwig?raw=true
+    bigDataUrl http://raw.githubusercontent.com/tdhock/PeakSegJoint/fixes/inst/exampleData/bcell/McGill0091.bigwig
     maxHeightPixels 25:25:8
     color 21,21,21
     autoScale on
@@ -22,7 +22,7 @@ visibility full
     parent H3K4me3_chr11 on
     shortLabel bcell/McGill0322
     longLabel bcell McGill0322
-    bigDataUrl https://github.com/tdhock/PeakSegJoint/blob/master/inst/exampleData/bcell/McGill0322.bigwig?raw=true
+    bigDataUrl http://raw.githubusercontent.com/tdhock/PeakSegJoint/fixes/inst/exampleData/bcell/McGill0322.bigwig
     maxHeightPixels 25:25:8
     color 21,21,21
     autoScale on
