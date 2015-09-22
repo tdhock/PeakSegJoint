@@ -1,0 +1,5 @@
+hub H3K4me3_chr11
+shortLabel H3K4me3 chr11
+longLabel Histone H3K4me3 modifications, chr11 subset
+genomesFile genomes.txt
+email toby.hocking@mail.mcgill.ca
