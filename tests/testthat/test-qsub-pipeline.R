@@ -68,7 +68,7 @@ test_that("pipeline trained on 8 samples predicts for 8 samples", {
   other.txt <- file.path(six.chunks, "other_labels.txt")
   cmd <- paste(Rscript, AllSteps, labels.txt, other.txt)
   system(cmd)
-  bed.gz <- file.path(three.chunks, "all_labels.bed.gz")
+  bed.gz <- file.path(six.chunks, "all_labels.bed.gz")
   bed <- read.table(bed.gz, skip=1)
   expect_equal(dim(bed), c(28, 9))
   pred.RData <- file.path(six.chunks, "PeakSegJoint.predictions.RData")
