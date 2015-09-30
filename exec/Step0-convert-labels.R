@@ -31,6 +31,12 @@ g.pos.pattern <-
          "(?<annotation>[a-zA-Z]+)",
          "(?<sample_groups>.*)")
 
+label.colors <- 
+  c(noPeaks="246,244,191",
+    peakStart="255,175,175",
+    peakEnd="255,76,76",
+    peaks="164,69,238")
+
 ## Parse the first occurance of pattern from each of several strings
 ## using (named) capturing regular expressions, returning a matrix
 ## (with column names).
@@ -51,10 +57,10 @@ str_match_perl <- function(string,pattern){
   result
 }
 
-valid.labels <- c("peakStart", "peakEnd", "peaks", "noPeaks")
 regions.by.file <- list()
 regions.by.chunk.file <- list()
 chunk.limits.list <- list()
+bed.list <- list()
 for(labels.file in argv){
   ## there should be bigwig files in subdirectories under the same
   ## directory as labels.file.
@@ -77,8 +83,7 @@ for(labels.file in argv){
   line.vec <- gsub(",", "", raw.vec)
   match.mat <- str_match_perl(line.vec, g.pos.pattern)
   stopifnot(!is.na(match.mat[,1]))
-  not.recognized <-
-    ! match.mat[, "annotation"] %in% valid.labels
+  not.recognized <- ! match.mat[, "annotation"] %in% names(label.colors)
   if(any(not.recognized)){
     print(raw.vec[not.recognized])
     print(match.mat[not.recognized, , drop=FALSE])
@@ -118,7 +123,16 @@ for(labels.file in argv){
   ## annotations.
   stripped <- gsub(" *$", "", gsub("^ *", "", match.df$sample.groups))
   is.noPeaks <- stripped == ""
-  sample.group.list <- strsplit(stripped, split=" ")
+  commas <- gsub(" +", ",", stripped)
+  sample.group.list <- strsplit(commas, split=",")
+  bed.list[[labels.file]] <- 
+    data.frame(match.df[,c("chrom", "chromStart", "chromEnd")],
+               name=paste0(match.df$annotation, ":", commas),
+               score=0,
+               strand=".",
+               thickStart=match.df$chromStart,
+               thickEnd=match.df$chromEnd,
+               rgb=label.colors[paste(match.df$annotation)])
   names(sample.group.list) <- rownames(match.df)
   sample.group.vec <- unique(unlist(sample.group.list))
   cat("sample groups with peak annotations: ",
@@ -175,8 +189,28 @@ for(labels.file in argv){
     })
   }
 }
+bed <- do.call(rbind, bed.list)
 chunk.limits <- do.call(rbind, chunk.limits.list)
 rownames(chunk.limits) <- NULL
+rownames(bed) <- NULL
+
+## Save labels to bed file for viewing on UCSC.
+bed.gz <- file.path(dirname(labels.file), "all_labels.bed.gz")
+con <- gzfile(bed.gz, "w")
+header <- 
+  paste("track",
+        "visibility=pack",
+        "name=PeakSegJointLabels",
+        'description="Visually defined labels',
+        'in regions with and without peaks"',
+        "itemRgb=on")
+writeLines(header, con)
+write.table(bed, con,
+            row.names=FALSE,
+            col.names=FALSE,
+            quote=FALSE)
+close(con)
+
 limits.by.chrom <- split(chunk.limits, chunk.limits$chrom)
 for(chrom in names(limits.by.chrom)){
   chrom.limits <- limits.by.chrom[[chrom]]
