@@ -31,13 +31,25 @@ rownames(all.peaks.df) <- NULL
 all.peaks.df$sample.path <-
   with(all.peaks.df, file.path(sample.group, sample.id))
 
-writeBoth <- function(peaks.df, bed.path){
+writeBoth <- function(peaks.df, bed.path, header.line){
   bigBed.file <- sub("[.]bed$", ".bigBed", bed.path)
-  write.table(peaks.df, bed.path, quote=FALSE, row.names=FALSE, col.names=FALSE)
+  write.table(peaks.df, bed.path, 
+              quote=FALSE, row.names=FALSE, col.names=FALSE)
   s <- ifelse(nrow(peaks.df)==1, "", "s")
   message("wrote ", nrow(peaks.df), " peak", s, " to ", bed.path)
   bigBedCmd <- paste("bedToBigBed", bed.path, chrom.file, bigBed.file)
-  system(bigBedCmd)
+  status <- system(bigBedCmd)
+  if(status != 0){
+    stop("error in bedToBigBed")
+  }
+  ## Also write a bed.gz file with a header for uploading as a custom
+  ## track.
+  bed.gz <- paste0(bed.path, ".gz")
+  con <- gzfile(bed.gz, "w")
+  writeLines(header.line, con)
+  write.table(peaks.df, con, 
+              quote=FALSE, row.names=FALSE, col.names=FALSE)
+  close(con)
 }
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 chrom.ranges <- bigWigInfo(bigwig.file.vec[1])
@@ -52,7 +64,8 @@ u.peaks <-
 rownames(u.peaks) <- with(u.peaks, {
   paste0(chrom, ":", chromStart, "-", chromEnd)
 })
-count.mat <- with(all.peaks.df, table(sample.group, peak.name))
+all.peaks.df$group <- sub("[0-9]*$", "", all.peaks.df$sample.group)
+count.mat <- with(all.peaks.df, table(group, peak.name))
 getCount <- function(x){
   count.str <- paste0(x, ":", rownames(count.mat))
   non.zero <- count.str[x != 0]
@@ -63,7 +76,12 @@ u.peaks$name <- str.vec[rownames(u.peaks)]
 count.tab <- colSums(all.peaks.mat)
 u.peaks$score <- count.tab[rownames(u.peaks)]
 summary.bed <- file.path(data.dir, "PeakSegJoint.summary.bed")
-writeBoth(u.peaks, summary.bed)
+header <- 
+  paste("track",
+        "visibility=pack",
+        "name=PeakSegJointGroups",
+        'description="PeakSegJoint sample counts by group"')
+writeBoth(u.peaks, summary.bed, header)
 
 predictions.RData <- file.path(data.dir, "PeakSegJoint.predictions.RData")
 predictions.csv <- file.path(data.dir, "PeakSegJoint.predictions.csv")
@@ -79,5 +97,13 @@ for(sample.path in names(peaks.by.path)){
   bed.peaks <- sorted.peaks[, c("chrom", "chromStart", "chromEnd")]
   rownames(bed.peaks) <- NULL
   bed.file <- file.path(data.dir, paste0(sample.path, ".bed"))
-  writeBoth(bed.peaks, bed.file)
+  desc.line <-
+    sprintf('description="PeakSegJoint calls for sample %s"',
+            sample.path)
+  header <- 
+    paste("track",
+          "visibility=pack",
+          paste0("name=PeakSegJoint:", sample.path),
+          desc.line)
+  writeBoth(bed.peaks, bed.file, header)
 }
