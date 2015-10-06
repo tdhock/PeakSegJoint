@@ -3,3 +3,4 @@
 *.so
 .Rhistory
 Rplots.pdf
+.httr-oauth
