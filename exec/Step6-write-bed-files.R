@@ -1,4 +1,5 @@
 library(PeakSegJoint)
+library(data.table)
 
 argv <- system.file("exampleData", "PeakSegJoint-predictions",
                     package="PeakSegJoint")
@@ -16,20 +17,70 @@ if(length(argv) != 1){
 pred.dir <- normalizePath(argv[1], mustWork=TRUE)
 data.dir <- dirname(pred.dir)
 
+positive.regions.RData <- file.path(data.dir, "positive.regions.RData")
+load(positive.regions.RData)
+
 RData.file.vec <- Sys.glob(file.path(pred.dir, "*.RData"))
 
 peak.mat.list <- list()
 pred.peak.list <- list()
 for(RData.file in RData.file.vec){
   objs <- load(RData.file)
-  pred.peak.list[[RData.file]] <- data.frame(pred.peaks)
+  pred.peak.list[[RData.file]] <- data.table(pred.peaks)
   peak.mat.list[[RData.file]] <- peak.mat
 }
 all.peaks.mat <- do.call(cbind, peak.mat.list)
-all.peaks.df <- do.call(rbind, pred.peak.list)
-rownames(all.peaks.df) <- NULL
-all.peaks.df$sample.path <-
-  with(all.peaks.df, file.path(sample.group, sample.id))
+all.peaks.dt <- do.call(rbind, pred.peak.list)
+all.peaks.dt[, sample.path := file.path(sample.group, sample.id)]
+all.peaks.df <- data.frame(all.peaks.dt)
+
+## Join positive region labels with peak calls.
+Input.counts <- all.peaks.dt[, list(
+  Input=sum(sample.group=="Input")
+  ), by=.(peak.name, chrom, chromStart, chromEnd)]
+if(is.data.frame(positive.regions)){
+  setkey(Input.counts, chrom, chromStart, chromEnd)
+  positive.dt <- data.table(positive.regions)
+  setkey(positive.dt, chrom, regionStart, regionEnd)
+  over.dt <- foverlaps(Input.counts, positive.dt, nomatch=0L)
+  thresh.dt <- over.dt[, list(
+    specific=sum(!input.has.peak),
+    nonspecific=sum(input.has.peak)
+    ), by=Input]
+  ## The decision function calls a peak "specific" if at most T input
+  ## samples have peaks, where T is the learned threshold: in the error
+  ## rate table below, [min.thresh, max.thresh), e.g. [4, 0) means that
+  ## thresholds 4, 3, 2, 1 all have the same error. 
+  specific.error.dt <- thresh.dt[, {
+    min.thresh <- c(-Inf, Input)
+    max.thresh <- c(Input, Inf)
+    threshold <- floor((min.thresh+max.thresh)/2)
+    threshold[1] <- min(Input)
+    threshold[length(threshold)] <- max(Input)
+    data.table(
+      min.thresh,
+      max.thresh,
+      threshold,
+      FN=c(0, cumsum(rev(specific))),
+      FP=c(rev(cumsum(nonspecific)), 0))
+  }]
+  specific.error.dt[, errors := FP + FN]
+  max.input.samples <- specific.error.dt[which.min(errors), threshold]
+  specific.error <- data.frame(specific.error.dt)
+  print(specific.error)
+  cat('A peak is called "specific" and included in output files if at most',
+      max.input.samples,
+      "Input samples have peaks. Counts:\n")
+  Input.counts[, call := ifelse(Input <= max.input.samples,
+                        "specific", "nonspecific")]
+  print(table(Input.counts$call))
+  specific.peak.names <- Input.counts[call=="specific", peak.name]
+}else{
+  cat("All peaks included in output files,",
+      "since there are no labeled peaks in Input samples.\n")
+  specific.peak.names <- colnames(all.peaks.mat)
+  specific.error <- NULL
+}
 
 writeBoth <- function(peaks.df, bed.path, header.line){
   bigBed.file <- sub("[.]bed$", ".bigBed", bed.path)
@@ -58,14 +109,17 @@ chrom.file <- tempfile()
 write.table(just.ends, chrom.file, quote=FALSE,
             row.names=FALSE, col.names=FALSE)
 
+## Save a summary bed file for easy viewing of the entire model as a
+## custom track on UCSC.
+specific.peaks.df <- subset(all.peaks.df, peak.name %in% specific.peak.names)
 u.cols <- c("chrom", "chromStart", "chromEnd")
 u.peaks <-
-  unique(all.peaks.df[, u.cols])
+  unique(specific.peaks.df[, u.cols])
 rownames(u.peaks) <- with(u.peaks, {
   paste0(chrom, ":", chromStart, "-", chromEnd)
 })
-all.peaks.df$group <- sub("[0-9]*$", "", all.peaks.df$sample.group)
-count.mat <- with(all.peaks.df, table(group, peak.name))
+specific.peaks.df$group <- sub("[0-9]*$", "", specific.peaks.df$sample.group)
+count.mat <- with(specific.peaks.df, table(group, peak.name))
 getCount <- function(x){
   count.str <- paste0(x, ":", rownames(count.mat))
   non.zero <- count.str[x != 0]
@@ -85,11 +139,16 @@ writeBoth(u.peaks, summary.bed, header)
 
 predictions.RData <- file.path(data.dir, "PeakSegJoint.predictions.RData")
 predictions.csv <- file.path(data.dir, "PeakSegJoint.predictions.csv")
-save(all.peaks.mat, all.peaks.df, file=predictions.RData)
-write.csv(all.peaks.mat, predictions.csv, quote=TRUE,
+peak.Input.counts <- data.frame(Input.counts)
+save(all.peaks.mat, all.peaks.df,
+     specific.peak.names,
+     peak.Input.counts, specific.error,
+     file=predictions.RData)
+specific.peaks.mat <- all.peaks.mat[, specific.peak.names]
+write.csv(specific.peaks.mat, predictions.csv, quote=TRUE,
           row.names=TRUE)
 
-peaks.by.path <- split(all.peaks.df, all.peaks.df$sample.path)
+peaks.by.path <- split(specific.peaks.df, specific.peaks.df$sample.path)
 for(sample.path in names(peaks.by.path)){
   sample.peaks <- peaks.by.path[[sample.path]]
   ord <- with(sample.peaks, order(chrom, chromStart))

@@ -61,10 +61,12 @@ regions.by.file <- list()
 regions.by.chunk.file <- list()
 chunk.limits.list <- list()
 bed.list <- list()
+positive.regions.list <- list()
 for(labels.file in argv){
   ## there should be bigwig files in subdirectories under the same
   ## directory as labels.file.
-  bigwig.files <- Sys.glob(file.path(dirname(labels.file), "*", "*.bigwig"))
+  data.dir <- dirname(labels.file)
+  bigwig.files <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
   sample.id <- sub("[.]bigwig$", "", basename(bigwig.files))
   sample.group <- basename(dirname(bigwig.files))
   sample.df <- data.frame(sample.id, sample.group)
@@ -140,6 +142,18 @@ for(labels.file in argv){
       "\n",
       sep="")
 
+  ## Create some labeled regions for specific/nonspecific peaks.
+  groups.up.vec <- sapply(sample.group.list, length)
+  file.positive.regions <- match.df[0 < groups.up.vec,]
+  input.has.peak <- grepl("Input", file.positive.regions$sample.groups)
+  if(any(input.has.peak)){                         
+    positive.regions.list[[labels.file]] <-
+      with(file.positive.regions, data.frame(
+        chrom, regionStart=chromStart, regionEnd=chromEnd,
+        annotation, input.has.peak
+        ))
+  }
+
   match.by.chunk <- split(match.df, match.df$chunk.id)
   for(chunk.id in names(match.by.chunk)){
     ## Check that all regions are on the same chrom.
@@ -191,11 +205,17 @@ for(labels.file in argv){
 }
 bed <- do.call(rbind, bed.list)
 chunk.limits <- do.call(rbind, chunk.limits.list)
+positive.regions <- do.call(rbind, positive.regions.list)
 rownames(chunk.limits) <- NULL
 rownames(bed) <- NULL
+rownames(positive.regions) <- NULL
+
+## Save positive regions for filtering final peaks.
+positive.regions.RData <- file.path(data.dir, "positive.regions.RData")
+save(positive.regions, file=positive.regions.RData)
 
 ## Save labels to bed file for viewing on UCSC.
-bed.gz <- file.path(dirname(labels.file), "all_labels.bed.gz")
+bed.gz <- file.path(data.dir, "all_labels.bed.gz")
 con <- gzfile(bed.gz, "w")
 header <- 
   paste("track",
@@ -283,7 +303,7 @@ for(labels.file in names(regions.by.file)){
     setkey(chunk, chrom, chunkStart, chunkEnd)
     
     RData.file <-
-      file.path(dirname(labels.file),
+      file.path(data.dir,
                 "PeakSegJoint-chunks",
                 chunk.id,
                 "regions.RData")
@@ -327,7 +347,7 @@ if(length(chunks.by.file) == 1){
 test.error.msg <-
   paste0(outer.folds, " fold cross-validation (", fold.msg, ").")
 
-RData.file <- file.path(dirname(labels.file), "chunk.file.map.RData")
+RData.file <- file.path(data.dir, "chunk.file.map.RData")
 save(chunk.file.map,
      outer.folds,
      outer.fold.id,
