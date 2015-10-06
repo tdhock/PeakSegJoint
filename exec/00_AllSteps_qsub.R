@@ -173,7 +173,7 @@ cmd.list <-
 depend.list <- list()
 for(step.list in cmd.list){
   depend.txt <- if(length(step.list$depends)==1 && qsub == "qsub"){
-    depend.vec <- depend.list[[step.list$step.name]]
+    depend.vec <- depend.list[[step.list$depends]]
     pid.txt <- paste(depend.vec, collapse=":")
     paste0("-W depend=afterok:", pid.txt)
   }else{
