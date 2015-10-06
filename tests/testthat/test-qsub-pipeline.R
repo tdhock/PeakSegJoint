@@ -72,6 +72,9 @@ if(is.na(as.integer(Sys.getenv("TRAVIS_PULL_REQUEST")))){
     index.lines <- readLines(index.html)
     cv.line <- grep("cross-validation", index.lines, value=TRUE)
     expect_match(cv.line, "3 fold")
+    ## check for no peak filtering.
+    expect_true("specific.error" %in% pred.objs)
+    expect_null(specific.error)
   })
 
   test_that("pipeline trained on 8 samples predicts for 8 samples", {
@@ -108,6 +111,9 @@ if(is.na(as.integer(Sys.getenv("TRAVIS_PULL_REQUEST")))){
     index.lines <- readLines(index.html)
     cv.line <- grep("cross-validation", index.lines, value=TRUE)
     expect_match(cv.line, "2 fold")
+    ## check for no peak filtering.
+    expect_true("specific.error" %in% pred.objs)
+    expect_null(specific.error)
   })
   
 }else{
@@ -140,7 +146,7 @@ if(is.na(as.integer(Sys.getenv("TRAVIS_PULL_REQUEST")))){
     bed.gz.vec <- Sys.glob(file.path(data.dir, "*", "*.bed.gz"))
     expect_equal(length(bed.gz.vec), 8)
     pred.RData <- file.path(data.dir, "PeakSegJoint.predictions.RData")
-    load(pred.RData)
+    pred.objs <- load(pred.RData)
     expect_equal(nrow(all.peaks.mat), 8)
     starts <- unique(all.peaks.df$chromStart)
     expect_equal(length(starts), ncol(all.peaks.mat))
@@ -157,7 +163,9 @@ if(is.na(as.integer(Sys.getenv("TRAVIS_PULL_REQUEST")))){
     index.lines <- readLines(index.html)
     cv.line <- grep("cross-validation", index.lines, value=TRUE)
     expect_match(cv.line, "4 fold")
-    expect_true("TODO check filtering input peaks")
+    ## check for filtering peaks with too many Input samples up.
+    expect_true("specific.error" %in% pred.objs)
+    expect_true(is.numeric(specific.error$errors))
   })
 
 }
