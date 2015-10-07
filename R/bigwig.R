@@ -34,20 +34,18 @@ readBigWig <- function
     sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s /dev/stdout",
             chrom, start, end,
             bigwig.file)
-  bg <- fread.or.null(cmd)
+  bg <- fread.or.null(cmd, drop=1)
   if(is.null(bg)){
-    data.table(chrom=character(),
-               chromStart=integer(),
+    data.table(chromStart=integer(),
                chromEnd=integer(),
                count=integer())
   }else{
-    setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
+    setnames(bg, c("chromStart", "chromEnd", "norm"))
     stopifnot(0 <= bg$norm)
     nonzero <- bg[0 < norm, ]
     min.nonzero.norm <- min(nonzero[, norm])
     nonzero[, count := as.integer(norm/min.nonzero.norm) ]
     nonzero[, .(
-      chrom,
       chromStart,
       chromEnd,
       count
