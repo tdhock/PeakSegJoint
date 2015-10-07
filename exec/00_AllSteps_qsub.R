@@ -118,7 +118,7 @@ job <- function(command.line, name, produces){
 }
 
 cmd.list <-
-  list(step("Step1", "02:00:00",
+  list(step("Step1", "04:00:00",
             job(paste(Rscript, Step1, chunk.dir.vec),
                 paste0("chunk", basename(chunk.dir.vec)),
                 problems.RData.vec)),
