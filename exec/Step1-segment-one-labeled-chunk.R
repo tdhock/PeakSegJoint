@@ -16,7 +16,8 @@ argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 print(argv)
 
