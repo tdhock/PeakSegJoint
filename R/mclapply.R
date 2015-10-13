@@ -14,7 +14,9 @@ maxjobs.mclapply <- function(X, FUN, maxjobs=getOption("mc.cores", 1L)){
   result.list <- list()
   for(i in seq_along(i.list)){
     i.vec <- i.list[[i]]
+    gc()
     result.list[i.vec] <- mclapply(X[i.vec], FUN)
+    gc()
   }
   result.list
 }
