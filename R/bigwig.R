@@ -3,8 +3,7 @@ fread.or.null <- function(...){
   tryCatch({
     fread(...)
   }, error=function(e){
-    structure(NULL,
-              error=e)
+    NULL
   })
 }
 
@@ -35,18 +34,23 @@ readBigWig <- function
     sprintf("bigWigToBedGraph -chrom=%s -start=%d -end=%d %s /dev/stdout",
             chrom, start, end,
             bigwig.file)
-  bg <- fread.or.null(cmd)
-  setnames(bg, c("chrom", "chromStart", "chromEnd", "norm"))
-  stopifnot(0 <= bg$norm)
-  nonzero <- bg[0 < norm, ]
-  min.nonzero.norm <- min(nonzero[, norm])
-  nonzero[, count := as.integer(norm/min.nonzero.norm) ]
-  nonzero[, .(
-    chrom,
-    chromStart,
-    chromEnd,
-    count
-    )]
+  bg <- fread.or.null(cmd, drop=1)
+  if(is.null(bg)){
+    data.table(chromStart=integer(),
+               chromEnd=integer(),
+               count=integer())
+  }else{
+    setnames(bg, c("chromStart", "chromEnd", "norm"))
+    stopifnot(0 <= bg$norm)
+    nonzero <- bg[0 < norm, ]
+    min.nonzero.norm <- min(nonzero[, norm])
+    nonzero[, count := as.integer(norm/min.nonzero.norm) ]
+    nonzero[, .(
+      chromStart,
+      chromEnd,
+      count
+      )]
+  }
 ### data.table with columns chrom chromStart chromEnd count.
 }
 

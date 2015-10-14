@@ -8,13 +8,14 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) != 2){
   stop("usage: Step5.R PeakSegJoint-chunks/combined.problems.RData jobNum")
 }
 
-combined.problems.RData <- normalizePath(argv[1])
+combined.problems.RData <- normalizePath(argv[1], mustWork=TRUE)
 jobNum <- argv[2]
 
 objs <- load(combined.problems.RData)
@@ -55,7 +56,7 @@ SegmentFinal <- function(row.i){
     stopifnot(nrow(selected) == 1)
     peak.df <- subset(info$peaks, peaks == selected$peaks)
     if(nrow(peak.df)){
-      data.table(chrom=problem$chrom, peak.df)
+      data.table(problem, peak.df)
     }
   }
 }

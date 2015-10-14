@@ -1,16 +1,43 @@
-PeakSegJoint is an R package with [[file:src/PeakSegJoint.c][C code that implements the fast
-heuristic JointZoom algorithm]] described in the [[https://github.com/tdhock/PeakSegJoint-paper][PeakSegJoint paper]]. It
-also contains [[file:R/fista.R][an R implementation of a Fast Iterative
-Shinkage-Thresholding Algorithm (FISTA) for L1-regularized interval
-regression with the squared hinge loss]]. 
+PeakSegJoint: supervised joint peak detection
 
 [[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
 
+There are two major differences between PeakSegJoint and all of the
+other peak detection algorithms for ChIP-seq data analysis:
+
+- *Supervised machine learning:* PeakSegJoint is trained by providing
+  labels ([[file:inst/exampleData/manually_annotated_region_labels.txt][example]]) that indicate regions with and without peaks. So if
+  you see false positives (a peak called where there is clearly only
+  background noise) or false negatives (no peak called where there
+  should be one) you can add labels to correct PeakSegJoint, and it
+  learns and gets more accurate as more labels are added. In contrast,
+  other peak detection methods are *unsupervised*, meaning that they
+  usually have 10-20 parameters, and no obvious way to train them,
+  yielding arbitrarily inaccurate peaks that can NOT be corrected
+  using labels.
+- *Joint peak detection in any number of samples or cell types* so the
+  model can be easily interpreted to find similarities or differences
+  between samples (PeakSegJoint outputs a binary matrix, samples x
+  peaks). In contrast, it is not easy to find similarities and
+  differences between samples using single-sample peak detection
+  methods (e.g. [[https://github.com/taoliu/MACS][MACS]]), and other multi-sample peak detection methods
+  are limited to one (e.g. [[https://github.com/mahmoudibrahim/jamm][JAMM]]) or two (e.g. [[https://code.google.com/p/pepr-chip-seq/][PePr]]) cell types
+  (assuming all samples of the same cell type are replicates with the
+  same peak pattern).
+
 ** Example output
 
-[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-train-errors/][Train error data viz, four samples of H3K4me3 data]].
+[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-train-errors/][Train error data viz, 8 samples of H3K4me3 data]].
 
-** R installation instructions
+[[http://cbio.ensmp.fr/~thocking/data/PeakSegJoint-H3K4me3-test/figure-test-errors/][Test error data viz, 8 samples of H3K4me3 data]].
+
+** R installation instructions and usage examples
+
+This R package contains [[file:src/PeakSegJoint.c][C code that implements the fast
+heuristic JointZoom algorithm]] described in the [[http://arxiv.org/abs/1506.01286][PeakSegJoint paper]]
+[[[https://github.com/tdhock/PeakSegJoint-paper][source]]]. It also contains [[file:R/fista.R][an R implementation of a
+Fast Iterative Shinkage-Thresholding Algorithm (FISTA) for
+L1-regularized interval regression with the squared hinge loss]].
 
 #+BEGIN_SRC R
   install.packages("devtools")
@@ -30,7 +57,7 @@ can use [[http://bedtools.readthedocs.org/en/latest/content/tools/genomecov.html
 a genome browser. The coverage data can be either normalized
 (non-integer values) or raw (integer valued count data), with or
 without lines for zero coverage. Create a track hub to visualize them
-on UCSC ([[https://github.com/tdhock/blueprint/blob/master/labels/H3K27ac_TDH_MonoMacroMyeloid/trackDb.txt][example]]).
+on UCSC ([[https://github.com/tdhock/blueprint/blob/master/portal/H3K27ac_TDH/MantleNeutrophilErythroblast_trackDb.txt][example]]).
 
 Then, visually identify several regions with and without peaks, saving
 those labels to a file. [[file:inst/exampleData/manually_annotated_region_labels.txt][Example labels file]]: there are two cell types,
@@ -42,7 +69,7 @@ sub-directories that have names that match the labels file. [[file:inst/exampleD
 data set]]: the tcell subdirectory contains two bigwig files, and the
 bcell subdirectory contains two bigwig files. To download the bigwig
 files listed in a track hub, save the track hub to the same directory
-as the labels file ([[https://github.com/tdhock/blueprint/tree/master/labels/H3K27ac_TDH_MonoMacroMyeloid][example]]), and then run [[file:exec/downloadTrackDbBigWigs.R][downloadTrackDbBigWigs.R]]:
+as the labels file ([[https://github.com/tdhock/blueprint/tree/master/portal/H3K27ac_TDH][example]]), and then run [[file:exec/downloadTrackDbBigWigs.R][downloadTrackDbBigWigs.R]]:
 
 #+BEGIN_SRC shell
 Rscript downloadTrackDbBigWigs.R path/to/trackDb.txt
@@ -63,10 +90,10 @@ headers to reflect your cluster configuration.
 ** Run PeakSegJoint on your laptop
 
 If you don't have access to a cluster with qsub, you can still run the
-[[file:exec/][steps]] in sequence on one computer. For example [[https://github.com/tdhock/PeakSegJoint/blob/master/tests/testthat/test-qsub-pipeline.R#L14][test-qsub-pipeline.R]]
+[[file:exec/][steps]] in sequence on one computer. For example [[file:tests/testthat/test-qsub-pipeline.R][test-qsub-pipeline.R]]
 uses bash instead of qsub, via
 
 #+BEGIN_SRC shell
-QSUB='echo INTERACTIVE && bash' Rscript 00_AllSteps_qsub.R path/to/labels.txt
+QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript 00_AllSteps_qsub.R path/to/labels.txt
 #+END_SRC
 

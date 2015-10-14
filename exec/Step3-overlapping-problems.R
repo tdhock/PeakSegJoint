@@ -12,13 +12,14 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) != 2){
   stop("usage: Step3.R PeakSegJoint-chunks/trained.model.RData jobNum")
 }
 
-trained.model.RData <- normalizePath(argv[1])
+trained.model.RData <- normalizePath(argv[1], mustWork=TRUE)
 jobNum <- argv[2]
 
 objs <- load(trained.model.RData)
@@ -30,7 +31,9 @@ bases.per.problem <- train.errors.picked$bases.per.problem
 chunks.dir <- dirname(trained.model.RData)
 data.dir <- dirname(chunks.dir)
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
-names(bigwig.file.vec) <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
+sample.group.vec <- basename(dirname(bigwig.file.vec))
+sample.id.vec <- sub("[.]bigwig$", "", basename(bigwig.file.vec))
+names(bigwig.file.vec) <- paste0(sample.group.vec, "/", sample.id.vec)
 
 OverlappingProblem <- function(problem.i){
   message(sprintf("%10d / %10d overlapping problems",

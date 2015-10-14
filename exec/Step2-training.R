@@ -17,13 +17,14 @@ argv <- commandArgs(trailingOnly=TRUE)
 
 print(argv)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) != 2){
   stop("usage: Step2.R path/to/PeakSegJoint-chunks numJobs")
 }
 
-chunks.dir <- normalizePath(argv[1])
+chunks.dir <- normalizePath(argv[1], mustWork=TRUE)
 numJobs <- as.integer(argv[2])
 data.dir <- dirname(chunks.dir)
 
@@ -34,6 +35,8 @@ chunk.best.list <- list()
 bpp.list <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
+  message(sprintf("%4d / %4d chunks %s", chunk.i, length(problems.RData.vec),
+                  problems.RData))
   chunk.dir <- dirname(problems.RData)
   chunk.id <- basename(chunk.dir)
   index.html <-
@@ -135,6 +138,9 @@ for(chunk.i in seq_along(problems.RData.vec)){
   if(! "step2.data.list" %in% objs){
     stop("step.data.list not found in ", problems.RData)
   }
+  if(! "step2.error.list" %in% objs){
+    stop("step.error.list not found in ", problems.RData)
+  }
   res.data <- step2.data.list[[res.str]]
   for(problem.i in 1:nrow(res.data$problems)){
     prob.info <- res.data$problems[problem.i, ]
@@ -203,7 +209,10 @@ bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
 ranges.by.chrom <- split(chrom.ranges, chrom.ranges$chrom)
 problems.by.chrom <- list()
-for(chrom in names(ranges.by.chrom)){
+for(chrom.i in seq_along(ranges.by.chrom)){
+  chrom <- names(ranges.by.chrom)[[chrom.i]]
+  message(sprintf("%4d / %4d chroms %s", chrom.i, length(ranges.by.chrom),
+                  chrom))
   chrom.range <- ranges.by.chrom[[chrom]]
   all.chrom.problems <- with(chrom.range, {
     getProblems(chrom, chromStart, chromEnd, bases.per.problem,
@@ -236,7 +245,6 @@ trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
      ## for estimating test error later:
-     labeled.problems.by.chunk,
      problems.by.chunk,
      regions.by.chunk,
      ## for parallelizing prediction on jobs:

@@ -2,6 +2,11 @@ language: c
 
 sudo: required
 
+env:
+  - TEST_SUITE=functions
+  - TEST_SUITE=qsub-noinput
+  - TEST_SUITE=qsub-input
+
 before_install:
   - curl -OL http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigWigInfo
   - curl -OL http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigWigToBedGraph

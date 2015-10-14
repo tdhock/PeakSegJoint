@@ -16,7 +16,8 @@ argv <- "~/projects/PeakSegJoint-paper/PeakSegJoint-chunks/H3K4me3_PGP_immune/2"
 
 argv <- commandArgs(trailingOnly=TRUE)
 
-PPN.cores()
+ppn <- PPN.cores()
+if(!is.na(ppn))options(mc.cores=ppn/2)
 
 print(argv)
 
@@ -69,6 +70,20 @@ if(all(sapply(step1.results.list, is.null))){
   stop("no computable models for any uniform size segmentation problems")
 }
 step1.results <- do.call(rbind, step1.results.list)
+
+## Plot step1 problems with detected peaks.
+## ggplot()+
+##   geom_segment(aes(problemStart/1e3, problem.name,
+##                    xend=problemEnd/1e3, yend=problem.name),
+##                data=step1.results)+
+##   geom_segment(aes(chromStart/1e3, problem.name,
+##                    xend=chromEnd/1e3, yend=problem.name),
+##                size=2,
+##                color="deepskyblue",
+##                data=step1.results)+
+##   theme_bw()+
+##   theme(panel.margin=grid::unit(0, "cm"))+
+##   facet_grid(bases.per.problem ~ ., scales="free", space="free")
 
 step1.by.res <- split(step1.results, step1.results$bases.per.problem)
 Step1Step2 <- function(res.str){

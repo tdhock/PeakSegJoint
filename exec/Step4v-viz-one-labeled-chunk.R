@@ -4,8 +4,8 @@ library(PeakSegJoint)
 argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/15"
 exampleData <-
   system.file("exampleData",
-              mustWork=TRUE,
               package="PeakSegJoint")
+exampleData <- "~/exampleData"
 argv <- file.path(exampleData, "PeakSegJoint-chunks", "3")
 
 argv <- commandArgs(trailingOnly=TRUE)
@@ -26,7 +26,7 @@ ann.colors <-
     peakEnd="#ff4c4c",
     peaks="#a445ee")
 
-chunk.dir <- normalizePath(argv)
+chunk.dir <- normalizePath(argv, mustWork=TRUE)
 chunks.dir <- dirname(chunk.dir)
 data.dir <- dirname(chunks.dir)
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
@@ -39,7 +39,7 @@ robjs <- load(regions.RData)
 regions$region.i <- 1:nrow(regions)
 chrom <- paste(regions$chrom[1])
 
-width.pixels <- 1500
+width.pixels <- 1000
 bigwig.glob <- file.path(data.dir, "*", "*.bigwig")
 bigwig.file.vec <- Sys.glob(bigwig.glob)
 limits.by.sample <- list()
@@ -82,7 +82,7 @@ for(bigwig.file in bigwig.file.vec){
   sample.group <- basename(dirname(bigwig.file))
   a.data <- with(sample.counts, {
     approx(chromStart+1, count,
-           as.integer(seq(limits$min, limits$max, l=width.pixels)),
+           as.integer(seq(limits$min, limits$max, l=width.pixels/2)),
            method="constant", rule=2)
   })
   counts.by.sample[[paste(sample.id, sample.group)]] <- with(a.data, {
@@ -208,6 +208,7 @@ height.pixels <- as.integer(if(max.height.pixels < ideal.height){
 }else{
   ideal.height
 })
+height.pixels <- (facet.rows+1)*30
 
 peakvar <- function(position){
   paste0(gsub("[-:]", ".", position), "peaks")
@@ -237,7 +238,9 @@ print(system.time({
 
          modelSelection=ggplot()+
            ggtitle("select number of samples with 1 peak")+
+           theme_bw()+
            theme_animint(height=300)+
+           theme(panel.margin=grid::unit(0, "lines"))+
            geom_segment(aes(min.log.lambda, peaks,
                             xend=max.log.lambda, yend=peaks,
                             showSelected=problem.name,
@@ -311,8 +314,13 @@ print(system.time({
            theme_bw()+
            theme_animint(width=width.pixels, height=height.pixels)+
            theme(panel.margin=grid::unit(0, "cm"))+
-           facet_grid(sample.group + sample.id ~ .,
-                      labeller=facet.labels, scales="free")+
+           facet_grid(sample.group + sample.id ~ ., labeller=function(var, val){
+             if(var=="sample.group"){
+               substr(val, 1, 2)
+             }else{
+               ""
+             }
+           }, scales="free")+
            geom_line(aes(base/1e3, count),
                      data=some.counts,
                      color="grey50")+
@@ -403,8 +411,8 @@ train.fig <-
     scale_fill_manual(values=ann.colors)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.group + sample.id ~ .,
-               labeller=facet.labels, scales="free")+
+    facet_grid(sample.group + sample.id ~ ., labeller=facet.labels,
+               scales="free")+
     geom_line(aes(base/1e3, count),
               data=some.counts,
               color="grey50")+
@@ -433,7 +441,7 @@ train.fig <-
                data=peaks.not.na, size=4, color="deepskyblue")
 
 png.name <- paste0(animint.dir, ".png")
-png(png.name, width=1000, h=(facet.rows+1)*30, units="px")
+png(png.name, width=1000, h=height.pixels, units="px")
 print(train.fig)
 dev.off()
 

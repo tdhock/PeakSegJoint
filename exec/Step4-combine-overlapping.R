@@ -13,7 +13,7 @@ if(length(argv) != 2){
   stop("usage: Step4.R path/to/PeakSegJoint-overlapping numJobs")
 }
 
-overlapping.dir <- normalizePath(argv[1])
+overlapping.dir <- normalizePath(argv[1], mustWork=TRUE)
 numJobs <- as.integer(argv[2])
 
 data.dir <- dirname(overlapping.dir)
@@ -25,6 +25,8 @@ for(job.RData in job.RData.vec){
   peaks.by.job[[job.RData]] <- overlapping.peaks
 }
 all.overlapping.peaks <- do.call(rbind, peaks.by.job)
+message(nrow(all.overlapping.peaks), " peaks in ",
+        length(job.RData.vec), " RData files.")
 
 peaks.by.chrom <- split(all.overlapping.peaks, all.overlapping.peaks$chrom)
 clustered.by.chrom <- list()
@@ -36,6 +38,8 @@ for(chrom in names(peaks.by.chrom)){
 }
 final.problems <- do.call(rbind, clustered.by.chrom)
 final.problems$job <- sort(rep(1:numJobs, l=nrow(final.problems)))
+
+message(nrow(final.problems), " final segmentation problems.")
 
 combined.problems <- split(final.problems, final.problems$job)
 
