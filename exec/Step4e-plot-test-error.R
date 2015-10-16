@@ -62,6 +62,7 @@ bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
 
+stop("chr1 chr2 chr3 ...")
 chunk.counts <- table(test.folds$test.fold)
 ggfolds <- ggplot()+
   ggtitle("Distribution of folds across chromosomes")+
