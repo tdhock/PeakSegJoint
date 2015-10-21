@@ -83,11 +83,12 @@ if(is.data.frame(positive.regions)){
 }
 
 writeBoth <- function(peaks.df, bed.path, header.line){
+  sorted.peaks <- data.table(peaks.df)[order(chrom, chromStart), ]
   bigBed.file <- sub("[.]bed$", ".bigBed", bed.path)
-  write.table(peaks.df, bed.path, 
+  write.table(sorted.peaks, bed.path, 
               quote=FALSE, row.names=FALSE, col.names=FALSE)
-  s <- ifelse(nrow(peaks.df)==1, "", "s")
-  message("wrote ", nrow(peaks.df), " peak", s, " to ", bed.path)
+  s <- ifelse(nrow(sorted.peaks)==1, "", "s")
+  message("wrote ", nrow(sorted.peaks), " peak", s, " to ", bed.path)
   bigBedCmd <- paste("bedToBigBed", bed.path, chrom.file, bigBed.file)
   status <- system(bigBedCmd)
   if(status != 0){
@@ -98,7 +99,7 @@ writeBoth <- function(peaks.df, bed.path, header.line){
   bed.gz <- paste0(bed.path, ".gz")
   con <- gzfile(bed.gz, "w")
   writeLines(header.line, con)
-  write.table(peaks.df, con, 
+  write.table(sorted.peaks, con, 
               quote=FALSE, row.names=FALSE, col.names=FALSE)
   close(con)
 }
