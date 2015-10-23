@@ -1,4 +1,4 @@
-PeakSegJoint: supervised joint peak detection
+PeakSegJoint: supervised joint peak detection ([[http://arxiv.org/abs/1506.01286][arXiv:1506.01286]])
 
 [[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
 
