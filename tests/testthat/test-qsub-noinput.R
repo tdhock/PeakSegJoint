@@ -71,6 +71,11 @@ test_that("pipeline trained on 4 samples predicts for 8 samples", {
   ## check for no peak filtering.
   expect_true("specific.error" %in% pred.objs)
   expect_null(specific.error)
+  ## Check for scatterplot viz with input vs each group.
+  index.html <- file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "index.html")
+  index.lines <- readLines(index.html)
+  expect_true(0 < length(index.lines))
 })
 
 test_that("pipeline trained on 8 samples predicts for 8 samples", {
@@ -110,5 +115,10 @@ test_that("pipeline trained on 8 samples predicts for 8 samples", {
   ## check for no peak filtering.
   expect_true("specific.error" %in% pred.objs)
   expect_null(specific.error)
+  ## Check for scatterplot viz with input vs each group.
+  index.html <- file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "index.html")
+  index.lines <- readLines(index.html)
+  expect_true(0 < length(index.lines))
 })
 
