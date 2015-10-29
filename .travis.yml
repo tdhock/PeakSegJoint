@@ -4,8 +4,8 @@ sudo: required
 
 env:
   - TEST_SUITE=functions
-  - TEST_SUITE=qsub-noinput
-  - TEST_SUITE=qsub-input
+  - TEST_SUITE=bash-noinput
+  - TEST_SUITE=bash-input
 
 before_install:
   - curl -OL http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bigWigInfo
