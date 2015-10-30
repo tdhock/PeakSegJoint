@@ -22,7 +22,7 @@ download.zip <- function(){
 test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
   download.zip()
   data.dir <- file.path(tempdir(), "input-test-data-master") 
-  labels.txt <- file.path(data.dir, "kidney_b_labels.txt")
+  labels.txt <- file.path(data.dir, "kidney_bcell_Input_labels.txt")
   cmd <- paste(Rscript, AllSteps, labels.txt)
   system(cmd)
   ## There should be summary bed files for labels and peaks:
