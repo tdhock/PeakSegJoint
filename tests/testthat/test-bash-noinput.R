@@ -71,11 +71,13 @@ test_that("pipeline trained on 4 samples predicts for 8 samples", {
   ## check for no peak filtering.
   expect_true("specific.error" %in% pred.objs)
   expect_null(specific.error)
-  ## Check for scatterplot viz with input vs each group.
-  index.html <- file.path(
-    data.dir, "PeakSegJoint-predictions-viz", "index.html")
-  index.lines <- readLines(index.html)
-  expect_true(0 < length(index.lines))
+  ## Check for bars viz.
+  bars.vec <- Sys.glob(file.path(
+    three.chunks, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+  expect_more_than(length(bars.vec), 0)
+  scatter.vec <- Sys.glob(file.path(
+    three.chunks, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+  expect_equal(length(scatter.vec), 0)
 })
 
 test_that("pipeline trained on 8 samples predicts for 8 samples", {
@@ -117,10 +119,10 @@ test_that("pipeline trained on 8 samples predicts for 8 samples", {
   expect_null(specific.error)
   ## Check for bars viz.
   bars.vec <- Sys.glob(file.path(
-    data.dir, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+    six.chunks, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
   expect_more_than(length(bars.vec), 0)
   scatter.vec <- Sys.glob(file.path(
-    data.dir, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+    six.chunks, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
   expect_equal(length(scatter.vec), 0)
 })
 
