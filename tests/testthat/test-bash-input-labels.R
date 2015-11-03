@@ -54,10 +54,12 @@ test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
   ## check for filtering peaks with too many Input samples up.
   expect_true("specific.error" %in% pred.objs)
   expect_true(is.numeric(specific.error$errors))
-  ## Check for scatterplot viz with input vs each group.
-  index.html <- file.path(
-    data.dir, "PeakSegJoint-predictions-viz", "index.html")
-  index.lines <- readLines(index.html)
-  expect_true(0 < length(index.lines))
+  ## Check for scatter viz.
+  bars.vec <- Sys.glob(file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+  expect_equal(length(bars.vec), 0)
+  scatter.vec <- Sys.glob(file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+  expect_more_than(length(scatter.vec), 0)
 })
 
