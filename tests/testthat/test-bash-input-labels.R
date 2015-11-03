@@ -19,7 +19,7 @@ download.zip <- function(){
   unzip("input-test-data-master.zip")
 }
 
-test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
+test_that("4 labeled input + 4 labeled H3K36me3", {
   download.zip()
   data.dir <- file.path(tempdir(), "input-test-data-master") 
   labels.txt <- file.path(data.dir, "kidney_bcell_Input_labels.txt")

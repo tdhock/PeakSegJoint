@@ -19,7 +19,7 @@ download.zip <- function(){
   unzip("input-test-data-master.zip")
 }
 
-test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
+test_that("4 un-labeled input + 4 labeled H3K36me3", {
   download.zip()
   data.dir <- file.path(tempdir(), "input-test-data-master") 
   labels.txt <- file.path(data.dir, "kidney_bcell_labels.txt")
@@ -28,7 +28,7 @@ test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
   ## There should be summary bed files for labels and peaks:
   labels.bed.gz <- file.path(data.dir, "all_labels.bed.gz")
   bed.labels <- read.table(labels.bed.gz, skip=1)
-  expect_equal(dim(bed.labels), c(35, 9))
+  expect_equal(dim(bed.labels), c(25, 9))
   summary.bed.gz <- file.path(data.dir, "PeakSegJoint.summary.bed.gz")
   bed.summary <- read.table(summary.bed.gz, skip=1)
   expect_equal(ncol(bed.summary), 5)
