@@ -69,6 +69,7 @@ if(is.data.frame(positive.regions)){
   }]
   specific.error.dt[, errors := FP + FN]
   max.input.samples <- specific.error.dt[which.min(errors), threshold]
+  thresh.dt <- data.table(max.input.samples, thresh.type="specific")
   specific.error <- data.frame(specific.error.dt)
   print(specific.error)
   cat('A peak is called "specific" and included in output files if at most',
@@ -156,14 +157,19 @@ for(nonInputType in type.vec){
   type.dt <- 
     data.table(up=type.count.mat[nonInputType, ],
                peak.name=colnames(type.count.mat))
-  type.dt$Input <- type.count.mat["Input", ]
-  type.dt[, dotID := sprintf("%d %s samples, %d Input samples",
-                    up, nonInputType, Input)]
+  by.vec <- if("Input" %in% rownames(type.count.mat)){
+    type.dt$Input <- type.count.mat["Input", ]
+    type.dt[, dotID := sprintf("%d %s samples, %d Input samples",
+                      up, nonInputType, Input)]
+    c("dotID", "up", "Input")
+  }else{
+    type.dt[, dotID := sprintf("%d %s samples", up, nonInputType)]
+    c("dotID", "up")
+  }
   some.up <- type.dt[0 < up, ]
   setkey(some.up, peak.name)
-  scatter.dt.list[[nonInputType]] <-
-    data.table(nonInputType,
-               some.up[, list(count=.N), by=.(dotID, up, Input)])
+  some.up.counts <- some.up[, list(count=.N), by=by.vec]
+  scatter.dt.list[[nonInputType]] <- data.table(nonInputType, some.up.counts)
   chromCounts.list[[nonInputType]] <-
     data.table(nonInputType, count.dt[some.up])
 }
@@ -206,8 +212,6 @@ bg.rect <- do.call(rbind, bg.rect.list)
 ##   bg.rect=data.frame(bg.rect))
 ## save(PredictedPeaks, file="~/R/animint-examples/data/PredictedPeaks.RData")
 
-thresh.dt <- data.table(max.input.samples, thresh.type="specific")
-
 hgTracks <- "http://genome.ucsc.edu/cgi-bin/hgTracks"
 viz <- list(
   title=pred.dir,
@@ -215,7 +219,8 @@ viz <- list(
     ggtitle("PeakSegJoint detections on selected chromosome")+
     theme_bw()+
     coord_cartesian(xlim=c(0, 1))+
-    theme_animint(width=1500, height=100)+
+    theme_animint(width=1500,
+                  height=50 + 20 * length(unique(chromCounts$type)))+
     theme(axis.line.x=element_blank(), axis.text.x=element_blank(), 
           axis.ticks.x=element_blank(), axis.title.x=element_blank())+
     scale_y_discrete("cell type", drop=FALSE)+
@@ -226,6 +231,10 @@ viz <- list(
                   showSelected=dotID),
               size=11,
               data=chromCounts),
+  ## TODO: rather than displaying the entire chromosome on the top
+  ## plot (which often squishes together a bunch of nearby peak
+  ## counts), we can tile the genome with boxes as in
+  ## https://github.com/tdhock/animint-examples/blob/master/examples/scaffolds.R
   chroms=ggplot()+
     theme_bw()+
     theme_animint(width=1500, height=330)+
@@ -249,16 +258,22 @@ viz <- list(
     geom_text(aes(max(chrom.ranges$chromEnd)/2e6, chrom,
                   showSelected=dotID,
                   label=totals),
-             data=scatter.dt),
-  scatter=ggplot()+
+             data=scatter.dt))
+
+if("Input" %in% rownames(type.count.mat)){
+  p <- ggplot()+
     geom_vline(aes(xintercept=N, color=thresh.type),
                data=counts.not.Input)+
     geom_hline(aes(yintercept=N, color=thresh.type),
                show_guide=TRUE,
-               data=counts.Input)+
-    geom_hline(aes(yintercept=max.input.samples+0.5, color=thresh.type),
-               show_guide=TRUE,
-               data=thresh.dt)+
+               data=counts.Input)
+  if(is.data.frame(positive.regions)){
+    p <- p+
+      geom_hline(aes(yintercept=max.input.samples+0.5, color=thresh.type),
+                 show_guide=TRUE,
+                 data=thresh.dt)
+  }
+  p <- p+
     scale_color_manual("threshold", values=c(
                                       "max samples"="grey",
                                       specific="grey30"))+
@@ -266,7 +281,8 @@ viz <- list(
     facet_grid(nonInputType ~ .)+
     theme_bw()+
     scale_fill_gradient(low="grey", high="red")+
-    theme_animint(width=1500)+
+    theme_animint(width=1500,
+                  height=50 + 100 * length(unique(chromCounts$nonInputType)))+
     theme(panel.margin=grid::unit(0, "cm"))+
     geom_rect(aes(xmin=up-size, xmax=up+size,
                   ymin=Input-size, ymax=Input+size,
@@ -275,7 +291,30 @@ viz <- list(
                   showSelected=chrom,
                   fill=log10(count)),
               color="transparent",
-              data=bg.rect))
+              data=bg.rect)
+  viz$scatter <- p
+}else{
+  viz$bars <- ggplot()+
+    geom_vline(aes(xintercept=N, color=thresh.type),
+               show_guide=TRUE,
+               data=counts.not.Input)+
+    scale_color_manual("threshold", values=c(
+                                      "max samples"="grey",
+                                      specific="grey30"))+
+    scale_x_continuous("number of samples with a peak")+
+    scale_y_continuous("count")+
+    facet_grid(nonInputType ~ .)+
+    theme_bw()+
+    theme_animint(width=1500,
+                  height=50 + 100 * length(unique(chromCounts$nonInputType)))+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    geom_bar(aes(up, count,
+                 tooltip=totals,
+                 clickSelects=dotID),
+             stat="identity",
+             data=scatter.dt)
+}  
+
 viz.dir <- paste0(pred.dir, "-viz")
 animint2dir(viz, viz.dir)
 
