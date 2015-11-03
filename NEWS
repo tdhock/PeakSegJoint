@@ -1,3 +1,15 @@
+2015.11.03
+
+Step6 outputs PeakSegJoint-predictions-viz/index.html which shows peak
+predictions with links to the UCSC genome browser. If an Input sample
+group is present, then we make a facetted scatterplot of Input versus
+other groups. If no Input sample group is present then we make a bar
+plot which shows only the other groups. If there are labels for Input
+samples, then we only report "specific" peaks in the output bed
+files. Specific peaks are defined as being present in not too many
+Input samples (threshold picked by minimizing the number of incorrect
+regions where Input samples are labeled as either up or down).
+
 2015.09.21
 
 Run test error estimation in parallel on chunk.order.seed and
