@@ -1,4 +1,4 @@
-PeakSegJoint: supervised joint peak detection
+PeakSegJoint: supervised joint peak detection ([[http://arxiv.org/abs/1506.01286][arXiv:1506.01286]])
 
 [[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
 
@@ -90,7 +90,7 @@ headers to reflect your cluster configuration.
 ** Run PeakSegJoint on your laptop
 
 If you don't have access to a cluster with qsub, you can still run the
-[[file:exec/][steps]] in sequence on one computer. For example [[file:tests/testthat/test-qsub-pipeline.R][test-qsub-pipeline.R]]
+[[file:exec/][steps]] in sequence on one computer. For example [[file:tests/testthat/test-bash-noinput.R][test-bash-noinput.R]]
 uses bash instead of qsub, via
 
 #+BEGIN_SRC shell

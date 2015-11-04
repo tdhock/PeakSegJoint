@@ -19,16 +19,16 @@ download.zip <- function(){
   unzip("input-test-data-master.zip")
 }
 
-test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
+test_that("4 un-labeled input + 4 labeled H3K36me3", {
   download.zip()
   data.dir <- file.path(tempdir(), "input-test-data-master") 
-  labels.txt <- file.path(data.dir, "kidney_b_labels.txt")
+  labels.txt <- file.path(data.dir, "kidney_bcell_labels.txt")
   cmd <- paste(Rscript, AllSteps, labels.txt)
   system(cmd)
   ## There should be summary bed files for labels and peaks:
   labels.bed.gz <- file.path(data.dir, "all_labels.bed.gz")
   bed.labels <- read.table(labels.bed.gz, skip=1)
-  expect_equal(dim(bed.labels), c(35, 9))
+  expect_equal(dim(bed.labels), c(25, 9))
   summary.bed.gz <- file.path(data.dir, "PeakSegJoint.summary.bed.gz")
   bed.summary <- read.table(summary.bed.gz, skip=1)
   expect_equal(ncol(bed.summary), 5)
@@ -41,18 +41,25 @@ test_that("pipeline trained on 4 input + 4 H3K36me3 samples", {
   test.errors.dir <- 
     file.path(data.dir, "PeakSegJoint-chunks", "figure-test-errors")
   test.errors.files <- dir(test.errors.dir)
-  ## pipeline trained on 6 chunks generates 6 test error plots:
-  expected.files <- paste0(1:6, ".png")
+  ## pipeline trained on 4 chunks generates 4 test error plots:
+  expected.files <- paste0(1:4, ".png")
   expect_true(all(expected.files %in% test.errors.files))
-  ## pipeline trained on 6 chunks generates test error summary:
+  ## pipeline trained on 4 chunks generates test error summary:
   expect_true("figure-test-error-decreases.png" %in% test.errors.files)
   ## pipeline trained on 1 file does 4 fold CV:
   index.html <- file.path(test.errors.dir, "index.html")
   index.lines <- readLines(index.html)
   cv.line <- grep("cross-validation", index.lines, value=TRUE)
   expect_match(cv.line, "4 fold")
-  ## check for filtering peaks with too many Input samples up.
+  ## check for no peak filtering when there are no labeled Inputs.
   expect_true("specific.error" %in% pred.objs)
-  expect_true(is.numeric(specific.error$errors))
+  expect_null(specific.error$errors)
+  ## Check for scatter viz.
+  bars.vec <- Sys.glob(file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+  expect_equal(length(bars.vec), 0)
+  scatter.vec <- Sys.glob(file.path(
+    data.dir, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+  expect_more_than(length(scatter.vec), 0)
 })
 

@@ -71,6 +71,13 @@ test_that("pipeline trained on 4 samples predicts for 8 samples", {
   ## check for no peak filtering.
   expect_true("specific.error" %in% pred.objs)
   expect_null(specific.error)
+  ## Check for bars viz.
+  bars.vec <- Sys.glob(file.path(
+    three.chunks, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+  expect_more_than(length(bars.vec), 0)
+  scatter.vec <- Sys.glob(file.path(
+    three.chunks, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+  expect_equal(length(scatter.vec), 0)
 })
 
 test_that("pipeline trained on 8 samples predicts for 8 samples", {
@@ -110,5 +117,12 @@ test_that("pipeline trained on 8 samples predicts for 8 samples", {
   ## check for no peak filtering.
   expect_true("specific.error" %in% pred.objs)
   expect_null(specific.error)
+  ## Check for bars viz.
+  bars.vec <- Sys.glob(file.path(
+    six.chunks, "PeakSegJoint-predictions-viz", "*bars*.tsv"))
+  expect_more_than(length(bars.vec), 0)
+  scatter.vec <- Sys.glob(file.path(
+    six.chunks, "PeakSegJoint-predictions-viz", "*scatter*.tsv"))
+  expect_equal(length(scatter.vec), 0)
 })
 

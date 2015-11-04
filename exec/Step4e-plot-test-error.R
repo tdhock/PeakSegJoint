@@ -61,6 +61,10 @@ rownames(test.metrics.curves) <- NULL
 bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
+chrom.vals <- unique(c(
+  paste0("chr", c(1:22, "X", "Y")),
+  chrom.ranges$chrom))
+chrom.ranges[, chrom := factor(chrom, chrom.vals)]
 
 chunk.counts <- table(test.folds$test.fold)
 ggfolds <- ggplot()+
