@@ -46,14 +46,19 @@ peaks.to.plot <- foverlaps(all.peaks.dt, one.peak, nomatch=0L)
 bigwig.glob <- file.path(data.dir, "*", "*.bigwig")
 bigwig.file.vec <- Sys.glob(bigwig.glob)
 counts.by.sample <- list()
-for(bigwig.file in bigwig.file.vec){
+for(bigwig.i in seq_along(bigwig.file.vec)){
+  bigwig.file <- bigwig.file.vec[[bigwig.i]]
+  cat(sprintf("%4d / %4d bigwigs %s\n", bigwig.i, length(bigwig.file.vec),
+              bigwig.file))
   sample.counts <- one.peak[, {
     readBigWig(bigwig.file, chrom, zoomStart, zoomEnd)
   }]
-  sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
-  sample.group <- basename(dirname(bigwig.file))
-  counts.by.sample[[paste(sample.id, sample.group)]] <-
-    data.table(sample.id, sample.group, sample.counts)
+  if(nrow(sample.counts)){
+    sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+    sample.group <- basename(dirname(bigwig.file))
+    counts.by.sample[[paste(sample.id, sample.group)]] <-
+      data.table(sample.id, sample.group, sample.counts)
+  }
 }
 some.counts <- do.call(rbind, counts.by.sample)
 if(is.null(some.counts)){
