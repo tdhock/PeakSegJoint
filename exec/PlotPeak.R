@@ -95,8 +95,8 @@ gg <-
                  color="deepskyblue")
 
 peaksPlot <- list(
-  peaks=peaks.to.plot,
-  coverage=some.counts)
+  peaks=data.frame(peaks.to.plot),
+  coverage=data.frame(some.counts))
 
 out.dir <- file.path(data.dir, "PeakSegJoint-predictions-plots", peak.to.plot)
 dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
