@@ -98,7 +98,9 @@ peaksPlot <- list(
   peaks=data.frame(peaks.to.plot),
   coverage=data.frame(some.counts))
 
-out.dir <- file.path(data.dir, "PeakSegJoint-predictions-plots", peak.to.plot)
+out.dir <- file.path(
+  data.dir, "PeakSegJoint-predictions-plots",
+  sub(":", "-", peak.to.plot))
 dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
 
 peaksPlot.RData <- file.path(out.dir, "peaksPlot.RData")
