@@ -2,8 +2,10 @@
 \alias{PeakSegJointHeuristicStep1}
 \title{PeakSegJointHeuristicStep1}
 \description{Run the first step of the PeakSegJoint fast heuristic optimization
-algorithm. NB: this function is only for testing the C code
-against the R implementation. For real data see
+algorithm. This is the GridSearch subroutine of the JointZoom algorithm
+in arXiv:1506.01286. NB: this function is only for testing the C code
+against the R implementation (search tests/testthat/*.R for Step1).
+For real data see
 PeakSegJointSeveral.}
 \usage{PeakSegJointHeuristicStep1(profiles, bin.factor = 2L)}
 \arguments{

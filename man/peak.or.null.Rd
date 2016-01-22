@@ -10,8 +10,8 @@ problems.}
   \item{count.data}{data.frame of counts to segment.}
 }
 
-\value{the peak of the most complex model, or NULL if there are no
-feasible models.}
+\value{data.table(chromStart, chromEnd) = the peak of the most complex
+model, or NULL if there are no feasible models.}
 
 \author{Toby Dylan Hocking}
 

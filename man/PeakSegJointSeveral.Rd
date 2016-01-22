@@ -3,15 +3,29 @@
 \title{PeakSegJointSeveral}
 \description{Run the PeakSegJoint heuristic segmentation algorithm with several
 different bin.factor values, keeping only the models with lowest
-Poisson loss for each peak size. }
+Poisson loss for each peak size. This algorithm gives an
+approximate solution to the following multi-sample constrained
+maximum likelihood segmentation problem. If there are S samples
+total, we look for the most likely common peak in s\in{0, ..., S}
+samples. We solve the equivalent minimization problem using the
+Poisson loss seg.mean - count.data * log(seg.mean), from the first
+base to the last base of profiles. The optimization variables are
+the segment means, of which there can be either 1 value (no peak)
+or 3 values (peak) in each sample. If there are 3 segments then
+two constraints are applied: (1) the changes in mean must occur at
+the same position in each sample, and (2) the changes must be up
+and then down (mean1 < mean2 > mean3).}
 \usage{PeakSegJointSeveral(profiles, bin.factors = 2:7)}
 \arguments{
   \item{profiles}{data.frame or list of them from ProfileList.}
-  \item{bin.factors}{integer vector of suboptimality parameters, bigger values are
-slower.}
+  \item{bin.factors}{integer vector of optimization parameters >= 2. Larger values are
+slower. Using more values is slower since it tells the algorithm
+to search more of the model space, yielding solution which is
+closer to the global optimum.}
 }
 
-\value{Model fit list as is returned by PeakSegJointHeuristic.}
+\value{List of model fit results, which can be passed to ConvertModelList
+for easier interpretation.}
 
 \author{Toby Dylan Hocking}
 

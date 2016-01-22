@@ -3,13 +3,12 @@
 \title{readBigWig}
 \description{Read part of a bigWig file into R as a data.table (assumes
 bigWigToBedGraph is present on your PATH).}
-\usage{readBigWig(bigwig.file, chrom, start, end, bedGraph.file = tempfile())}
+\usage{readBigWig(bigwig.file, chrom, start, end)}
 \arguments{
   \item{bigwig.file}{path or URL of bigwig file.}
   \item{chrom}{chromosome to read.}
   \item{start}{position before reading.}
-  \item{end}{last position to read.}
-  \item{bedGraph.file}{plain text file where coverage is saved before reading into R.}
+  \item{end}{plain text file where coverage is saved before reading into R.}
 }
 
 \value{data.table with columns chrom chromStart chromEnd count.}
