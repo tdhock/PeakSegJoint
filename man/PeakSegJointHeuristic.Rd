@@ -6,10 +6,13 @@ gives an approximate solution to a multi-sample Poisson maximum
 likelihood segmentation problem. Given S samples, this function
 computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
 samples with an overlapping peak (maximum of one peak per
-sample). This solver runs steps 1-3, and Step3 is guaranteed as of
-24 July 2015 to return a feasible segmentation (seg1 < seg2 >
-seg3). NB: this function is mostly for internal testing
-purposes. For real data use PeakSegJointSeveral.}
+sample). This solver runs steps 1-3, and Step3 checks if there are
+any more likely models in samples with peak locations which are
+the same as all the models detected in Step2. This is guaranteed
+as of 24 July 2015 to return a feasible segmentation (seg1 < seg2
+> seg3). NB: this function is mostly for internal testing purposes
+(search tests/testthat/*.R for 'Heuristic('). For real data use
+PeakSegJointSeveral.}
 \usage{PeakSegJointHeuristic(profiles, bin.factor = 2L)}
 \arguments{
   \item{profiles}{List of data.frames with columns chromStart, chromEnd, count, or

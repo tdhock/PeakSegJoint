@@ -43,9 +43,9 @@ L1-regularized interval regression with the squared hinge loss]].
   install.packages("devtools")
   devtools::install_github("tdhock/PeakSegJoint")
   library(PeakSegJoint)
-  example(PeakSegJointSeveral) #segmentation algo.
-  example(PeakSegJointError) #TODO
-  example(IntervalRegressionProblems) #fista interval regression algo.
+  example(PeakSegJointSeveral) # JointZoom approximate segmentation algo.
+  example(PeakSegJointError) # Number of incorrect labels.
+  example(IntervalRegressionProblems) # FISTA convex optimization algo.
 #+END_SRC
 
 ** Create a labeled data set
