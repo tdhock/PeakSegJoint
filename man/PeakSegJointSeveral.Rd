@@ -6,7 +6,7 @@ different bin.factor values, keeping only the models with lowest
 Poisson loss for each peak size. This algorithm gives an
 approximate solution to the following multi-sample constrained
 maximum likelihood segmentation problem. If there are S samples
-total, we look for the most likely common peak in $s\in{0, ..., S}$
+total, we look for the most likely common peak in \eqn{s\in{0, ..., S}}
 samples. We solve the equivalent minimization problem using the
 Poisson loss seg.mean - count.data * log(seg.mean), from the first
 base to the last base of profiles. The optimization variables are
