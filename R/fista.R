@@ -371,9 +371,9 @@ IntervalRegressionMatrix <- function
             "crit =", stopping.crit, "\n")
       }
     }
-    if(any(!is.finite(this.iterate))){
+    if(any(!is.finite(this.iterate)) || 1e100 < stopping.crit){
       if(verbose >= 1){
-        cat("infinite parameter, restarting with bigger Lipschitz.\n")
+        cat("restarting with bigger Lipschitz.\n")
       }
       iterate.count <- 1
       stopping.crit <- threshold
