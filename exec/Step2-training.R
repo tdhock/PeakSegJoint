@@ -3,15 +3,14 @@ library(xtable)
 library(PeakSegJoint)
 options(xtable.print.results=FALSE)
 
-argv <-
-  c(system.file(file.path("exampleData",
+ex.dir <-
+  system.file(file.path("exampleData",
                           "PeakSegJoint-chunks"),
-                package="PeakSegJoint"),
-    "200")
-
-argv <- c("PeakSegJoint-chunks/H3K36me3_TDH_immune", "200")
-argv <- c("~/exampleData/PeakSegJoint-chunks", "200")
-argv <- c("~/projects/H3K27ac_TDH/PeakSegJoint-chunks", "200")
+                package="PeakSegJoint")
+ex.dir <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
+ex.dir <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks"
+ex.dir <- "~/exampleData/PeakSegJoint-chunks"
+argv <- file.path(ex.dir, c(1:3), "models.by.problem.RData")
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -20,17 +19,11 @@ print(argv)
 ppn <- PPN.cores()
 if(!is.na(ppn))options(mc.cores=ppn/2)
 
-if(length(argv) != 2){
-  stop("usage: Step2.R path/to/PeakSegJoint-chunks numJobs")
+if(length(argv) == 0){
+  stop("usage: Step2.R chunk1/models.by.problem.RData [...]")
 }
 
-chunks.dir <- normalizePath(argv[1], mustWork=TRUE)
-numJobs <- as.integer(argv[2])
-data.dir <- dirname(chunks.dir)
-
-problems.RData.vec <- Sys.glob(file.path(chunks.dir, "*", "problems.RData"))
-models.RData.vec <-
-  Sys.glob(file.path(chunks.dir, "*", "models.by.problem.RData"))
+models.RData.vec <- normalizePath(argv, mustWork=TRUE)
 
 models.by.res <- list()
 for(models.RData in models.RData.vec){
@@ -44,9 +37,40 @@ for(models.RData in models.RData.vec){
   }
 }
 
-stop("re-do train/test split? give train chunks on command line?")
-
-stop("TODO train model")
+set.seed(1)
+for(res.str in names(models.by.res)){
+  models.by.problem <- models.by.res[[res.str]]
+  feature.mat.list <- list()
+  target.mat.list <- list()
+  for(chunk.problem in names(models.by.problem)){
+    models.by.sample <- models.by.problem[[chunk.problem]]
+    for(id.group in names(models.by.sample)){
+      model <- models.by.sample[[id.group]]
+      if(any(is.finite(model$target))){
+        target.mat.list[[paste(chunk.problem, id.group)]] <- model$target
+        feature.mat.list[[paste(chunk.problem, id.group)]] <- model$features
+      }
+    }
+  }
+  feature.mat <- do.call(rbind, feature.mat.list)
+  target.mat <- do.call(rbind, target.mat.list)
+  fit <- IntervalRegressionMatrixCV(feature.mat, target.mat)
+  for(chunk.problem in names(models.by.problem)){
+    models.by.sample <- models.by.problem[[chunk.problem]]
+    for(id.group in names(models.by.sample)){
+      model <- models.by.sample[[id.group]]
+      pred.log.lambda <- as.numeric(fit$predict(rbind(model$features)))
+      selected <- subset(
+        model$modelSelection,
+        min.log.lambda < pred.log.lambda &
+          pred.log.lambda < max.log.lambda)
+      stopifnot(nrow(selected)==1)
+      peaks.str <- paste(selected$peaks)
+      pred.peaks <- model$fit$peaks[[peaks.str]]
+      stop("TODO store metadata, plot pred peaks")
+    }
+  }
+}
 
 if(all(sapply(sample.results.list, is.null))){
   print(sample.problems.dt)
