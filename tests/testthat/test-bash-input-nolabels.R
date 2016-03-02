@@ -8,6 +8,7 @@ AllSteps <-
               package="PeakSegJoint")
 Rscript <- "QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript"
 
+## This needs to be a function so we can call on.exit(setwd())
 download.zip <- function(){
   require(httr)
   zip.url <- "https://github.com/tdhock/input-test-data/archive/master.zip"
@@ -16,6 +17,7 @@ download.zip <- function(){
   request <- GET(zip.url)
   stop_for_status(request)
   writeBin(content(request), "input-test-data-master.zip")
+  unlink("input-test-data-master", recursive=TRUE)
   unzip("input-test-data-master.zip")
 }
 
