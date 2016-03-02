@@ -31,8 +31,10 @@ ProfileList <- function
 
 PeakSegJointHeuristicStep1 <- structure(function
 ### Run the first step of the PeakSegJoint fast heuristic optimization
-### algorithm. NB: this function is only for testing the C code
-### against the R implementation. For real data see
+### algorithm. This is the GridSearch subroutine of the JointZoom algorithm
+### in arXiv:1506.01286. NB: this function is only for testing the C code
+### against the R implementation (search tests/testthat/*.R for Step1).
+### For real data see
 ### PeakSegJointSeveral.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
@@ -113,10 +115,12 @@ PeakSegJointHeuristicStep1 <- structure(function
 
 PeakSegJointHeuristicStep2 <- function
 ### Run the first and second steps of the PeakSegJoint fast heuristic
-### optimization algorithm. Step2 is guaranteed to return feasible
-### segmentations (seg1 < seg2 > seg3). NB: this function is only for
-### testing the C code against the R implementation. For real data see
-### PeakSegJointSeveral.
+### optimization algorithm. Step2 the SearchNearPeak subroutine
+### described in the JointZoom Algorithm of arXiv:1506.01286, and it
+### is guaranteed to return feasible segmentations (seg1 < seg2 >
+### seg3). NB: this function is only for testing the C code against
+### the R implementation (search tests/testthat/*.R files for
+### Step2). For real data see PeakSegJointSeveral.
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -137,15 +141,28 @@ PeakSegJointHeuristicStep2 <- function
 ### for easier interpretation.
 }
 
-PeakSegJointSeveral <- structure(function
 ### Run the PeakSegJoint heuristic segmentation algorithm with several
 ### different bin.factor values, keeping only the models with lowest
-### Poisson loss for each peak size. 
+### Poisson loss for each peak size. This algorithm gives an
+### approximate solution to the following multi-sample constrained
+### maximum likelihood segmentation problem. If there are S samples
+### total, we look for the most likely common peak in \eqn{s\in{0, ..., S}}
+### samples. We solve the equivalent minimization problem using the
+### Poisson loss seg.mean - count.data * log(seg.mean), from the first
+### base to the last base of profiles. The optimization variables are
+### the segment means, of which there can be either 1 value (no peak)
+### or 3 values (peak) in each sample. If there are 3 segments then
+### two constraints are applied: (1) the changes in mean must occur at
+### the same position in each sample, and (2) the changes must be up
+### and then down (mean1 < mean2 > mean3).
+PeakSegJointSeveral <- structure(function
 (profiles,
 ### data.frame or list of them from ProfileList.
  bin.factors=2:7
-### integer vector of suboptimality parameters, bigger values are
-### slower.
+### integer vector of optimization parameters >= 2. Larger values are
+### slower. Using more values is slower since it tells the algorithm
+### to search more of the model space, yielding solution which is
+### closer to the global optimum.
  ){
   stopifnot(is.numeric(bin.factors))
   stopifnot(length(bin.factors) > 0)
@@ -169,7 +186,8 @@ PeakSegJointSeveral <- structure(function
     best.fit$models[to.copy] <- fit$models[to.copy]
   }
   best.fit
-### Model fit list as is returned by PeakSegJointHeuristic.
+### List of model fit results, which can be passed to ConvertModelList
+### for easier interpretation.
 }, ex=function(){
   data(H3K4me3.TDH.other.chunk8)
   bf.vec <- c(2, 3, 5)
@@ -258,16 +276,19 @@ PeakSegJointSeveral <- structure(function
   
 })
 
-PeakSegJointHeuristic <- structure(function
 ### Run the PeakSegJoint fast heuristic optimization algorithm, which
 ### gives an approximate solution to a multi-sample Poisson maximum
 ### likelihood segmentation problem. Given S samples, this function
 ### computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
 ### samples with an overlapping peak (maximum of one peak per
-### sample). This solver runs steps 1-3, and Step3 is guaranteed as of
-### 24 July 2015 to return a feasible segmentation (seg1 < seg2 >
-### seg3). NB: this function is mostly for internal testing
-### purposes. For real data use PeakSegJointSeveral.
+### sample). This solver runs steps 1-3, and Step3 checks if there are
+### any more likely models in samples with peak locations which are
+### the same as all the models detected in Step2. This is guaranteed
+### as of 24 July 2015 to return a feasible segmentation (seg1 < seg2
+### > seg3). NB: this function is mostly for internal testing purposes
+### (search tests/testthat/*.R for 'Heuristic('). For real data use
+### PeakSegJointSeveral.
+PeakSegJointHeuristic <- structure(function
 (profiles,
 ### List of data.frames with columns chromStart, chromEnd, count, or
 ### single data.frame with additional column sample.id.
@@ -387,7 +408,7 @@ ConvertModelList <- function
 ### from the C code to the repetitive format that is more useful for
 ### plotting.
 (model.list
-### Value of PeakSegJointHeuristic(...).
+### List from PeakSegJointHeuristic(...) or PeakSegJointSeveral(...).
  ){
   seg1.chromStart <- model.list$data_start_end[1]
   seg3.chromEnd <- model.list$data_start_end[2]
@@ -418,7 +439,11 @@ ConvertModelList <- function
         sample.id <- sub(".*/", "", sample.path)
         maybe.group <- sub("/.*", "", sample.path)
         sample.group <- ifelse(maybe.group == sample.path, NA, maybe.group)
-        data.frame(peaks, sample.id, sample.group)
+        if(all(is.na(sample.group))){
+          data.frame(peaks, sample.id)
+        }else{
+          data.frame(peaks, sample.id, sample.group)
+        }
       }
       peakStart <- model$peak_start_end[1]
       peakEnd <- model$peak_start_end[2]
@@ -471,5 +496,10 @@ ConvertModelList <- function
     exactModelSelection(loss, model.complexity, peaks)
   })
   info
-### List of peaks, segments, loss, modelSelection.
+### List of data.frames: segments has 1 row for each segment mean,
+### sample, and model size (peaks, sample.id, sample.group,
+### chromStart, chromEnd, mean); peaks is the same kind of data.frame
+### as segments, but with only the second/peak segments; loss has one
+### row for each model size; modelSelection has one row for each model
+### size that can be selected, see exactModelSelection.
 }  

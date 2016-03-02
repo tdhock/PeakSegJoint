@@ -5,6 +5,10 @@ TODOs
 Fit PeakSegDP to each sample before running PeakSegJoint? (rather than
 running PeakSegJoint with a fixed problem size)
 
+2016.01.22
+
+Docs for PeakSegJointError.
+
 2015.11.03
 
 Step6 outputs PeakSegJoint-predictions-viz/index.html which shows peak
