@@ -26,9 +26,15 @@ if(length(argv) == 0){
 models.RData.vec <- normalizePath(argv, mustWork=TRUE)
 
 models.by.res <- list()
+regions.by.chunk <- list()
+chunks.list <- list()
 for(models.RData in models.RData.vec){
   objs <- load(models.RData)
-  chunk.id <- basename(dirname(models.RData))
+  objs <- load(regions.RData)
+  chunk.dir <- dirname(models.RData)
+  chunk.id <- basename(chunk.dir)
+  regions.by.chunk[[chunk.id]] <- regions
+  chunks.list[[chunk.id]] <- chunk
   for(problem.i in 1:nrow(sample.problems.dt)){
     problem <- sample.problems.dt[problem.i,]
     res.str <- paste(problem$bases.per.problem)
@@ -39,6 +45,7 @@ for(models.RData in models.RData.vec){
 
 chunks.dir <- dirname(dirname(models.RData))
 data.dir <- dirname(chunks.dir)
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 
 SeparatePeaks <- function(res.str, seed=1){
   set.seed(1)
@@ -76,14 +83,27 @@ SeparatePeaks <- function(res.str, seed=1){
       if(0 < selected$peaks){
         peaks.str <- paste(selected$peaks)
         pred.peaks <- model$fit$peaks[[peaks.str]]
+        peak.cols <- c(
+          "sample.id", "sample.group",
+          "chromStart", "chromEnd")
         peaks.by.chunk.list[[chunk.str]][[paste(chunk.problem, id.group)]] <- 
-          data.table(model$meta, pred.peaks)
+          data.table(model$meta, pred.peaks)[, peak.cols, with=FALSE]
       }#if
     }#for(id.group
   }#for(chunk.problem
   problems.by.chunk <- list()
   for(chunk.str in names(peaks.by.chunk.list)){
     peaks.list <- peaks.by.chunk.list[[chunk.str]]
+    regions <- regions.by.chunk[[chunk.str]]
+    prop.noPeaks <- regions[, list(
+      prop=mean(annotation=="noPeaks")
+      ), by=.(chromStart, chromEnd)]
+    prop.noPeaks[, bases := chromEnd - chromStart]
+    peaks.list$joint <- prop.noPeaks[prop==1, {
+      data.table(sample.id="joint", sample.group="joint",
+                 chromStart=as.integer(chromStart+bases/3),
+                 chromEnd=as.integer(chromEnd-bases/3))
+    }]
     peaks <- do.call(rbind, peaks.list)
     clustered <- clusterPeaks(peaks)
     joint.problems <- clustered2problems(clustered)
@@ -94,8 +114,14 @@ SeparatePeaks <- function(res.str, seed=1){
       problems <- unique(bins[, .(problemStart, problemEnd)])
       problems[, problem.i := 1:.N]
       ggplot()+
+        geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                         fill=annotation),
+                      alpha=0.5,
+                      color="grey",
+                      data=regions)+
+        scale_fill_manual(values=ann.colors)+
         geom_point(aes((chromStart+chromEnd)/2e3, mean),
-                   color="grey",
+                   color="grey50",
                    shape=1,
                    data=bins)+
         theme_bw()+
@@ -128,99 +154,32 @@ SeparatePeaks <- function(res.str, seed=1){
 separate.by.res <- mclapply.or.stop(names(models.by.res), SeparatePeaks)
 names(separate.by.res) <- names(models.by.res)
 
-if(all(sapply(sample.results.list, is.null))){
-  print(sample.problems.dt)
-  stop("no computable models for any uniform size segmentation problems")
-}
-sample.results <- do.call(rbind, sample.results.list)
-
-## Plot step1 problems with detected peaks.
-## ggplot()+
-##   geom_segment(aes(problemStart/1e3, problem.name,
-##                    xend=problemEnd/1e3, yend=problem.name),
-##                data=sample.results)+
-##   geom_segment(aes(chromStart/1e3, problem.name,
-##                    xend=chromEnd/1e3, yend=problem.name),
-##                size=2,
-##                color="deepskyblue",
-##                data=sample.results)+
-##   theme_bw()+
-##   theme(panel.margin=grid::unit(0, "cm"))+
-##   facet_grid(bases.per.problem ~ ., scales="free", space="free")
-
-step1.by.res <- split(step1.results, step1.results$bases.per.problem)
-Step1Step2 <- function(res.str){
-  bases.per.problem <- as.integer(res.str)
-  step1.peaks <- step1.by.res[[res.str]]
-  step2.problems <- clusterProblems(step1.peaks)
-  
-  problems.dt <- data.table(bases.per.problem, step2.problems)
-  problems.dt[, problemStart1 := problemStart + 1L]
-  setkey(problems.dt, problemStart1, problemEnd)
-  setkey(regions, chromStart1, chromEnd)
-  over.regions <- foverlaps(regions, problems.dt, nomatch=0L)
-  over.regions[,
-               `:=`(overlapStart=ifelse(problemStart < chromStart,
-                      chromStart, problemStart),
-                    overlapEnd=ifelse(problemEnd < chromEnd,
-                      problemEnd, chromEnd))]
-  over.regions[,
-               overlapBases := overlapEnd-overlapStart]
-  wrong.direction <- with(over.regions, {
-    (annotation=="peakEnd" & chromStart < problemStart) |
-      (annotation=="peakStart" & problemEnd < chromEnd)
-  })
-  wrong.regions <-
-    unique(over.regions[wrong.direction, .(problem.name, chromStart)])
-  setkey(over.regions, problem.name, chromStart)
-  over.regions[wrong.regions, overlapBases := 0]
-  ## ggplot()+
-  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3),
-  ##                 data=over.regions,
-  ##                 fill="grey")+
-  ##   geom_text(aes(problemStart/1e3, factor(problem.i),
-  ##                 label=overlapBases),
-  ##             hjust=1,
-  ##             data=over.regions)+
-  ##   theme_bw()+
-  ##   theme(panel.margin=grid::unit(0, "cm"))+
-  ##   facet_grid(sample.id ~ ., scales="free")+
-  ##   geom_segment(aes(problemStart/1e3, factor(problem.i),
-  ##                    xend=problemEnd/1e3, yend=factor(problem.i)),
-  ##                data=over.regions)
-  region.i.problems <-
-    over.regions[,
-                 .(problem.name=problem.name[which.max(overlapBases)]),
-                 by=region.i]
-  stopifnot(nrow(region.i.problems) <= nrow(regions))
-  setkey(regions, region.i)
-  setkey(region.i.problems, region.i)
-  assigned.regions <- regions[region.i.problems,]
-  stopifnot(nrow(assigned.regions) == nrow(region.i.problems))
-  regions.by.problem <-
-    split(assigned.regions, assigned.regions$problem.name, drop=TRUE)
-
-  list(problems=problems.dt,
-       regions=regions.by.problem)
-}
-step2.data.list <- mclapply.or.stop(names(step1.by.res), Step1Step2)
-names(step2.data.list) <- names(step1.by.res)
-
-step2.problems.list <- list()
-problems.with.regions.list <- list()
-for(res.str in names(step2.data.list)){
-  res.data <- step2.data.list[[res.str]]
-  problems.dt <- res.data$problems[, .(problem.name, problemStart, problemEnd)]
-  problems.by.name <- split(problems.dt, problems.dt$problem.name)
-  step2.problems.list[names(problems.by.name)] <- problems.by.name
-  if(length(res.data$regions)){
-    problems.with.regions.list[[res.str]] <- 
-      data.table(bases.per.problem=as.integer(res.str),
-                 problem.name=names(res.data$regions))
+problems.by.chunk <- list()
+for(res.str in names(separate.by.res)){
+  problem.list <- separate.by.res[[res.str]]$problems
+  for(chunk.str in names(problem.list)){
+    problems.by.chunk[[chunk.str]][[res.str]] <- problem.list[[chunk.str]]
   }
 }
-step2.problems <- do.call(rbind, step2.problems.list)
-problems.with.regions <- do.call(rbind, problems.with.regions.list)
+
+for(chunk.str in names(problems.by.chunk)){
+  joint.problems.by.res <- problems.by.chunk[[chunk.str]]
+  regions.RData <- file.path(chunks.dir, chunk.str, "regions.RData")
+  counts.by.sample <- list()
+  for(bigwig.file in bigwig.file.vec){
+    sample.counts <-
+      readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+    sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+    sample.group <- basename(dirname(bigwig.file))
+    counts.by.sample[[paste(sample.id, sample.group)]] <-
+      data.table(sample.id, sample.group, sample.counts)
+  }
+  counts <- do.call(rbind, counts.by.sample)
+  for(res.str in names(joint.problems.by.res)){
+    res.problems <- joint.problems.by.res[[res.str]]
+    res.problems
+  }
+}
 
 blank <- unique(counts[, .(sample.id)])
 SegmentStep2 <- function(row.i){
