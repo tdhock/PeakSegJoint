@@ -18,10 +18,10 @@ before_install:
   - travis-tool.sh bootstrap
 
 install:
-  - travis-tool.sh install_deps
+  - Rscript -e "devtools::install_deps(upgrade=FALSE)"
+  - Rscript -e "devtools::install(dependencies=FALSE)"
 
 script:
-  - Rscript -e "devtools::install(dep=FALSE)"
   - Rscript -e "source('tests/testthat.R', chdir = TRUE)"
 
 after_failure:
