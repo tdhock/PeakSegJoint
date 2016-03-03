@@ -37,8 +37,11 @@ for(models.RData in models.RData.vec){
   }
 }
 
-set.seed(1)
-for(res.str in names(models.by.res)){
+chunks.dir <- dirname(dirname(models.RData))
+data.dir <- dirname(chunks.dir)
+
+SeparatePeaks <- function(res.str, seed=1){
+  set.seed(1)
   models.by.problem <- models.by.res[[res.str]]
   feature.mat.list <- list()
   target.mat.list <- list()
@@ -55,6 +58,8 @@ for(res.str in names(models.by.res)){
   feature.mat <- do.call(rbind, feature.mat.list)
   target.mat <- do.call(rbind, target.mat.list)
   fit <- IntervalRegressionMatrixCV(feature.mat, target.mat)
+  peaks.by.chunk.list <- list()
+  bins.by.chunk.list <- list()
   for(chunk.problem in names(models.by.problem)){
     models.by.sample <- models.by.problem[[chunk.problem]]
     for(id.group in names(models.by.sample)){
@@ -65,12 +70,63 @@ for(res.str in names(models.by.res)){
         min.log.lambda < pred.log.lambda &
           pred.log.lambda < max.log.lambda)
       stopifnot(nrow(selected)==1)
-      peaks.str <- paste(selected$peaks)
-      pred.peaks <- model$fit$peaks[[peaks.str]]
-      stop("TODO store metadata, plot pred peaks")
-    }
-  }
+      chunk.str <- paste(model$meta$chunk.id)
+      bins.by.chunk.list[[chunk.str]][[paste(chunk.problem, id.group)]] <-
+        data.table(model$meta, model$bins)
+      if(0 < selected$peaks){
+        peaks.str <- paste(selected$peaks)
+        pred.peaks <- model$fit$peaks[[peaks.str]]
+        peaks.by.chunk.list[[chunk.str]][[paste(chunk.problem, id.group)]] <- 
+          data.table(model$meta, pred.peaks)
+      }#if
+    }#for(id.group
+  }#for(chunk.problem
+  problems.by.chunk <- list()
+  for(chunk.str in names(peaks.by.chunk.list)){
+    peaks.list <- peaks.by.chunk.list[[chunk.str]]
+    peaks <- do.call(rbind, peaks.list)
+    clustered <- clusterPeaks(peaks)
+    joint.problems <- clustered2problems(clustered)
+    problems.by.chunk[[chunk.str]] <- joint.problems
+    if(FALSE){
+      bins <- do.call(rbind, bins.list)
+      bins.list <- bins.by.chunk.list[[chunk.str]]
+      problems <- unique(bins[, .(problemStart, problemEnd)])
+      problems[, problem.i := 1:.N]
+      ggplot()+
+        geom_point(aes((chromStart+chromEnd)/2e3, mean),
+                   color="grey",
+                   shape=1,
+                   data=bins)+
+        theme_bw()+
+        theme(panel.margin=grid::unit(0, "lines"))+
+        facet_grid(sample.group + sample.id ~ ., scales="free")+
+        geom_segment(aes(problemStart/1e3, problem.i,
+                         xend=problemEnd/1e3, yend=problem.i),
+                     data=data.table(
+                       sample.id="problems",
+                       sample.group="problems",
+                       problems))+
+        geom_segment(aes(problemStart/1e3, cluster,
+                         xend=problemEnd/1e3, yend=cluster),
+                     data=data.table(
+                       sample.id="joint",
+                       sample.group="joint",
+                       joint.problems))+
+        geom_segment(aes(chromStart/1e3, 0,
+                         xend=chromEnd/1e3, yend=0),
+                     color="deepskyblue",
+                     data=peaks)+
+        geom_point(aes(chromStart/1e3, 0),
+                   color="deepskyblue",
+                   data=peaks)
+    }#if(FALSE
+  }#for(chunk.str
+  list(problems=problems.by.chunk,
+       fit=fit)
 }
+separate.by.res <- mclapply.or.stop(names(models.by.res), SeparatePeaks)
+names(separate.by.res) <- names(models.by.res)
 
 if(all(sapply(sample.results.list, is.null))){
   print(sample.problems.dt)

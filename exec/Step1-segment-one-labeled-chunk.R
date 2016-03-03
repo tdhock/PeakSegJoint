@@ -116,6 +116,10 @@ SampleProblems <- function(problem.i){
     start <- as.integer(problem$problemStart)
     model <- segmentBins(
       problem.counts, start, bases.per.bin, bins.per.problem)
+    model$meta <- data.table(
+      problem.counts[1, .(sample.id, sample.group)],
+      problem,
+      chunk.id)
     sample.regions <- problem.regions[id.group]
     if(!is.na(sample.regions$sample.id[1])){
       
