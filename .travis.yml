@@ -18,8 +18,9 @@ before_install:
   - travis-tool.sh bootstrap
 
 install:
-  - travis-tool.sh install_devtools
-  - Rscript -e "devtools::install_deps(upgrade=FALSE, upgrade_dependencies=FALSE)"
+  - travis-tool.sh install_deps
+  - travis-tool.sh install_github tdhock/animint
+  - travis-tool.sh install_github tdhock/ggplot2
   - Rscript -e "devtools::install(dependencies=FALSE)"
 
 script:
