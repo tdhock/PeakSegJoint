@@ -60,6 +60,9 @@ IntervalRegressionProblemsCV <- function
  ){
   stopifnot(is.integer(fold.vec))
   stopifnot(length(fold.vec) == length(problem.list))
+  if(length(fold.vec) < 2){
+    return(list(predict=function(...)0))
+  }
   best.reg.list <- list()
   for(validation.fold in unique(fold.vec)){
     ##print(validation.fold)
@@ -264,6 +267,11 @@ IntervalRegressionProblems <- structure(function
   }
   all.targets <- do.call(rbind, targets.list)
   is.trivial.target <- apply(!is.finite(all.targets), 1, all)
+  if(all(is.trivial.target)){
+    return(list(
+      predict=function(...)0,
+      regularization.vec=0))
+  }
   nontrivial.i.vec <- which(!is.trivial.target)
 
   all.featureSum <- do.call(rbind, featureSum.list)

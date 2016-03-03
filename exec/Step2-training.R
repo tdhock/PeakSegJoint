@@ -94,6 +94,7 @@ SeparatePeaks <- function(res.str, seed=1){
   }#for(chunk.problem
   problems.by.chunk <- list()
   for(chunk.str in names(peaks.by.chunk.list)){
+    chunk <- chunks.list[[chunk.str]]
     peaks.list <- peaks.by.chunk.list[[chunk.str]]
     regions <- regions.by.chunk[[chunk.str]]
     prop.noPeaks <- regions[, list(
@@ -111,12 +112,34 @@ SeparatePeaks <- function(res.str, seed=1){
     setkey(joint.problems, problemStart, problemEnd)
     setkey(regions, chromStart, chromEnd)
     over.dt <- foverlaps(joint.problems, regions, nomatch=0L)
-    joint.problems[, overlaps.regions := ifelse(
-      cluster %in% over.dt$cluster, "some", "none")]
-    problems.by.chunk[[chunk.str]] <- joint.problems
+    over.dt[, problem.name := sprintf(
+      "%s:%d-%d", chunk$chrom, problemStart, problemEnd)]
+    over.dt[, region.name := sprintf(
+      "%s:%d-%d", chunk$chrom, chromStart, chromEnd)]
+    ## Edit assignment of labels to problems -- there should be only
+    ## one segmentation problem with a peak for each peakStart/peakEnd
+    ## label.
+    problems.by.chromStart <- split(over.dt, over.dt$chromStart)
+    assigned.by.chromStart <- list()
+    for(start.str in names(problems.by.chromStart)){
+      region.problems <- problems.by.chromStart[[start.str]]
+      multiple.problems <- any(1 < table(region.problems$sample.id))
+      peakStart <- any(region.problems$annotation=="peakStart")
+      peakEnd <- any(region.problems$annotation=="peakEnd")
+      if(multiple.problems){
+        if(peakStart){
+          region.problems[problemEnd < chromEnd, annotation := "noPeaks"]
+        }
+        if(peakEnd){
+          region.problems[chromStart < problemStart, annotation := "noPeaks"]
+        }
+      }
+      assigned.by.chromStart[[start.str]] <- region.problems
+    }
+    problems.by.chunk[[chunk.str]] <- do.call(rbind, assigned.by.chromStart)
     if(FALSE){
-      bins <- do.call(rbind, bins.list)
       bins.list <- bins.by.chunk.list[[chunk.str]]
+      bins <- do.call(rbind, bins.list)
       problems <- unique(bins[, .(problemStart, problemEnd)])
       problems[, problem.i := 1:.N]
       ggplot()+
@@ -165,19 +188,16 @@ for(res.str in names(separate.by.res)){
   problem.list <- separate.by.res[[res.str]]$problems
   for(chunk.str in names(problem.list)){
     problems.by.chunk[[chunk.str]][[res.str]] <-
-      data.table(sample.id=res.str, sample.group=res.str,
+      data.table(res.str,
                  problem.list[[chunk.str]])
   }
 }
 
-joint.by.problem <- list()
-joint.by.chunk <- list()
+joint.by.res <- list()
 labeled.by.chunk <- list()
 for(chunk.str in names(problems.by.chunk)){
   joint.problems.by.res <- problems.by.chunk[[chunk.str]]
-  regions <- regions.by.chunk[[chunk.str]]
-  chunk.problems <- do.call(rbind, joint.problems.by.res)
-  labeled.problems <- chunk.problems[overlaps.regions=="some",]
+  labeled.problems <- do.call(rbind, joint.problems.by.res)
   zoom <- labeled.problems[, list(
     zoomStart=min(problemStart),
     zoomEnd=max(problemEnd))]
@@ -193,11 +213,13 @@ for(chunk.str in names(problems.by.chunk)){
   counts <- do.call(rbind, counts.by.sample)
   setkey(counts, chromStart, chromEnd)
   if(FALSE){
+    show.problems <- data.table(labeled.problems)
+    show.problems[, sample.id := res.str]
+    show.problems[, sample.group := res.str]
     ggplot()+
       geom_segment(aes(problemStart/1e3, cluster,
-                       color=overlaps.regions,
                        xend=problemEnd/1e3, yend=cluster),
-                   data=chunk.problems)+
+                   data=show.problems)+
       geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                         fill=annotation),
                     alpha=0.5,
@@ -212,16 +234,16 @@ for(chunk.str in names(problems.by.chunk)){
       theme(panel.margin=grid::unit(0, "lines"))+
       facet_grid(sample.group + sample.id ~ ., scales="free")
   }
-  labeled.problems[, problem.name := sprintf(
-    "%s:%d-%d", chunk$chrom, problemStart, problemEnd)]
   uniq.problems <- unique(
-    labeled.problems[, .(problem.name, problemStart, problemEnd)])
+    labeled.problems[, .(res.str, problem.name, problemStart, problemEnd)])
+  setkey(labeled.problems, res.str, problem.name)
   SegmentJoint <- function(row.i){
     ##print(row.i)
     problem <- uniq.problems[row.i, ]
     problem[, problemStart1 := problemStart + 1L]
+    setkey(problem, res.str, problem.name)
+    problem.regions <- labeled.problems[problem]
     setkey(problem, problemStart1, problemEnd)
-    problem.regions <- foverlaps(problem, regions, nomatch=0L)
     problem.counts <-
       foverlaps(problem, counts, nomatch=0L, type="any")
     problem.counts[, .(chromStart=min(chromStart),
@@ -270,22 +292,24 @@ for(chunk.str in names(problems.by.chunk)){
     info
   }
   labeled.model.list <-
+    ##lapply(uniq.problems[, 1:.N], SegmentJoint)
     mclapply.or.stop(uniq.problems[, 1:.N], SegmentJoint)
-  ## It is OK to index the model list on problem name (even though the
-  ## same problem could occur in several resolutions), since anyways the
-  ## model should not change between resolutions.
-  names(labeled.model.list) <- uniq.problems$problem.name
-  joint.by.problem[uniq.problems$problem.name] <- labeled.model.list
-  stopifnot(table(names(labeled.model.list)) == 1)
-  joint.by.chunk[[chunk.str]] <- labeled.model.list
+  for(problem.i in 1:nrow(uniq.problems)){
+    problem <- uniq.problems[problem.i, ]
+    joint.by.res[[problem$res.str]][[problem$problem.name]] <- 
+      labeled.model.list[[problem.i]]
+  }
   labeled.by.chunk[[chunk.str]] <- data.table(chunk.str, labeled.problems)
 }
 all.labeled.problems <- do.call(rbind, labeled.by.chunk)
-setkey(all.labeled.problems, sample.id)
+setkey(all.labeled.problems, res.str)
 
 ResError <- function(res.str){
+  set.seed(1)
   res.problems <- all.labeled.problems[res.str]
+  joint.by.problem <- joint.by.res[[res.str]]
   train.by.problem <- list()
+  oracle.by.chunk <- list()
   for(problem.name in res.problems$problem.name){
     info <- joint.by.problem[[problem.name]]
     train.by.problem[[problem.name]] <- list(
@@ -297,6 +321,10 @@ ResError <- function(res.str){
   for(problem.i in 1:nrow(res.problems)){
     problem <- res.problems[problem.i,]
     info <- joint.by.problem[[problem$problem.name]]
+    min.err <- subset(info$error$modelSelection, errors==min(errors))
+    simplest <- subset(min.err, peaks==min(peaks))
+    oracle.by.chunk[[problem$chunk.str]][[problem$problem.name]] <-
+      subset(info$peaks, peaks==simplest$peaks)
     pred.log.lambda <- joint.fit$predict(info$features)
     pred.row <- subset(
       info$error$modelSelection,
@@ -308,10 +336,68 @@ ResError <- function(res.str){
   }
   error.by.chunk <- list()
   for(chunk.str in names(peaks.by.chunk)){
+    peaks.by.problem <- oracle.by.chunk[[chunk.str]]
     peaks.by.problem <- peaks.by.chunk[[chunk.str]]
     chunk.peaks <- do.call(rbind, peaks.by.problem)
     chunk.regions <- regions.by.chunk[[chunk.str]]
-    error.by.chunk[[chunk.str]] <- PeakErrorSamples(chunk.peaks, chunk.regions)
+    error.regions <- PeakErrorSamples(chunk.peaks, chunk.regions)
+    if(FALSE){# plot errors.
+      chunk <- chunks.list[[chunk.str]]
+      labeled.problems <- labeled.by.chunk[[chunk.str]]
+      zoom <- labeled.problems[, list(
+      zoomStart=min(problemStart),
+      zoomEnd=max(problemEnd))]
+      counts.by.sample <- list()
+      for(bigwig.file in bigwig.file.vec){
+        sample.counts <-
+          readBigWig(bigwig.file, chunk$chrom, zoom$zoomStart, zoom$zoomEnd)
+        sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+        sample.group <- basename(dirname(bigwig.file))
+        counts.by.sample[[paste(sample.id, sample.group)]] <-
+          data.table(sample.id, sample.group, sample.counts)
+      }
+      counts <- do.call(rbind, counts.by.sample)
+      ggplot()+
+        geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                          fill=annotation),
+                      alpha=0.5,
+                      color="grey",
+                      data=chunk.regions)+
+        scale_y_continuous("aligned read coverage",
+                           breaks=function(limits){
+                             floor(limits[2])
+                           })+
+        scale_linetype_manual("error type",
+                              limits=c("correct", 
+                                "false negative",
+                                "false positive"
+                                       ),
+                              values=c(correct=0,
+                                "false negative"=3,
+                                "false positive"=1))+
+        scale_x_continuous(paste("position on", chunk$chrom,
+                                 "(kilo bases = kb)"))+
+        geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                          linetype=status),
+                      fill=NA,
+                      size=1,
+                      color="black",
+                      data=error.regions)+
+        scale_fill_manual(values=ann.colors)+
+        geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                      ymin=0, ymax=count),
+                  color="grey50",
+                  data=counts)+
+        geom_segment(aes(chromStart/1e3, 0,
+                         xend=chromEnd/1e3, yend=0),
+                     data=chunk.peaks,
+                     color="deepskyblue",
+                     size=2)+
+        theme_bw()+
+        theme(panel.margin=grid::unit(0, "lines"))+
+        facet_grid(sample.group + sample.id ~ ., scales="free")
+    }
+    error.by.chunk[[chunk.str]] <- error.regions
   }
   error <- do.call(rbind, error.by.chunk)
   with(error, {
@@ -323,10 +409,10 @@ ResError <- function(res.str){
                regions=length(fp))
   })
 }
-res.vec <- unique(all.labeled.problems$sample.id)
+res.vec <- unique(all.labeled.problems$res.str)
 res.error.list <- mclapply.or.stop(res.vec, ResError)
 res.error <- do.call(rbind, res.error.list)
-print(res.error)
+print(res.error[order(bases.per.problem),])
 stop("check peaks")
 
 ## Check to make sure each peak occurs within its problem.

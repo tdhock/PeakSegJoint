@@ -254,10 +254,10 @@ print(positive.q <- quantile(positive.bases))
 min.bases.per.problem <- as.integer(positive.q[["50%"]] * 5)
 
 ## Define possible problem sizes.
-bases.per.problem.all <- as.integer(10^seq(3, 7, by=0.2))
+bases.per.problem.all <- as.integer(10^seq(3, 8, by=0.2))
 bases.per.problem.vec <-
   bases.per.problem.all[min.bases.per.problem < bases.per.problem.all &
-                          bases.per.problem.all < min.bases.per.problem * 100]
+                          bases.per.problem.all < min.bases.per.problem * 1000]
 
 ## Write chunks to separate RData files.
 chunk.id <- 1
