@@ -313,34 +313,21 @@ ResError <- function(res.str){
     chunk.regions <- regions.by.chunk[[chunk.str]]
     error.by.chunk[[chunk.str]] <- PeakErrorSamples(chunk.peaks, chunk.regions)
   }
-  stop("compute stats")
-  res.data <- step2.data.list[[res.str]]
-  error.row.name.vec <- with(problems.with.regions.list[[res.str]], {
-    paste(bases.per.problem, problem.name)
-  })
-  pred.peaks.list <- list()
-  for(error.row.name in error.row.name.vec){
-    error.info <- step2.error.list[[error.row.name]]
-    pred.peaks.list[[error.row.name]] <- error.info$peaks
-  }
-  pred.peaks <- if(length(pred.peaks.list) == 0){
-    Peaks()
-  }else{
-    do.call(rbind, pred.peaks.list)
-  }
-  res.regions <- do.call(rbind, res.data$regions)
-  error.regions <- PeakErrorSamples(pred.peaks, res.regions)
-  with(error.regions, {
-    data.table(bases.per.problem=as.integer(res.str),
+  error <- do.call(rbind, error.by.chunk)
+  with(error, {
+    data.table(res.str,
+               bases.per.problem=as.integer(res.str),
                fp=sum(fp),
                fn=sum(fn),
                errors=sum(fp+fn),
                regions=length(fp))
   })
 }
-res.error.list <- mclapply.or.stop(names(problems.with.regions.list), ResError)
+res.vec <- unique(all.labeled.problems$sample.id)
+res.error.list <- mclapply.or.stop(res.vec, ResError)
 res.error <- do.call(rbind, res.error.list)
 print(res.error)
+stop("check peaks")
 
 ## Check to make sure each peak occurs within its problem.
 for(prob.i in 1:nrow(step2.problems)){
