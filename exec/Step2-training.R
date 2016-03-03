@@ -170,6 +170,9 @@ for(res.str in names(separate.by.res)){
   }
 }
 
+joint.by.problem <- list()
+joint.by.chunk <- list()
+labeled.by.chunk <- list()
 for(chunk.str in names(problems.by.chunk)){
   joint.problems.by.res <- problems.by.chunk[[chunk.str]]
   regions <- regions.by.chunk[[chunk.str]]
@@ -188,6 +191,7 @@ for(chunk.str in names(problems.by.chunk)){
       data.table(sample.id, sample.group, sample.counts)
   }
   counts <- do.call(rbind, counts.by.sample)
+  setkey(counts, chromStart, chromEnd)
   if(FALSE){
     ggplot()+
       geom_segment(aes(problemStart/1e3, cluster,
@@ -208,118 +212,89 @@ for(chunk.str in names(problems.by.chunk)){
       theme(panel.margin=grid::unit(0, "lines"))+
       facet_grid(sample.group + sample.id ~ ., scales="free")
   }
-  for(res.str in names(joint.problems.by.res)){
-    res.problems <- joint.problems.by.res[[res.str]]
-    res.problems
-  }
-}
-
-blank <- unique(counts[, .(sample.id)])
-SegmentStep2 <- function(row.i){
-  ##print(row.i)
-  problem <- step2.problems[row.i, ]
-  problem[, problemStart1 := problemStart + 1L]
-  setkey(problem, problemStart1, problemEnd)
-  problem.counts <-
-    foverlaps(counts, problem, nomatch=0L, type="any")
-  problem.counts[, .(chromStart=min(chromStart),
-                     chromEnd=max(chromEnd)),
-                 by=sample.id]
-  problem.counts[, `:=`(
-    chromStart=ifelse(chromStart < problemStart, problemStart, chromStart),
-    chromEnd=ifelse(problemEnd < chromEnd, problemEnd, chromEnd)
-    )]
-  coverage.limits <- 
+  labeled.problems[, problem.name := sprintf(
+    "%s:%d-%d", chunk$chrom, problemStart, problemEnd)]
+  uniq.problems <- unique(
+    labeled.problems[, .(problem.name, problemStart, problemEnd)])
+  SegmentJoint <- function(row.i){
+    ##print(row.i)
+    problem <- uniq.problems[row.i, ]
+    problem[, problemStart1 := problemStart + 1L]
+    setkey(problem, problemStart1, problemEnd)
+    problem.regions <- foverlaps(problem, regions, nomatch=0L)
+    problem.counts <-
+      foverlaps(problem, counts, nomatch=0L, type="any")
     problem.counts[, .(chromStart=min(chromStart),
                        chromEnd=max(chromEnd)),
                    by=sample.id]
-  with(coverage.limits, {
-    stopifnot(problem$problemStart <= chromStart)
-    stopifnot(chromEnd <= problem$problemEnd)
-  })
-  with(problem.counts, stopifnot(chromStart < chromEnd))
-
-  ## counts.by.sample <- table(problem.counts$sample.id)
-  ## is.segment <- counts.by.sample == 1
-  ## is.step <- !is.segment
-  ## step.ids <- names(counts.by.sample)[is.step]
-  ## segment.ids <- names(counts.by.sample)[is.segment]
-  ## setkey(problem.counts, sample.id)
-  ## segment.dt <- problem.counts[segment.ids]
-  ## step.dt <- problem.counts[step.ids]
-  ## ggplot()+
-  ##   theme_bw()+
-  ##   theme(panel.margin=grid::unit(0, "cm"))+
-  ##   facet_grid(sample.id ~ ., labeller=function(var, val){
-  ##     sub("McGill0", "", sub(" ", "\n", val))
-  ##   }, scales="free")+
-  ##   geom_segment(aes((problemStart+0.5)/1e3, 0,
-  ##                    xend=problemEnd/1e3, yend=0),
-  ##                data=problem,
-  ##                color="black",
-  ##                size=1)+
-  ##   geom_segment(aes((chromStart+0.5)/1e3, count,
-  ##                    xend=chromEnd/1e3, yend=count),
-  ##                data=problem.counts,
-  ##                color="grey50")+
-  ##   ## geom_segment(aes((chromStart+0.5)/1e3, count,
-  ##   ##                  xend=chromEnd/1e3, yend=count),
-  ##   ##              data=segment.dt,
-  ##   ##              color="grey50")+
-  ##   ## geom_step(aes((chromStart+0.5)/1e3, count),
-  ##   ##           data=step.dt,
-  ##   ##           color="grey50")+
-  ##   geom_blank(data=blank)
-
-  profile.list <- ProfileList(problem.counts)
-  fit <- tryCatch({
-    PeakSegJointSeveral(profile.list)
-  }, error=function(e){
-    NULL
-  })
-  if(is.null(fit)){
-    return(NULL)
-  }
-  info <- ConvertModelList(fit)
-  info$features <- featureMatrix(profile.list)
-  info
-}
-step2.model.list <-
-  mclapply.or.stop(seq_along(step2.problems$problem.name), SegmentStep2)
-## It is OK to index the model list on problem name (even though the
-## same problem could occur in several resolutions), since anyways the
-## model should not change between resolutions.
-names(step2.model.list) <- step2.problems$problem.name
-stopifnot(table(names(step2.model.list)) == 1)
-
-ProblemError <- function(row.i){
-  prob.meta <- problems.with.regions[row.i, ]
-  one.res <- step2.data.list[[paste(prob.meta$bases.per.problem)]]
-  problem.name <- paste(prob.meta$problem.name)
-  problem.regions <- one.res$regions[[problem.name]]
-  converted <- step2.model.list[[problem.name]]
-  if(is.null(converted)){
-    pred.peaks <- Peaks()
-    prob.err.list <- PeakSegJointError(list(peaks=NULL), problem.regions)
-  }else{
-    prob.err.list <- PeakSegJointError(converted, problem.regions)
-    best.models <-
-      subset(prob.err.list$modelSelection, errors==min(errors))
-    peaks.num <- min(best.models$peaks)
-    pred.peaks <- if(peaks.num > 0){
-      subset(converted$peaks, peaks == peaks.num)
+    problem.counts[, `:=`(
+      chromStart=ifelse(chromStart < problemStart, problemStart, chromStart),
+      chromEnd=ifelse(problemEnd < chromEnd, problemEnd, chromEnd)
+      )]
+    coverage.limits <- 
+      problem.counts[, .(chromStart=min(chromStart),
+                         chromEnd=max(chromEnd)),
+                     by=sample.id]
+    with(coverage.limits, {
+      stopifnot(problem$problemStart <= chromStart)
+      stopifnot(chromEnd <= problem$problemEnd)
+    })
+    seg.counts <- problem.counts[chromStart < chromEnd,]
+    if(FALSE){
+      ggplot()+
+        theme_bw()+
+        theme(panel.margin=grid::unit(0, "cm"))+
+        facet_grid(sample.id ~ ., scales="free")+
+        geom_segment(aes((problemStart+0.5)/1e3, 0,
+                         xend=problemEnd/1e3, yend=0),
+                     data=problem,
+                     color="black",
+                     size=1)+
+        geom_rect(aes(xmin=chromStart/1e3, ymin=0,
+                      xmax=chromEnd/1e3, ymax=count),
+                  data=seg.counts,
+                  color="grey50")
     }
+    profile.list <- ProfileList(seg.counts)
+    fit <- tryCatch({
+      PeakSegJointSeveral(profile.list)
+    }, error=function(e){
+      NULL
+    })
+    if(is.null(fit)){
+      return(NULL)
+    }
+    info <- ConvertModelList(fit)
+    info$features <- featureMatrix(profile.list)
+    info$error <- PeakSegJointError(info, problem.regions)
+    info
   }
-  list(problem=prob.err.list,
-       peaks=pred.peaks)
+  labeled.model.list <-
+    mclapply.or.stop(uniq.problems[, 1:.N], SegmentJoint)
+  ## It is OK to index the model list on problem name (even though the
+  ## same problem could occur in several resolutions), since anyways the
+  ## model should not change between resolutions.
+  names(labeled.model.list) <- uniq.problems$problem.name
+  joint.by.problem[uniq.problems$problem.name] <- labeled.model.list
+  stopifnot(table(names(labeled.model.list)) == 1)
+  joint.by.chunk[[chunk.str]] <- labeled.model.list
+  labeled.by.chunk[[chunk.str]] <- labeled.problems
 }
-step2.error.list <-
-  mclapply.or.stop(seq_along(problems.with.regions$problem.name), ProblemError)
-names(step2.error.list) <- with(problems.with.regions, {
-  paste(bases.per.problem, problem.name)
-})
+
+all.labeled.problems <- do.call(rbind, labeled.by.chunk)
+setkey(all.labeled.problems, sample.id)
 
 ResError <- function(res.str){
+  res.problems <- all.labeled.problems[res.str]
+  train.by.problem <- list()
+  for(problem.name in res.problems$problem.name){
+    info <- joint.by.problem[[problem.name]]
+    train.by.problem[[problem.name]] <- list(
+      features=info$features,
+      target=info$error$target)
+  }
+  joint.fit <- IntervalRegressionProblemsCV(train.by.problem)
+  stop("TODO compute error of fit peaks")
   res.data <- step2.data.list[[res.str]]
   error.row.name.vec <- with(problems.with.regions.list[[res.str]], {
     paste(bases.per.problem, problem.name)
