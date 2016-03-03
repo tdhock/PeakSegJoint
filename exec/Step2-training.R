@@ -30,9 +30,10 @@ regions.by.chunk <- list()
 chunks.list <- list()
 for(models.RData in models.RData.vec){
   objs <- load(models.RData)
-  objs <- load(regions.RData)
   chunk.dir <- dirname(models.RData)
   chunk.id <- basename(chunk.dir)
+  regions.RData <- file.path(chunk.dir, "regions.RData")
+  objs <- load(regions.RData)
   regions.by.chunk[[chunk.id]] <- regions
   chunks.list[[chunk.id]] <- chunk
   for(problem.i in 1:nrow(sample.problems.dt)){
@@ -107,6 +108,11 @@ SeparatePeaks <- function(res.str, seed=1){
     peaks <- do.call(rbind, peaks.list)
     clustered <- clusterPeaks(peaks)
     joint.problems <- clustered2problems(clustered)
+    setkey(joint.problems, problemStart, problemEnd)
+    setkey(regions, chromStart, chromEnd)
+    over.dt <- foverlaps(joint.problems, regions, nomatch=0L)
+    joint.problems[, overlaps.regions := ifelse(
+      cluster %in% over.dt$cluster, "some", "none")]
     problems.by.chunk[[chunk.str]] <- joint.problems
     if(FALSE){
       bins <- do.call(rbind, bins.list)
@@ -158,23 +164,50 @@ problems.by.chunk <- list()
 for(res.str in names(separate.by.res)){
   problem.list <- separate.by.res[[res.str]]$problems
   for(chunk.str in names(problem.list)){
-    problems.by.chunk[[chunk.str]][[res.str]] <- problem.list[[chunk.str]]
+    problems.by.chunk[[chunk.str]][[res.str]] <-
+      data.table(sample.id=res.str, sample.group=res.str,
+                 problem.list[[chunk.str]])
   }
 }
 
 for(chunk.str in names(problems.by.chunk)){
   joint.problems.by.res <- problems.by.chunk[[chunk.str]]
-  regions.RData <- file.path(chunks.dir, chunk.str, "regions.RData")
+  regions <- regions.by.chunk[[chunk.str]]
+  chunk.problems <- do.call(rbind, joint.problems.by.res)
+  labeled.problems <- chunk.problems[overlaps.regions=="some",]
+  zoom <- labeled.problems[, list(
+    zoomStart=min(problemStart),
+    zoomEnd=max(problemEnd))]
   counts.by.sample <- list()
   for(bigwig.file in bigwig.file.vec){
     sample.counts <-
-      readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+      readBigWig(bigwig.file, chunk$chrom, zoom$zoomStart, zoom$zoomEnd)
     sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
     sample.group <- basename(dirname(bigwig.file))
     counts.by.sample[[paste(sample.id, sample.group)]] <-
       data.table(sample.id, sample.group, sample.counts)
   }
   counts <- do.call(rbind, counts.by.sample)
+  if(FALSE){
+    ggplot()+
+      geom_segment(aes(problemStart/1e3, cluster,
+                       color=overlaps.regions,
+                       xend=problemEnd/1e3, yend=cluster),
+                   data=chunk.problems)+
+      geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                        fill=annotation),
+                    alpha=0.5,
+                    color="grey",
+                    data=regions)+
+      scale_fill_manual(values=ann.colors)+
+      geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+                    ymin=0, ymax=count),
+                color="grey50",
+                data=counts)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "lines"))+
+      facet_grid(sample.group + sample.id ~ ., scales="free")
+  }
   for(res.str in names(joint.problems.by.res)){
     res.problems <- joint.problems.by.res[[res.str]]
     res.problems
