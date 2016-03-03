@@ -195,8 +195,12 @@ IntervalRegressionMatrixPath <- function
          stopifnot(pred.feature.names %in% colnames(mat))
          raw.mat <- mat[, pred.feature.names, drop=FALSE]
          raw.mat[!is.finite(raw.mat)] <- 0 
-         mean.mat <- matrix(mean.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         sd.mat <- matrix(sd.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         mean.mat <- matrix(
+           mean.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         sd.mat <- matrix(
+           sd.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
          norm.mat <- (raw.mat-mean.mat)/sd.mat
          intercept.mat <- cbind("(Intercept)"=1, norm.mat)
          intercept.mat %*% pred.param.mat
@@ -366,8 +370,12 @@ IntervalRegressionProblems <- structure(function
          stopifnot(pred.feature.names %in% colnames(mat))
          raw.mat <- mat[, pred.feature.names, drop=FALSE]
          raw.mat[!is.finite(raw.mat)] <- 0 
-         mean.mat <- matrix(mean.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         sd.mat <- matrix(sd.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         mean.mat <- matrix(
+           mean.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         sd.mat <- matrix(
+           sd.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
          norm.mat <- (raw.mat-mean.mat)/sd.mat
          intercept.mat <- cbind("(Intercept)"=1, norm.mat)
          colSums(intercept.mat %*% pred.param.mat)

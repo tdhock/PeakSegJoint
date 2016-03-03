@@ -278,9 +278,8 @@ for(chunk.str in names(problems.by.chunk)){
   joint.by.problem[uniq.problems$problem.name] <- labeled.model.list
   stopifnot(table(names(labeled.model.list)) == 1)
   joint.by.chunk[[chunk.str]] <- labeled.model.list
-  labeled.by.chunk[[chunk.str]] <- labeled.problems
+  labeled.by.chunk[[chunk.str]] <- data.table(chunk.str, labeled.problems)
 }
-
 all.labeled.problems <- do.call(rbind, labeled.by.chunk)
 setkey(all.labeled.problems, sample.id)
 
@@ -294,7 +293,27 @@ ResError <- function(res.str){
       target=info$error$target)
   }
   joint.fit <- IntervalRegressionProblemsCV(train.by.problem)
-  stop("TODO compute error of fit peaks")
+  peaks.by.chunk <- list()
+  for(problem.i in 1:nrow(res.problems)){
+    problem <- res.problems[problem.i,]
+    info <- joint.by.problem[[problem$problem.name]]
+    pred.log.lambda <- joint.fit$predict(info$features)
+    pred.row <- subset(
+      info$error$modelSelection,
+      min.log.lambda < pred.log.lambda &
+        pred.log.lambda < max.log.lambda)
+    stopifnot(nrow(pred.row)==1)
+    peaks.by.chunk[[problem$chunk.str]][[problem$problem.name]] <- 
+      subset(info$peaks, peaks==pred.row$peaks)
+  }
+  error.by.chunk <- list()
+  for(chunk.str in names(peaks.by.chunk)){
+    peaks.by.problem <- peaks.by.chunk[[chunk.str]]
+    chunk.peaks <- do.call(rbind, peaks.by.problem)
+    chunk.regions <- regions.by.chunk[[chunk.str]]
+    error.by.chunk[[chunk.str]] <- PeakErrorSamples(chunk.peaks, chunk.regions)
+  }
+  stop("compute stats")
   res.data <- step2.data.list[[res.str]]
   error.row.name.vec <- with(problems.with.regions.list[[res.str]], {
     paste(bases.per.problem, problem.name)
