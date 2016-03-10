@@ -652,6 +652,7 @@ for(chrom.i in seq_along(ranges.by.chrom)){
 overlapping.problems <- do.call(rbind, problems.by.chrom)
 load(file.path(data.dir, "jobs.RData"))
 overlapping.problems$job <- sort(rep(1:n.jobs, l=nrow(overlapping.problems)))
+cat("counts of problems per job:\n")
 table(overlapping.problems$job)
 problems.by.job <- split(overlapping.problems, overlapping.problems$job)
 
