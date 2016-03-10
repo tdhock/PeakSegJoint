@@ -33,6 +33,7 @@ where there are path/to/*/*.bigwig files")
 ##NEEDS TO BE ABSOLUTE!
 labels.file.vec <- normalizePath(argv, mustWork=TRUE)
 data.dir <- dirname(labels.file.vec[1])
+save(n.jobs, file=file.path(data.dir, "jobs.RData"))
 
 ## Step0 generates some files for every chunk, which we need to
 ## examine to make the step2 commands, so we run it interactively.
@@ -48,60 +49,51 @@ if(status != 0){
 }
 load(file.path(data.dir, "chunk.file.map.RData"))
 
-Step1 <-
-  system.file(file.path("exec", "Step1-segment-one-labeled-chunk.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-regions.RData.vec <-
-  Sys.glob(file.path(data.dir, "PeakSegJoint-chunks", "*", "regions.RData"))
-chunk.dir.vec <- dirname(regions.RData.vec)
-problems.RData.vec <- file.path(chunk.dir.vec, "problems.RData")
-
-Step2 <- 
-  system.file(file.path("exec", "Step2-training.R"),
+Step1 <- 
+  system.file(file.path("exec", "Step1-training.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 chunks.dir <- file.path(data.dir, "PeakSegJoint-chunks")
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 
-## Step3e and Step4v make test error estimates and visualizations
+## Step2e and Step3v make test error estimates and visualizations
 ## using the labeled data.
-Step3e <-
-  system.file(file.path("exec", "Step3e-estimate-test-error.R"),
+Step2e <-
+  system.file(file.path("exec", "Step2e-estimate-test-error.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 test.error.params <-
   expand.grid(outer.fold=1:outer.folds,
               chunk.order.seed=1:n.chunk.order.seeds)
-Step4e <-
-  system.file(file.path("exec", "Step4e-plot-test-error.R"),
+Step3e <-
+  system.file(file.path("exec", "Step3e-plot-test-error.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 oJob.dir <- file.path(data.dir, "PeakSegJoint-overlapping")
 dir.create(oJob.dir, showWarnings=FALSE)
-Step4v <-
-  system.file(file.path("exec", "Step4v-viz-one-labeled-chunk.R"),
+Step3v <-
+  system.file(file.path("exec", "Step3v-viz-one-labeled-chunk.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 
 job.vec <- 1:n.jobs
+Step2 <-
+  system.file(file.path("exec", "Step2-overlapping-problems.R"),
+              mustWork=TRUE,
+              package="PeakSegJoint")
 Step3 <-
-  system.file(file.path("exec", "Step3-overlapping-problems.R"),
+  system.file(file.path("exec", "Step3-combine-overlapping.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 Step4 <-
-  system.file(file.path("exec", "Step4-combine-overlapping.R"),
-              mustWork=TRUE,
-              package="PeakSegJoint")
-Step5 <-
-  system.file(file.path("exec", "Step5-final-problems.R"),
+  system.file(file.path("exec", "Step4-final-problems.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 pred.dir <- file.path(data.dir, "PeakSegJoint-predictions")
 dir.create(pred.dir, showWarnings=FALSE)
 combined.problems.RData <- file.path(data.dir, "combined.problems.RData")
-Step6 <-
-  system.file(file.path("exec", "Step6-write-bed-files.R"),
+Step5 <-
+  system.file(file.path("exec", "Step5-write-bed-files.R"),
               mustWork=TRUE,
               package="PeakSegJoint")
 
@@ -120,16 +112,11 @@ job <- function(command.line, name, produces){
 cmd.list <-
   list(step("Step1", "04:00:00",
             job(paste(Rscript, Step1, chunk.dir.vec),
-                paste0("chunk", basename(chunk.dir.vec)),
-                problems.RData.vec)),
-       step("Step2", "02:00:00",
-            job(paste(Rscript, Step2, chunks.dir, n.jobs),
                 "training",
-                trained.model.RData),
-            "Step1"),
-       step("Step3e", "20:00:00",
+                trained.model.RData)),
+       step("Step2e", "20:00:00",
             with(test.error.params, job(
-              paste(Rscript, Step3e, trained.model.RData,
+              paste(Rscript, Step2e, trained.model.RData,
                     chunk.order.seed, outer.fold),
               paste0("seed", chunk.order.seed, "fold", outer.fold),
               file.path(chunks.dir,
@@ -137,38 +124,38 @@ cmd.list <-
                         paste0("seed", chunk.order.seed,
                                "fold", outer.fold,
                                ".RData")))),
-            "Step2"),
-       step("Step4e", "02:00:00",
-            job(paste(Rscript, Step4e, chunks.dir),
+            "Step1"),
+       step("Step3e", "02:00:00",
+            job(paste(Rscript, Step3e, chunks.dir),
                 "vizTest",
                 file.path(chunks.dir, "figure-test-errors",
                           "test.metrics.curves.RData")),
-            "Step3e"),
-       step("Step4v", "02:00:00",
-            job(paste(Rscript, Step4v, chunk.dir.vec),
+            "Step2e"),
+       step("Step3v", "02:00:00",
+            job(paste(Rscript, Step3v, chunk.dir.vec),
                 paste0("chunk", basename(chunk.dir.vec), "viz"),
                 file.path(chunk.dir.vec, "figure-train-errors.png")),
-            "Step3e"),
-       step("Step3", "20:00:00",
-            job(paste(Rscript, Step3, trained.model.RData, job.vec),
+            "Step2e"),
+       step("Step2", "20:00:00",
+            job(paste(Rscript, Step2, trained.model.RData, job.vec),
                 paste0("oJob", job.vec),
                 file.path(oJob.dir, paste0(job.vec, ".RData"))),
-            "Step2"),
-       step("Step4", "02:00:00",
-            job(paste(Rscript, Step4, oJob.dir, n.jobs),
+            "Step1"),
+       step("Step3", "02:00:00",
+            job(paste(Rscript, Step3, oJob.dir, n.jobs),
                 "combine",
                 file.path(data.dir, "combined.problems.RData")),
-            "Step3"),
-       step("Step5", "20:00:00",
-            job(paste(Rscript, Step5, combined.problems.RData, job.vec),
+            "Step2"),
+       step("Step4", "20:00:00",
+            job(paste(Rscript, Step4, combined.problems.RData, job.vec),
                 paste0("finalJob", job.vec),
                 file.path(pred.dir, paste0(job.vec, ".RData"))),
-            "Step4"),
-       step("Step6", "02:00:00",
-            job(paste(Rscript, Step6, pred.dir),
+            "Step3"),
+       step("Step5", "02:00:00",
+            job(paste(Rscript, Step5, pred.dir),
                 "bed",
                 file.path(data.dir, "PeakSegJoint.predictions.RData")),
-            "Step5"))
+            "Step4"))
 
 depend.list <- list()
 for(step.list in cmd.list){

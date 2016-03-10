@@ -44,3 +44,25 @@ clusterPeaks <- structure(function
                      xend=chromEnd+1/2, yend=sample.id, color=factor(cluster)),
                      data=clustered)
 })
+
+clustered2problems <- function(clustered.df){
+  clustered.dt <- data.table(clustered.df)
+  clusters <- clustered.dt[, list(
+    peakStart=min(chromStart),
+    peakEnd=max(chromEnd)
+    ), by=cluster]
+  setkey(clusters, peakStart, peakEnd)
+  clusters[, peakBases := peakEnd - peakStart]
+  clusters[, expandStart := peakStart - peakBases]
+  clusters[, expandEnd := peakEnd + peakBases]
+  clusters[, overlaps.next := c(expandStart[-1] < expandEnd[-.N], FALSE)]
+  clusters[, overlaps.prev := c(FALSE, overlaps.next[-.N])]
+  clusters[, center.before.next := c((peakStart[-1] + peakEnd[-.N])/2, NA)]
+  clusters[, center.after.prev := c(NA, center.before.next[-.N])]
+  clusters[, problemStart := as.integer(ifelse(overlaps.prev,
+                            center.after.prev, expandStart))]
+  clusters[, problemEnd := as.integer(ifelse(overlaps.next,
+                          center.before.next, expandEnd))]
+  clusters
+}
+

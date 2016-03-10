@@ -1,3 +1,220 @@
+IntervalRegressionMatrixCV <- function
+### Use cross-validation to estimate the optimal regularization, by
+### picking the value that minimize the number of incorrectly
+### predicted target intervals.
+(feature.mat,
+### Numeric feature matrix.
+ target.mat,
+### Numeric target matrix.
+ n.folds=5,
+### Number of cross-validation folds.
+ fold.vec=sample(rep(1:n.folds, l=nrow(feature.mat)))
+### Integer vector of fold id numbers.
+ ){
+  stopifnot(is.numeric(feature.mat))
+  stopifnot(is.matrix(feature.mat))
+  n.observations <- nrow(feature.mat)
+  stopifnot(is.numeric(target.mat))
+  stopifnot(is.matrix(target.mat))
+  stopifnot(nrow(target.mat) == n.observations)
+  stopifnot(ncol(target.mat) == 2)
+  stopifnot(is.integer(fold.vec))
+  stopifnot(length(fold.vec) == n.observations)
+  best.reg.list <- list()
+  for(validation.fold in unique(fold.vec)){
+    ##print(validation.fold)
+    is.validation <- fold.vec == validation.fold
+    is.train <- !is.validation
+    train.features <- feature.mat[is.train, ]
+    train.targets <- target.mat[is.train, ]
+    fit <- IntervalRegressionMatrixPath(
+      train.features, train.targets, max.iterations=1e3, verbose=0)
+    validation.features <- feature.mat[is.validation, ]
+    pred.log.lambda <- fit$predict(validation.features)
+    validation.targets <- target.mat[is.validation, ]
+    too.small <- pred.log.lambda < validation.targets[, 1]
+    too.big <- validation.targets[, 2] < pred.log.lambda
+    is.error <- too.small | too.big
+    error.vec <- colSums(is.error)
+    best.reg.vec <- fit$regularization.vec[error.vec == min(error.vec)]
+    best.reg.list[[paste(validation.fold)]] <- max(best.reg.vec) #simplest model
+  }
+  mean.reg <- mean(unlist(best.reg.list))
+  IntervalRegressionMatrixPath(
+    feature.mat, target.mat,
+    initial.regularization=mean.reg,
+    factor.regularization=NULL,
+    verbose=0)
+}
+
+IntervalRegressionProblemsCV <- function
+### Use cross-validation to estimate the optimal regularization, by
+### picking the value that minimize the number of incorrectly
+### predicted target intervals.
+(problem.list,
+### List of lists with features and targets.
+ n.folds=5,
+### Number of cross-validation folds.
+ fold.vec=sample(rep(1:n.folds, l=length(problem.list)))
+### Integer vector of fold id numbers.
+ ){
+  stopifnot(is.integer(fold.vec))
+  stopifnot(length(fold.vec) == length(problem.list))
+  if(length(fold.vec) < 2){
+    return(list(predict=function(...)0))
+  }
+  best.reg.list <- list()
+  for(validation.fold in unique(fold.vec)){
+    ##print(validation.fold)
+    is.validation <- fold.vec == validation.fold
+    is.train <- !is.validation
+    train.list <- problem.list[is.train]
+    fit <- IntervalRegressionProblems(
+      train.list, max.iterations=1e3, verbose=0)
+    validation.list <- problem.list[is.validation]
+    error.mat <- matrix(
+      NA, length(validation.list), length(fit$regularization.vec))
+    for(i in seq_along(validation.list)){
+      info <- validation.list[[i]]
+      pred.log.lambda <- fit$predict(info$features)
+      too.small <- pred.log.lambda < info$target[1]
+      too.big <- info$target[2] < pred.log.lambda
+      is.error <- too.small | too.big
+      error.mat[i, ] <- is.error
+    }
+    error.vec <- colSums(error.mat)
+    best.reg.vec <- fit$regularization.vec[error.vec == min(error.vec)]
+    best.reg.list[[paste(validation.fold)]] <- max(best.reg.vec) #simplest model
+  }
+  mean.reg <- mean(unlist(best.reg.list))
+  IntervalRegressionProblems(
+    problem.list,
+    initial.regularization=mean.reg,
+    factor.regularization=NULL,
+    verbose=0)
+}
+
+IntervalRegressionMatrixPath <- function
+### Interval regression using the squared hinge loss, for a path of
+### regularization parameters.
+(feature.mat,
+### Numeric feature matrix.
+ target.mat,
+### Numeric target matrix.
+ initial.regularization=0.001,
+### Initial regularization parameter.
+ factor.regularization=1.5,
+### Increase regularization by this factor after finding an optimal
+### solution. Or NULL to compute just one model
+### (initial.regularization).
+ verbose=1,
+### Print messages if >= 1.
+ ...
+### Other parameters to pass to IntervalRegressionMatrix.
+ ){
+  stopifnot(is.numeric(feature.mat))
+  stopifnot(is.matrix(feature.mat))
+  n.observations <- nrow(feature.mat)
+  stopifnot(is.numeric(target.mat))
+  stopifnot(is.matrix(target.mat))
+  stopifnot(nrow(target.mat) == n.observations)
+  stopifnot(ncol(target.mat) == 2)
+  stopifnot(is.numeric(initial.regularization))
+  stopifnot(length(initial.regularization)==1)
+
+  is.trivial.target <- apply(!is.finite(target.mat), 1, all)
+  nontrivial.features <- feature.mat[!is.trivial.target, ]
+  nontrivial.targets <- target.mat[!is.trivial.target, ]
+  is.finite.feature <- apply(is.finite(nontrivial.features), 2, all)
+  finite.features <- nontrivial.features[, is.finite.feature, drop=FALSE]
+  all.mean.vec <- colMeans(finite.features)
+  all.sd.vec <- apply(finite.features, 2, sd)
+  is.invariant <- all.sd.vec == 0
+  train.feature.i <- which(!is.invariant)
+  train.feature.names <- colnames(finite.features)[train.feature.i]
+  mean.vec <- all.mean.vec[train.feature.names]
+  sd.vec <- all.sd.vec[train.feature.names]
+  invariant.features <- finite.features[, train.feature.names, drop=FALSE]
+  mean.mat <- matrix(
+    mean.vec, nrow(invariant.features), ncol(invariant.features), byrow=TRUE)
+  sd.mat <- matrix(
+    sd.vec, nrow(invariant.features), ncol(invariant.features), byrow=TRUE)
+  norm.features <- (invariant.features-mean.mat)/sd.mat
+  intercept.features <- cbind("(Intercept)"=1, norm.features)
+  apply(intercept.features, 2, mean)
+  apply(intercept.features, 2, sd)
+
+  regularization <- initial.regularization
+  n.features <- ncol(intercept.features)
+  param.vec <- rep(0, n.features)
+  n.nonzero <- n.features
+
+  param.vec.list <- list()
+  regularization.vec.list <- list()
+  while(n.nonzero > 1){
+    param.vec <-
+      IntervalRegressionMatrix(intercept.features, nontrivial.targets,
+                               param.vec,
+                               regularization,
+                               verbose=verbose,
+                               ...)
+    n.zero <- sum(param.vec == 0)
+    n.nonzero <- sum(param.vec != 0)
+    l1.norm <- sum(abs(param.vec[-1]))
+    if(verbose >= 1){
+      cat(sprintf("regularization=%8.4f L1norm=%8.4f zeros=%d\n",
+                  regularization, l1.norm, n.zero))
+    }
+    param.vec.list[[paste(regularization)]] <- param.vec
+    regularization.vec.list[[paste(regularization)]] <- regularization
+    if(is.null(factor.regularization)){
+      n.nonzero <- 1 #stops while loop.
+    }else{
+      stopifnot(is.numeric(factor.regularization))
+      stopifnot(length(factor.regularization)==1)
+      regularization <- regularization * factor.regularization
+    }
+  }
+  param.mat <- do.call(cbind, param.vec.list)
+  if(verbose >= 1){
+    cat(paste0("Done computing parameter matrix (",
+               nrow(param.mat), " features x ",
+               ncol(param.mat), " regularization parameters)\n"))
+  }
+  feature.not.used <- apply(param.mat[-1, ,drop=FALSE] == 0, 1, all)
+  pred.feature.names <- train.feature.names[!feature.not.used]
+  pred.param.mat <-
+    param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
+  list(param.mat=param.mat,
+       regularization.vec=do.call(c, regularization.vec.list),
+       mean.vec=mean.vec,
+       sd.vec=sd.vec,
+       train.feature.names=train.feature.names,
+       pred.feature.names=pred.feature.names,
+       pred.param.mat=pred.param.mat,
+       predict=function(mat){
+         stopifnot(is.matrix(mat))
+         stopifnot(is.numeric(mat))
+         stopifnot(pred.feature.names %in% colnames(mat))
+         raw.mat <- mat[, pred.feature.names, drop=FALSE]
+         raw.mat[!is.finite(raw.mat)] <- 0 
+         mean.mat <- matrix(
+           mean.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         sd.mat <- matrix(
+           sd.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         norm.mat <- (raw.mat-mean.mat)/sd.mat
+         intercept.mat <- cbind("(Intercept)"=1, norm.mat)
+         intercept.mat %*% pred.param.mat
+       })
+### List representing fit model. You can do
+### fit$predict(feature.matrix) to get a predicted log penalty
+### value. The mean.vec and sd.vec were used for scaling the training
+### data matrices. The param.mat is the n.features * n.regularization
+### numeric matrix of optimal coefficients.
+}
+
 IntervalRegressionProblems <- structure(function
 ### Compute a sequence of interval regression models for increasingly
 ### more L1 regularization, until we get to a regularization parameter
@@ -50,6 +267,11 @@ IntervalRegressionProblems <- structure(function
   }
   all.targets <- do.call(rbind, targets.list)
   is.trivial.target <- apply(!is.finite(all.targets), 1, all)
+  if(all(is.trivial.target)){
+    return(list(
+      predict=function(...)0,
+      regularization.vec=0))
+  }
   nontrivial.i.vec <- which(!is.trivial.target)
 
   all.featureSum <- do.call(rbind, featureSum.list)
@@ -139,22 +361,32 @@ IntervalRegressionProblems <- structure(function
                nrow(param.mat), " features x ",
                ncol(param.mat), " regularization parameters)\n"))
   }
+  feature.not.used <- apply(param.mat[-1, ,drop=FALSE] == 0, 1, all)
+  pred.feature.names <- train.feature.names[!feature.not.used]
+  pred.param.mat <-
+    param.mat[c("(Intercept)", pred.feature.names),,drop=FALSE]
   list(param.mat=param.mat,
        regularization.vec=do.call(c, regularization.vec.list),
        mean.vec=mean.vec,
        sd.vec=sd.vec,
        train.feature.names=train.feature.names,
+       pred.feature.names=pred.feature.names,
+       pred.param.mat=pred.param.mat,
        predict=function(mat){
          stopifnot(is.matrix(mat))
          stopifnot(is.numeric(mat))
-         stopifnot(train.feature.names %in% colnames(mat))
-         raw.mat <- mat[, train.feature.names, drop=FALSE]
+         stopifnot(pred.feature.names %in% colnames(mat))
+         raw.mat <- mat[, pred.feature.names, drop=FALSE]
          raw.mat[!is.finite(raw.mat)] <- 0 
-         mean.mat <- matrix(mean.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
-         sd.mat <- matrix(sd.vec, nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         mean.mat <- matrix(
+           mean.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
+         sd.mat <- matrix(
+           sd.vec[pred.feature.names],
+           nrow(raw.mat), ncol(raw.mat), byrow=TRUE)
          norm.mat <- (raw.mat-mean.mat)/sd.mat
          intercept.mat <- cbind("(Intercept)"=1, norm.mat)
-         colSums(intercept.mat %*% param.mat)
+         colSums(intercept.mat %*% pred.param.mat)
        })
 ### List representing fit model. You can do
 ### fit$predict(feature.matrix) to get a predicted log penalty

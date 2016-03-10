@@ -251,13 +251,13 @@ positive.df <- subset(all.regions, annotation %in% c("peakStart", "peakEnd"))
 positive.bases <- unique(with(positive.df, chromEnd-chromStart))
 cat("peak region size in bases:\n")
 print(positive.q <- quantile(positive.bases))
-min.bases.per.problem <- positive.q[["25%"]]
+min.bases.per.problem <- as.integer(positive.q[["50%"]] * 5)
 
 ## Define possible problem sizes.
-bases.per.problem.all <- as.integer(4.5 * 2^seq(3, 20, by=0.5))
+bases.per.problem.all <- as.integer(10^seq(3, 8, by=0.2))
 bases.per.problem.vec <-
   bases.per.problem.all[min.bases.per.problem < bases.per.problem.all &
-                          bases.per.problem.all < min.bases.per.problem * 100]
+                          bases.per.problem.all < min.bases.per.problem * 1000]
 
 ## Write chunks to separate RData files.
 chunk.id <- 1
@@ -275,7 +275,7 @@ for(labels.file in names(regions.by.file)){
       res.str <- paste(bases.per.problem)
 
       chunk.problems <-
-        getProblems(chrom, min.chromStart, max.chromEnd, bases.per.problem)
+        getProblems(chrom, min.chromStart, max.chromEnd, bases.per.problem, 2)
 
       problems.by.res[[res.str]] <- chunk.problems
     }

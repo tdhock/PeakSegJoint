@@ -1,3 +1,10 @@
+TODOs
+
+2016.03.02
+
+Fit PeakSegDP to each sample before running PeakSegJoint? (rather than
+running PeakSegJoint with a fixed problem size)
+
 2016.01.22
 
 Docs for PeakSegJointError.
