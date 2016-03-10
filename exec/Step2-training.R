@@ -10,7 +10,7 @@ ex.dir <-
 ex.dir <- "PeakSegJoint-chunks/H3K36me3_TDH_immune"
 ex.dir <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks"
 ex.dir <- "~/exampleData/PeakSegJoint-chunks"
-argv <- file.path(ex.dir, c(1:3), "models.by.problem.RData")
+argv <- file.path(ex.dir, c(1:3))
 
 argv <- commandArgs(trailingOnly=TRUE)
 
@@ -20,20 +20,159 @@ ppn <- PPN.cores()
 if(!is.na(ppn))options(mc.cores=ppn/2)
 
 if(length(argv) == 0){
-  stop("usage: Step2.R chunk1/models.by.problem.RData [...]")
+  stop("usage: Step2.R PeakSegJoint-chunks/1 [...]")
 }
 
-models.RData.vec <- normalizePath(argv, mustWork=TRUE)
+ann.colors <-
+  c(noPeaks="#f6f4bf",
+    peakStart="#ffafaf",
+    peakEnd="#ff4c4c",
+    peaks="#a445ee")
+
+chunk.dir.vec <- normalizePath(argv, mustWork=TRUE)
+chunks.dir <- dirname(chunk.dir.vec[1])
+data.dir <- dirname(chunks.dir)
+bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 
 models.by.res <- list()
 regions.by.chunk <- list()
 chunks.list <- list()
-for(models.RData in models.RData.vec){
-  objs <- load(models.RData)
-  chunk.dir <- dirname(models.RData)
+for(chunk.dir in chunk.dir.vec){
+  chunk.id <- basename(chunk.dir)
+  bins.per.problem <- 500L
   chunk.id <- basename(chunk.dir)
   regions.RData <- file.path(chunk.dir, "regions.RData")
   objs <- load(regions.RData)
+  regions$region.i <- 1:nrow(regions)
+  chrom <- paste(regions$chrom[1])
+  regions[, chromStart1 := chromStart + 1L]
+  regions[, id.group := paste(sample.id, sample.group)]
+
+  counts.by.sample <- list()
+  for(bigwig.file in bigwig.file.vec){
+    sample.counts <-
+      readBigWig(bigwig.file, chunk$chrom, chunk$chunkStart, chunk$chunkEnd)
+    sample.id <- sub("[.]bigwig$", "", basename(bigwig.file))
+    sample.group <- basename(dirname(bigwig.file))
+    counts.by.sample[[paste(sample.id, sample.group)]] <-
+      data.table(sample.id, sample.group, sample.counts)
+  }
+  counts <- do.call(rbind, counts.by.sample)
+  counts[, chromStart1 := chromStart + 1L]
+  setkey(counts, chromStart1, chromEnd)
+
+  sample.problems.dt <- do.call(rbind, problems.by.res)
+
+  ## ggplot()+
+  ##   ggtitle(regions.RData)+
+  ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3, fill=annotation),
+  ##                 color="grey",
+  ##                 alpha=0.5,
+  ##                 data=regions)+
+  ##   geom_segment(aes(problemStart/1e3, seq_along(bases.per.problem),
+  ##                    xend=problemEnd/1e3, yend=seq_along(bases.per.problem)),
+  ##                data=data.table(sample.problems.dt,
+  ##                                sample.group="problems", sample.id="problems"))+
+  ##   scale_fill_manual(values=ann.colors)+
+  ##   geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+  ##                 ymin=0, ymax=count),
+  ##             fill="grey50",
+  ##             data=counts)+
+  ##   theme_bw()+
+  ##   theme(panel.margin=grid::unit(0, "cm"))+
+  ##   facet_grid(sample.group + sample.id ~ ., scales="free")
+
+  SampleProblems <- function(problem.i){
+    cat(sprintf(
+      "%4d / %4d problems %s\n",
+      problem.i, nrow(sample.problems.dt),
+      chunk.dir))
+    problem <- sample.problems.dt[problem.i, ]
+    bases.per.bin <- as.integer(problem$bases.per.problem/bins.per.problem)
+    problem.name <- paste(problem$problem.name)
+    problem.regions <-
+      regions[! (chromEnd < problem$problemStart |
+                   problem$problemEnd < chromStart), ]
+    setkey(problem.regions, id.group)
+    
+    ## ggplot()+
+    ##   ggtitle(problem.name)+
+    ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3, fill=annotation),
+    ##                 color="grey",
+    ##                 alpha=0.5,
+    ##                 data=regions)+
+    ##   geom_segment(aes(problemStart/1e3, 0,
+    ##                    xend=problemEnd/1e3, yend=0),
+    ##                data=problem)+
+    ##   scale_fill_manual(values=ann.colors)+
+    ##   geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+    ##                 ymin=0, ymax=count),
+    ##             fill="grey50",
+    ##             data=counts)+
+    ##   theme_bw()+
+    ##   theme(panel.margin=grid::unit(0, "cm"))+
+    ##   facet_grid(sample.group + sample.id ~ ., scales="free")
+
+    models.by.sample <- list()
+    for(id.group in names(counts.by.sample)){
+      sample.counts <- counts.by.sample[[id.group]]
+      problem.counts <-
+        sample.counts[! (chromEnd < problem$problemStart |
+                           problem$problemEnd < chromStart), ]
+      start <- as.integer(problem$problemStart)
+      model <- segmentBins(
+        problem.counts, start, bases.per.bin, bins.per.problem)
+      model$meta <- data.table(
+        problem.counts[1, .(sample.id, sample.group)],
+        problem,
+        chunk.id)
+      sample.regions <- problem.regions[id.group]
+      if(!is.na(sample.regions$sample.id[1])){
+        
+        ## ggplot()+
+        ##   ggtitle(problem.name)+
+        ##   geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+        ##                     fill=annotation),
+        ##                 color="grey",
+        ##                 alpha=0.5,
+        ##                 data=sample.regions)+
+        ##   geom_segment(aes(problemStart/1e3, -1,
+        ##                    xend=problemEnd/1e3, yend=-1),
+        ##                size=2,
+        ##                data=problem)+
+        ##   scale_fill_manual(values=ann.colors)+
+        ##   geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
+        ##                 ymin=0, ymax=count),
+        ##             fill="grey50",
+        ##             data=problem.counts)+
+        ##   geom_line(aes((chromStart+chromEnd)/2e3, mean),
+        ##             data=model$bins)+
+        ##   theme_bw()+
+        ##   theme(panel.margin=grid::unit(0, "cm"))+
+        ##   facet_grid(sample.group + sample.id ~ ., scales="free")
+        
+        model$fit$error$incorrect.regions <- NA
+        for(peaks.str in names(model$fit$peaks)){
+          peaks <- model$fit$peaks[[peaks.str]]
+          error.regions <- PeakErrorChrom(peaks, sample.regions)
+          model$fit$error[peaks.str, "incorrect.regions"] <-
+            with(error.regions, sum(fp+fn))
+        }
+        model$modelSelection$incorrect.regions <-
+          model$fit$error[paste(model$modelSelection$peaks), "incorrect.regions"]
+        target.indices <- with(model$modelSelection, largestContinuousMinimum(
+          incorrect.regions, max.log.lambda-min.log.lambda))
+        model$target <- with(model$modelSelection, c(
+          min.log.lambda[target.indices$start],
+          max.log.lambda[target.indices$end]))
+      }
+      models.by.sample[[id.group]] <- model
+    }#id.group
+    models.by.sample
+  }#problem.i
+  models.by.problem <-
+    mclapply.or.stop(seq_along(sample.problems.dt$problem.name), SampleProblems)
+
   regions.by.chunk[[chunk.id]] <- regions
   chunks.list[[chunk.id]] <- chunk
   for(problem.i in 1:nrow(sample.problems.dt)){
@@ -43,10 +182,6 @@ for(models.RData in models.RData.vec){
       models.by.problem[[problem.i]]
   }
 }
-
-chunks.dir <- dirname(dirname(models.RData))
-data.dir <- dirname(chunks.dir)
-bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 
 SeparatePeaks <- function(res.str, seed=1){
   set.seed(1)
@@ -335,6 +470,7 @@ ResError <- function(res.str){
       subset(info$peaks, peaks==pred.row$peaks)
   }
   error.by.chunk <- list()
+  pred.peaks.by.chunk <- list()
   for(chunk.str in names(peaks.by.chunk)){
     peaks.by.problem <- oracle.by.chunk[[chunk.str]]
     peaks.by.problem <- peaks.by.chunk[[chunk.str]]
@@ -397,112 +533,57 @@ ResError <- function(res.str){
         theme(panel.margin=grid::unit(0, "lines"))+
         facet_grid(sample.group + sample.id ~ ., scales="free")
     }
-    error.by.chunk[[chunk.str]] <- error.regions
-  }
+    bases.per.problem <- as.integer(res.str)
+    pred.peaks.by.chunk[[chunk.str]] <- data.table(
+      bases.per.problem, chunk.str, chunk.peaks)
+    error.by.chunk[[chunk.str]] <- data.table(
+      bases.per.problem, chunk.str, error.regions)
+  }#for(chunk.str
   error <- do.call(rbind, error.by.chunk)
-  with(error, {
-    data.table(res.str,
-               bases.per.problem=as.integer(res.str),
-               fp=sum(fp),
-               fn=sum(fn),
-               errors=sum(fp+fn),
-               regions=length(fp))
-  })
+  list(error=error,
+       peaks=do.call(rbind, pred.peaks.by.chunk),
+       fit=joint.fit)
 }
 res.vec <- unique(all.labeled.problems$res.str)
-res.error.list <- mclapply.or.stop(res.vec, ResError)
-res.error <- do.call(rbind, res.error.list)
-print(res.error[order(bases.per.problem),])
-stop("check peaks")
-
-## Check to make sure each peak occurs within its problem.
-for(prob.i in 1:nrow(step2.problems)){
-  prob <- step2.problems[prob.i, ]
-  problem.name <- paste(prob$problem.name)
-  model <- step2.model.list[[problem.name]]
-  stopifnot(prob$problemStart < model$peaks$chromStart)
-  stopifnot(model$peaks$chromEnd < prob$problemEnd)
-}
-
-## Save results for this chunk/resolution.
-problems.RData <- file.path(chunk.dir, "problems.RData")
-save(step1.results,
-     ##step2.problems,
-     ##regions.by.problem,
-     step2.data.list,
-     step2.model.list,
-     step2.error.list,
-     res.error,
-     file=problems.RData)
-
-
-
-err.mat.list <- list()
-chunk.best.list <- list()
-bpp.list <- list()
-for(chunk.i in seq_along(problems.RData.vec)){
-  problems.RData <- problems.RData.vec[[chunk.i]]
-  message(sprintf("%4d / %4d chunks %s", chunk.i, length(problems.RData.vec),
-                  problems.RData))
-  chunk.dir <- dirname(problems.RData)
-  chunk.id <- basename(chunk.dir)
-  index.html <-
-    file.path("..", chunk.id, "figure-train-errors", "index.html")
-  first.png <-
-    file.path("..", chunk.id, "figure-train-errors.png")
-  objs <- load(problems.RData)
-  err.vec <- res.error$errors
-  min.df <- subset(res.error, errors==min(errors))
-  best.errors <- min(res.error$errors)
-  bpp.list[[chunk.id]] <- min.df$bases.per.problem
-  href <- sprintf('<a href="%s">
-  <img src="%s" alt="chunk%s" />
-</a>', index.html, first.png, chunk.id)
-  chunk.best.list[[chunk.id]] <-
-    data.frame(selected.model=href,
-               best.errors,
-               regions=res.error$regions[1])
-  names(err.vec) <- res.error$bases.per.problem
-  err.mat.list[[chunk.i]] <- err.vec
-}
-chunk.best <- do.call(rbind, chunk.best.list)
-err.mat <- do.call(rbind, err.mat.list)
-err.vec <- colSums(err.mat)
-train.errors <-
-  data.frame(bases.per.problem=as.integer(names(err.vec)),
-             errors=as.integer(err.vec),
-             regions=sum(chunk.best$regions))
-chosen.i <- max(which(err.vec == min(err.vec)))
-res.str <- names(err.vec)[chosen.i]
-bases.per.problem <- as.integer(res.str)
-train.errors.picked <- train.errors[chosen.i, ]
-
-chunk.best$selected.errors <- err.mat[, res.str]
-chunk.best$best.bases.per.problem <- NA
-for(chunk.i in seq_along(bpp.list)){
-  bpp <- bpp.list[[chunk.i]]
-  bpp[bpp == res.str] <-
-    paste0("<b>", bpp[bpp==res.str], "</b>")
-  chunk.best$best.bases.per.problem[chunk.i] <- paste0(bpp, collapse="<br />")
-}
-
-chunk.ordered <-
-  chunk.best[order(chunk.best$selected.errors, decreasing=TRUE),]
-
-resCurve <- 
-ggplot()+
-  geom_line(aes(bases.per.problem, errors),
-            data=train.errors)+
-  scale_x_log10()+
-  ylab("minimum incorrect labels (train error)")+
-  ggtitle(paste(res.str, "bases/problem"))+
-  geom_point(aes(bases.per.problem, errors),
-             data=train.errors.picked,
-             pch=1)
-print(train.errors)
+res.result.list <- mclapply.or.stop(res.vec, ResError)
+names(res.result.list) <- res.vec
+res.error.list <- lapply(res.result.list, "[[", "error")
+res.error.regions <- do.call(rbind, res.error.list)
+res.peaks.list <- lapply(res.result.list, "[[", "peaks")
+res.peaks <- do.call(rbind, res.peaks.list)
+res.error <- res.error.regions[, data.table(
+  fp=sum(fp),
+  fn=sum(fn),
+  errors=sum(fp+fn),
+  regions=length(fp)), by=bases.per.problem]
+print(train.errors <- res.error[order(bases.per.problem),])
+min.errors <- res.error[errors==min(errors),]
+train.errors.picked <- min.errors[which.max(bases.per.problem),]
 cat("Picked the following problem size:\n")
 print(train.errors.picked)
-
+res.chunk.error <-
+  res.error.regions[bases.per.problem==train.errors.picked$bases.per.problem,
+                    data.table(
+                      fp=sum(fp),
+                      fn=sum(fn),
+                      errors=sum(fp+fn),
+                      regions=length(fp)
+                      ), by=chunk.str]
+(chunks.ordered <- res.chunk.error[order(-errors), ])
+joint.fit <-
+  res.result.list[[paste(train.errors.picked$bases.per.problem)]]$fit
+separate.fit <-
+  separate.by.res[[paste(train.errors.picked$bases.per.problem)]]$fit
+resCurve <- 
+  ggplot()+
+    geom_line(aes(bases.per.problem, errors),
+              data=train.errors)+
+    scale_x_log10()+
+    ylab("incorrect labels (train error)")+
+    ggtitle(paste(res.str, "bases/problem"))+
+    geom_point(aes(bases.per.problem, errors),
+               data=train.errors.picked,
+               pch=1)
 png.name <-
   file.path(chunks.dir, "figure-train-errors", "figure-train-errors.png")
 png.dir <- dirname(png.name)
@@ -515,8 +596,7 @@ res.xt <- xtable(train.errors)
 res.html <-
   print(res.xt, type="html",
         include.rownames=FALSE)
-
-xt <- xtable(chunk.ordered)
+xt <- xtable(chunks.ordered)
 html.table <-
   print(xt, type="html",
         include.rownames=FALSE,
@@ -531,87 +611,11 @@ html.out <-
         html.table,
         "<h1>Train/validation error curves for selecting regularization</h1>",
         '<p><img src="figure-regularization.png" /></td>')
-
 out.file <- file.path(chunks.dir, "figure-train-errors", "index.html")
-
 cat(html.out, file=out.file)
-
-problems.by.chunk <- list()
-labeled.problems.by.chunk <- list()
-regions.by.chunk <- list()
-for(chunk.i in seq_along(problems.RData.vec)){
-  problems.RData <- problems.RData.vec[[chunk.i]]
-  objs <- load(problems.RData)
-  if(! "step2.data.list" %in% objs){
-    stop("step.data.list not found in ", problems.RData)
-  }
-  if(! "step2.error.list" %in% objs){
-    stop("step.error.list not found in ", problems.RData)
-  }
-  res.data <- step2.data.list[[res.str]]
-  for(problem.i in 1:nrow(res.data$problems)){
-    prob.info <- res.data$problems[problem.i, ]
-    problem.name <- paste(prob.info$problem.name)
-    target <- step2.error.list[[paste(res.str, problem.name)]]$problem$target
-    mlist <- step2.model.list[[problem.name]]
-    stopifnot(prob.info$problemStart < mlist$peaks$chromStart)
-    stopifnot(mlist$peaks$chromEnd < prob.info$problemEnd)
-    mlist$target <- target
-    problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
-    if(is.numeric(target)){
-      labeled.problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
-    }
-  }
-  chunk.dir <- dirname(problems.RData)
-  regions.RData <- file.path(chunk.dir, "regions.RData")
-  load(regions.RData)
-  regions.by.chunk[[problems.RData]] <- regions
-}
-
-## Fit model to all training data. need (unlabeled) problems.by.chunk
-## here since the predictions must be made on all problems in the
-## validation set (not just the subset of problems for which we have
-## assigned some regions and computed a target).
-full.curves <- tv.curves(problems.by.chunk, regions.by.chunk)
-picked.error <- best.on.validation(full.curves)
-
-tvPlot <- 
-  ggplot()+
-    geom_point(aes(-log10(regularization), metric.value, color=tv),
-               pch=1,
-               data=picked.error)+
-    geom_line(aes(-log10(regularization), metric.value, color=tv),
-              data=full.curves)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ validation.fold, labeller=function(var, val){
-      if(var=="validation.fold"){
-        paste("fold", val)
-      }else{
-        paste(val)
-      }
-    }, scales="free")
-reg.png <-
-  file.path(chunks.dir, "figure-train-errors", "figure-regularization.png")
-png(reg.png, width=600, h=400, units="px")
-print(tvPlot)
-dev.off()
-
-mean.reg <- mean(picked.error$regularization)
-
-## labeled.problems.by.chunk needed here since
-## IntervalRegressionProblems does not accept problems without
-## targets.
-train.list <- do.call(c, labeled.problems.by.chunk)
-full.fit <-
-  IntervalRegressionProblems(train.list,
-                             initial.regularization=mean.reg,
-                             factor.regularization=NULL,
-                             verbose=0)
 
 ## get chrom size info from a bigwig, so we can generate a list of
 ## segmentation problems and divide them into jobs.
-bigwig.file.vec <- Sys.glob(file.path(data.dir, "*", "*.bigwig"))
 bigwig.file <- bigwig.file.vec[1]
 chrom.ranges <- bigWigInfo(bigwig.file)
 ranges.by.chrom <- split(chrom.ranges, chrom.ranges$chrom)
@@ -622,7 +626,9 @@ for(chrom.i in seq_along(ranges.by.chrom)){
                   chrom))
   chrom.range <- ranges.by.chrom[[chrom]]
   all.chrom.problems <- with(chrom.range, {
-    getProblems(chrom, chromStart, chromEnd, bases.per.problem,
+    getProblems(chrom, chromStart, chromEnd,
+                train.errors.picked$bases.per.problem,
+                overlap.count=2L,
                 chrom.size=chromEnd)
   })
   ## Look at a bigwig file to see where the first chromStart and last
@@ -644,16 +650,16 @@ for(chrom.i in seq_along(ranges.by.chrom)){
                          first.chromStart < problemEnd, ]
 }
 overlapping.problems <- do.call(rbind, problems.by.chrom)
-overlapping.problems$job <- sort(rep(1:numJobs, l=nrow(overlapping.problems)))
+load(file.path(data.dir, "jobs.RData"))
+overlapping.problems$job <- sort(rep(1:n.jobs, l=nrow(overlapping.problems)))
 table(overlapping.problems$job)
 problems.by.job <- split(overlapping.problems, overlapping.problems$job)
 
 trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
-     full.fit,
-     ## for estimating test error later:
-     problems.by.chunk,
-     regions.by.chunk,
+     separate.fit, joint.fit,
+     res.peaks,
+     res.error.regions,
      ## for parallelizing prediction on jobs:
      problems.by.job,
      file=trained.model.RData)
