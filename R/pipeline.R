@@ -38,8 +38,14 @@ problem.joint <- function
   }
   coverage <- do.call(rbind, coverage.list)
   setkey(coverage, sample.id, chrom, chromStart, chromEnd)
-  profile.list <- ProfileList(coverage.list)
-  fit <- PeakSegJointSeveral(coverage.list)
+  profile.list <- ProfileList(coverage)
+  tryCatch({
+    fit <- PeakSegJointSeveral(coverage)
+  }, error=function(e){
+    str(coverage)
+    str(profile.list)
+    stop(e)
+  })
   segmentations <- ConvertModelList(fit)
   segmentations$features <- featureMatrix(profile.list)
   save(segmentations, file=segmentations.RData)
