@@ -71,10 +71,7 @@ ggfolds <- ggplot()+
   ggtitle("Distribution of folds across chromosomes")+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(test.fold ~ ., labeller=function(var, val){
-    n.chunks <- chunk.counts[paste(val)]
-    paste0("test fold ", val, "\n", n.chunks, " chunks")
-  }, scales="free", space="free")+
+  facet_grid(test.fold ~ ., scales="free", space="free")+
   geom_segment(aes(chromStart/1e6, chrom,
                    xend=chromEnd/1e6, yend=chrom),
                data=chrom.ranges)+
@@ -110,13 +107,7 @@ gg.test <-
               data=test.metrics.curves)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ test.fold, labeller=function(var, val){
-      if(var=="test.fold"){
-        paste("test fold", val)
-      }else{
-        paste(val)
-      }
-    }, scales="free")
+    facet_grid(metric.name ~ test.fold, scales="free")
 
 test.png <-
   file.path(test.out.dir, "figure-test-error-decreases.png")

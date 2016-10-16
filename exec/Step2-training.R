@@ -177,13 +177,7 @@ tvPlot <-
               data=full.curves)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ validation.fold, labeller=function(var, val){
-      if(var=="validation.fold"){
-        paste("fold", val)
-      }else{
-        paste(val)
-      }
-    }, scales="free")
+    facet_grid(metric.name ~ validation.fold, scales="free")
 reg.png <-
   file.path(chunks.dir, "figure-train-errors", "figure-regularization.png")
 png(reg.png, width=600, h=400, units="px")

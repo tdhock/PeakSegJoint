@@ -118,11 +118,5 @@ save(test.results,
 ##              data=test.metrics.curve)+
 ##   theme_bw()+
 ##   theme(panel.margin=grid::unit(0, "cm"))+
-##   facet_grid(metric.name ~ test.fold, labeller=function(var, val){
-##     if(var=="test.fold"){
-##       paste("test fold", val)
-##     }else{
-##       paste(val)
-##     }
-##   }, scales="free")
+##   facet_grid(metric.name ~ test.fold, scales="free")
 

@@ -195,9 +195,7 @@ SegmentStep2 <- function(row.i){
   ## ggplot()+
   ##   theme_bw()+
   ##   theme(panel.margin=grid::unit(0, "cm"))+
-  ##   facet_grid(sample.id ~ ., labeller=function(var, val){
-  ##     sub("McGill0", "", sub(" ", "\n", val))
-  ##   }, scales="free")+
+  ##   facet_grid(sample.id ~ ., scales="free")+
   ##   geom_segment(aes((problemStart+0.5)/1e3, 0,
   ##                    xend=problemEnd/1e3, yend=0),
   ##                data=problem,
