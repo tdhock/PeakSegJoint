@@ -19,7 +19,6 @@ before_install:
 
 install:
   - travis-tool.sh install_deps
-  - travis-tool.sh install_github tdhock/ggplot2
   - Rscript -e "devtools::install_github('tdhock/animint', upgrade_dependencies=FALSE)"
   - Rscript -e "devtools::install(dependencies=FALSE)"
 

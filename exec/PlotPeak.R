@@ -17,10 +17,6 @@ if(length(argv) != 2){
   stop("usage: PlotPeak.R PeakSegJoint.predictions.RData chrX:1234-5678")
 }
 
-facet.labels <- function(var, val){
-  sub("_.*", "", val)
-}
-
 predictions.RData <- normalizePath(argv[1], mustWork=TRUE)
 peak.to.plot <- argv[2]
 data.dir <- dirname(predictions.RData)
@@ -82,7 +78,7 @@ gg <-
     coord_cartesian(xlim=one.peak[, c(zoomStart, zoomEnd)/1e3])+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.group + sample.id ~ ., labeller=facet.labels,
+    facet_grid(sample.group + sample.id ~ ., 
                scales="free")+
     geom_rect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
                   ymin=0, ymax=count),
