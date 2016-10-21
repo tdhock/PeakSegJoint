@@ -10,17 +10,20 @@ problem.joint <- function
   problem[, problemStart1 := problemStart + 1L]
   setkey(problem, chrom, problemStart1, problemEnd)
   jointProblems <- dirname(jointProblem.dir)
-  data.dir <- dirname(jointProblems)
+  prob.dir <- dirname(jointProblems)
+  probs.dir <- dirname(prob.dir)
+  data.dir <- dirname(probs.dir)
   samples.dir <- file.path(data.dir, "samples")
   coverage.bedGraph.vec <- Sys.glob(file.path(
     samples.dir, "*", "*", "problems",
     problem$problem.name, "coverage.bedGraph"))
+  cat("Found", length(coverage.bedGraph.vec), "samples to jointly segment.\n")
   coverage.list <- list()
   for(coverage.i in seq_along(coverage.bedGraph.vec)){
     coverage.bedGraph <- coverage.bedGraph.vec[[coverage.i]]
-    cat(sprintf(
-      "%4d / %4d %s\n",
-      coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
+    ## cat(sprintf(
+    ##   "%4d / %4d %s\n",
+    ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
     sample.coverage <- fread(coverage.bedGraph)
     setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
     sample.coverage[, chromStart1 := chromStart + 1L]
@@ -42,6 +45,7 @@ problem.joint <- function
   fit <- PeakSegJointSeveral(coverage)
   segmentations <- ConvertModelList(fit)
   segmentations$features <- featureMatrix(profile.list)
+  cat("Writing segmentation and features to", segmentations.RData, "\n")
   save(segmentations, file=segmentations.RData)
   segmentations$coverage <- coverage
   segmentations
