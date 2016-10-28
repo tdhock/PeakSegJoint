@@ -318,7 +318,7 @@ problem.joint.plot <- function
       fill=annotation), 
       alpha=0.5,
       data=labels)+
-    scale_fill_manual(values=ann.colors)+
+    scale_fill_manual("label", values=ann.colors)+
     scale_color_manual(values=c(separate="black", joint="deepskyblue"))+
     scale_size_manual(values=c(separate=2, joint=3))+
     geom_step(aes(
