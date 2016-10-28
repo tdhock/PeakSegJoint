@@ -353,22 +353,23 @@ problem.joint.plot <- function
       size=peak.type),
       data=separate.peaks)
   n.rows <- length(coverage.list) + 2
-  mypng <- function(base){
+  mypng <- function(base, g){
     f <- file.path(chunk.dir, base)
     cat("Writing ",
         f,
         "\n", sep="")
     png(f, res=100, width=1000, height=60*n.rows)
+    print(g)
+    dev.off()
+    thumb.png <- sub(".png$", "-thumb.png", f)
+    cmd <- sprintf("convert %s -resize 230 %s", f, thumb.png)
+    system(cmd)
   }
-  mypng("figure-predictions-zoomout.png")
-  print(gg)
-  dev.off()
+  mypng("figure-predictions-zoomout.png", gg)
   gg.zoom <- gg+
     coord_cartesian(
       xlim=chunk[, c(chunkStart, chunkEnd)/1e3],
       expand=FALSE)
-  mypng("figure-predictions.png")
-  print(gg.zoom)
-  dev.off()
+  mypng("figure-predictions.png", gg.zoom)
 ### Nothing
 }  
