@@ -7,7 +7,7 @@
   \item{data.dir}{project directory.}
 }
 
-
+\value{Nothing.}
 
 \author{Toby Dylan Hocking}
 

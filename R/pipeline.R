@@ -1,3 +1,19 @@
+problem.joint.predict.many <- function
+### Compute all joint peak predictions for one separate problem.
+(prob.dir
+### project/problems/problemID
+){
+  joint.dir.vec <- Sys.glob(file.path(
+    prob.dir, "jointProblems", "*"))
+  problems.dir <- dirname(prob.dir)
+  set.dir <- dirname(problems.dir)
+  joint.model.RData <- file.path(set.dir, "joint.model.RData")
+  mclapply.or.stop(joint.dir.vec, function(joint.dir){
+    PeakSegJoint::problem.joint.predict(joint.model.RData, joint.dir)
+  })
+### Nothing.
+}
+
 problem.joint.targets.train <- function
 ### Compute all target intervals then learn a penalty function.
 (data.dir
@@ -9,6 +25,7 @@ problem.joint.targets.train <- function
     problem.joint.target(dirname(labels.tsv))
   })
   problem.joint.train(data.dir)
+### Nothing.
 }
 
 problem.joint.train <- function
