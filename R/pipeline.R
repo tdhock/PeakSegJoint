@@ -124,8 +124,9 @@ problem.joint.train <- function
   cat("Learned regularization parameter and weights:\n")
   is.selected <- joint.model$param.mat != 0
   print(joint.model$param.mat[is.selected, , drop=FALSE])
-  pred.log.penalty <- sapply(
-    problems.list, with, joint.model$predict(features))
+  pred.log.penalty <- sapply(problems.list, function(problem){
+    joint.model$predict(problem$features)
+  })
   lower.limit <- sapply(problems.list, with, target[1])
   upper.limit <- sapply(problems.list, with, target[2])
   pred.dt <- data.table(
