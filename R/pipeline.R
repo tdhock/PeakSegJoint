@@ -139,7 +139,7 @@ problem.joint.train <- function
     too.lo, "low",
     ifelse(too.hi, "high", "correct"))]
   cat("Train errors:\n")
-  pred.dt[, list(targets=.N), by=status]
+  print(pred.dt[, list(targets=.N), by=status])
   save(joint.model, problems.list, file=joint.model.RData)
 ### Nothing.
 }
