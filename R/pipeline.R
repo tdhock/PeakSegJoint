@@ -44,11 +44,13 @@ problem.joint.train <- function
     problem.dir <- dirname(target.tsv)
     segmentations.RData <- file.path(problem.dir, "segmentations.RData")
     load(segmentations.RData)
-    problems.list[[problem.dir]] <- list(
-      features=segmentations$features,
-      target=target.vec)
+    if(any(is.finite(target.vec))){
+      problems.list[[problem.dir]] <- list(
+        features=segmentations$features,
+        target=target.vec)
+    }
   }
-  target.mat <- unname(t(sapply(problems.list, "[[", "target")))
+  cat("Training using", length(problems.list), "finite targets.\n")
   set.seed(1)
   n.observations <- length(problems.list)
   n.folds <- ifelse(n.observations < 10, 3, 5)
@@ -58,12 +60,12 @@ problem.joint.train <- function
   }
   error.loss.list <- list()
   for(validation.fold in unique(fold.vec)){
-    ##print(validation.fold)
+    ##cat(sprintf("%d"))
     is.validation <- fold.vec == validation.fold
     is.train <- !is.validation
     train.problems <- problems.list[is.train]
     fit <- IntervalRegressionProblems(
-      train.problems, max.iterations=1e3, verbose=0)
+      train.problems, max.iterations=1e4, verbose=0)
     for(problem.i in seq_along(problems.list)){
       problem <- problems.list[[problem.i]]
       log.penalty.vec <- fit$predict(problem$features)
