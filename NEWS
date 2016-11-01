@@ -1,3 +1,9 @@
+2016.11.01
+
+New functions problem.joint.predict.many, problem.joint.targets.train,
+problem.joint.train, problem.joint.plot, problem.joint.target,
+problem.joint.predict
+
 2016.10.16
 
 Depend ggplot2 >= 2.0
