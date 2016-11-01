@@ -7,10 +7,7 @@ problem.joint.predict.many <- function
     prob.dir, "jointProblems", "*"))
   problems.dir <- dirname(prob.dir)
   set.dir <- dirname(problems.dir)
-  joint.model.RData <- file.path(set.dir, "joint.model.RData")
-  mclapply.or.stop(joint.dir.vec, function(joint.dir){
-    PeakSegJoint::problem.joint.predict(joint.model.RData, joint.dir)
-  })
+  mclapply.or.stop(joint.dir.vec, problem.joint.predict)
 ### Nothing.
 }
 
@@ -200,13 +197,16 @@ problem.joint <- function
 
 problem.joint.predict <- function
 ### Compute peak predictions for a joint problem.
-(joint.model.RData,
-### path/to/joint.model.RData file (which contains an object called joint.model)
- jointProblem.dir
-### problem to predict peaks.
+(jointProblem.dir
+### project/problems/problemID/jointProblems/jointProbID
 ){
-  load(joint.model.RData)
   converted <- problem.joint(jointProblem.dir)
+  jprobs.dir <- dirname(jointProblem.dir)
+  prob.dir <- dirname(jprobs.dir)
+  probs.dir <- dirname(prob.dir)
+  set.dir <- dirname(probs.dir)
+  joint.model.RData <- file.path(set.dir, "joint.model.RData")
+  load(joint.model.RData)
   log.penalty <- joint.model$predict(converted$features)
   stopifnot(length(log.penalty)==1)
   selected <- subset(
