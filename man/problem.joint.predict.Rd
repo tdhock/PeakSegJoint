@@ -2,10 +2,9 @@
 \alias{problem.joint.predict}
 \title{problem joint predict}
 \description{Compute peak predictions for a joint problem.}
-\usage{problem.joint.predict(joint.model.RData, jointProblem.dir)}
+\usage{problem.joint.predict(jointProblem.dir)}
 \arguments{
-  \item{joint.model.RData}{path/to/joint.model.RData file (which contains an object called joint.model)}
-  \item{jointProblem.dir}{problem to predict peaks.}
+  \item{jointProblem.dir}{project/problems/problemID/jointProblems/jointProbID}
 }
 
 \value{Nothing.}
