@@ -18,8 +18,14 @@ problem.joint.targets.train <- function
 ){
   labels.tsv.vec <- Sys.glob(file.path(
     data.dir, "problems", "*", "jointProblems", "*", "labels.tsv"))
-  mclapply.or.stop(labels.tsv.vec, function(labels.tsv){
-    problem.joint.target(dirname(labels.tsv))
+  mclapply.or.stop(seq_along(labels.tsv.vec), function(labels.i){
+    labels.tsv <- labels.tsv.vec[[labels.i]]
+    prob.dir <- dirname(labels.tsv)
+    cat(sprintf(
+      "%4d / %4d labeled joint problems %s\n",
+      labels.i, length(labels.tsv.vec),
+      prob.dir))
+    problem.joint.target(prob.dir)
   })
   problem.joint.train(data.dir)
 ### Nothing.
