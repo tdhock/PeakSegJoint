@@ -5,9 +5,18 @@ problem.joint.predict.many <- function
 ){
   joint.dir.vec <- Sys.glob(file.path(
     prob.dir, "jointProblems", "*"))
-  problems.dir <- dirname(prob.dir)
-  set.dir <- dirname(problems.dir)
-  mclapply.or.stop(joint.dir.vec, problem.joint.predict)
+  prob.progress <- function(joint.dir.i){
+    joint.dir <- joint.dir.vec[[joint.dir.i]]
+    cat(sprintf(
+      "%4d / %4d joint prediction problems %s\n",
+      joint.dir.i, length(joint.dir.vec),
+      joint.dir))
+    problem.joint.predict(joint.dir)
+    gc()
+  }
+  ## out of memory errors, so don't run in parallel!
+  ##mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
+  lapply(seq_along(joint.dir.vec), prob.progress)
 ### Nothing.
 }
 
