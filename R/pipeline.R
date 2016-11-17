@@ -166,7 +166,7 @@ problem.joint <- function
   problem <- fread(problem.bed)
   setnames(problem, c("chrom",  "problemStart", "problemEnd", "problem.name"))
   problem[, problemStart1 := problemStart + 1L]
-  setkey(problem, chrom, problemStart1, problemEnd)
+  setkey(problem, problemStart1, problemEnd)
   jointProblems <- dirname(jointProblem.dir)
   prob.dir <- dirname(jointProblems)
   probs.dir <- dirname(prob.dir)
@@ -182,10 +182,12 @@ problem.joint <- function
     ## cat(sprintf(
     ##   "%4d / %4d %s\n",
     ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    sample.coverage <- fread(coverage.bedGraph)
-    setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
+    sample.coverage <- fread(
+      coverage.bedGraph,
+      colClasses=list(NULL=1, integer=2:4))
+    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
     sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chrom, chromStart1, chromEnd)
+    setkey(sample.coverage, chromStart1, chromEnd)
     problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
     problem.dir <- dirname(coverage.bedGraph)
     problems.dir <- dirname(problem.dir)
@@ -198,7 +200,6 @@ problem.joint <- function
       sample.id, sample.group, problem.coverage)
   }
   coverage <- do.call(rbind, coverage.list)
-  setkey(coverage, sample.id, chrom, chromStart, chromEnd)
   profile.list <- ProfileList(coverage)
   fit <- PeakSegJointSeveral(coverage)
   segmentations <- ConvertModelList(fit)
