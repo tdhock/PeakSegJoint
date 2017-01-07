@@ -391,19 +391,26 @@ problem.joint.plot <- function
     sample.group <- basename(group.dir)
     sample.coverage <- fread(file.path(problem.dir, "coverage.bedGraph"))
     setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
-    sample.peaks <- fread(file.path(problem.dir, "peaks.bed"))
-    setnames(sample.peaks, c("chrom", "peakStart", "peakEnd", "status", "mean"))
-    sample.peaks[, peakStart1 := peakStart + 1L]
     sample.coverage[, chromStart1 := chromStart + 1L]
     setkey(sample.coverage, chromStart1, chromEnd)
-    setkey(sample.peaks, peakStart1, peakEnd)
     chunk.cov <- foverlaps(sample.coverage, chunk, nomatch=0L)
-    chunk.peaks <- foverlaps(sample.peaks, chunk, nomatch=0L)
     coverage.list[[problem.dir]] <- data.table(
       sample.id, sample.group, chunk.cov)
-    if(nrow(chunk.peaks)){
-      separate.peaks.list[[problem.dir]] <- data.table(
-        sample.id, sample.group, chunk.peaks)
+    ## Also store peaks in this chunk, if there are any.
+    sample.peaks <- tryCatch({
+      fread(file.path(problem.dir, "peaks.bed"))
+    }, error=function(e){
+      data.table()
+    })
+    if(nrow(sample.peaks)){
+      setnames(sample.peaks, c("chrom", "peakStart", "peakEnd", "status", "mean"))
+      sample.peaks[, peakStart1 := peakStart + 1L]
+      setkey(sample.peaks, peakStart1, peakEnd)
+      chunk.peaks <- foverlaps(sample.peaks, chunk, nomatch=0L)
+      if(nrow(chunk.peaks)){
+        separate.peaks.list[[problem.dir]] <- data.table(
+          sample.id, sample.group, chunk.peaks)
+      }
     }
   }
   coverage <- do.call(rbind, coverage.list)
