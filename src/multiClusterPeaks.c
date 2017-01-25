@@ -4,35 +4,25 @@
 #include <stdlib.h>
 
 int multiClusterPeaks
-(int *peakStart, int *peakEnd, int *sample, int n_peaks,
- int *cluster){//out
-  int peak_i, n_samples=0, candidate_samples;
+(int *peakStart, int *peakEnd, int *cluster, int n_peaks){//out
+  int peak_i;
+  int cluster_i = 0;
+  int cluster_first_end = 0;
   for(peak_i=0; peak_i<n_peaks; peak_i++){
-    if(sample < 0){
-      return ERROR_NEGATIVE_SAMPLE_ID;
-    }
-    candidate_samples = sample[peak_i] + 1;
-    if(n_samples < candidate_samples){
-      n_samples = candidate_samples;
-    }
-  }
-  int *start_vec = (int*)malloc(sizeof(int)*n_samples);
-  int *end_vec = (int*)malloc(sizeof(int)*n_samples);
-  // start_vec and end_vec contain the candidates for the current peak
-  // cluster, and are initialized to -1 to indicate unused.
-  int sample_i;
-  for(sample_i=0; sample_i<n_samples; sample_i++){
-    start_vec[sample_i] = -1;
-    end_vec[sample_i] = -1;
-  }
-  for(peak_i=0; peak_i<n_peaks; peak_i++){
-    //keep adding peaks to start_vec and end_vec
-    
     //end a cluster when next start is after the first end of this
     //cluster -- this means that two peaks on the same sample can
     //never be in the same cluster.
+    if(cluster_first_end < peakStart[peak_i]){
+      cluster_i++;
+      cluster_first_end = peakEnd[peak_i];
+    }else{
+      //this is the same cluster, so update cluster_first_end only if
+      //necessary.
+      if(peakEnd[peak_i] < cluster_first_end){
+	cluster_first_end = peakEnd[peak_i];
+      }
+    }
+    cluster[peak_i]=cluster_i;
   }  
-  free(start_vec);
-  free(end_vec);
   return 0;
 }

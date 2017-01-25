@@ -18,9 +18,8 @@ multiClusterPeaks <- structure(function
     "multiClusterPeaks_interface",
     as.integer(peaks$chromStart),
     as.integer(peaks$chromEnd),
-    as.integer(sample.vec),
-    as.integer(nrow(peaks)),
     cluster=as.integer(peaks$chromEnd),
+    as.integer(nrow(peaks)),
     PACKAGE="PeakSegJoint")
   peaks$cluster <- res$cluster
   peaks
@@ -38,15 +37,21 @@ multiClusterPeaks <- structure(function
       data=chr7.peaks)
 
   clustered <- multiClusterPeaks(chr7.peaks)
+  library(data.table)
+  clusters <- data.table(clustered)[, list(
+    clusterStart=as.integer(median(chromStart)),
+    clusterEnd=as.integer(median(chromEnd))
+    ), by=cluster]
   ggplot()+
     geom_segment(aes(
       chromStart/1e3, sample.id,
       color=factor(cluster),
       xend=chromEnd/1e3, yend=sample.id),
-      data=clustered)
-  
-  gg+geom_segment(aes(
+      data=clustered)+
+  geom_segment(aes(
     clusterStart/1e3, "clusters",
-    xend=clusterEnd/1e3, yend="clusters"), data=clusters)
+    color=factor(cluster),
+    xend=clusterEnd/1e3, yend="clusters"),
+    data=clusters)
   
 })
