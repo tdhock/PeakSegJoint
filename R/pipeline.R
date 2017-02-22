@@ -11,12 +11,17 @@ problem.joint.predict.many <- function
       "%4d / %4d joint prediction problems %s\n",
       joint.dir.i, length(joint.dir.vec),
       joint.dir))
-    problem.joint.predict(joint.dir)
+    peaks.bed <- file.path(joint.dir, "peaks.bed")
+    if(file.exists(peaks.bed)){
+      cat("Skipping since peaks.bed already exists.\n")
+    }else{
+      problem.joint.predict(joint.dir)
+    }
     gc()
   }
   ## out of memory errors, so don't run in parallel!
-  ##mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
-  lapply(seq_along(joint.dir.vec), prob.progress)
+  mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
+  ##lapply(seq_along(joint.dir.vec), prob.progress)
 ### Nothing.
 }
 
