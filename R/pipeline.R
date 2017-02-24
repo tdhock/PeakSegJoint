@@ -39,7 +39,15 @@ problem.joint.predict.many <- function
   }else{
     do.call(rbind, peaks.list)
   }
-  fwrite(peaks, peaks.bed, quote=FALSE, sep="\t", col.names=FALSE)
+  ##fread( does not support writing a data.table with 0 rows, so here
+  ##we use write.table instead, for convenience.
+  write.table(
+    peaks,
+    peaks.bed,
+    quote=FALSE,
+    sep="\t",
+    col.names=FALSE,
+    row.names=FALSE)
   peaks
 ### data.table of predicted peaks.
 }
