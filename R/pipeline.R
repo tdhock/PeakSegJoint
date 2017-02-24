@@ -34,7 +34,11 @@ problem.joint.predict.many <- function
   ## out of memory errors, so don't run in parallel!
   peaks.list <- mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
   ##lapply(seq_along(joint.dir.vec), prob.progress)
-  peaks <- do.call(rbind, peaks.list)
+  peaks <- if(length(peaks.list)==0){
+    data.table()
+  }else{
+    do.call(rbind, peaks.list)
+  }
   fwrite(peaks, peaks.bed, quote=FALSE, sep="\t", col.names=FALSE)
   peaks
 ### data.table of predicted peaks.
