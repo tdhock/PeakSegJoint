@@ -5,24 +5,34 @@ problem.joint.predict.many <- function
 ){
   joint.dir.vec <- Sys.glob(file.path(
     prob.dir, "jointProblems", "*"))
+  peaks.bed <- file.path(prob.dir, "peaks.bed")
+  unlink(peaks.bed)
   prob.progress <- function(joint.dir.i){
     joint.dir <- joint.dir.vec[[joint.dir.i]]
     cat(sprintf(
       "%4d / %4d joint prediction problems %s\n",
       joint.dir.i, length(joint.dir.vec),
       joint.dir))
-    peaks.bed <- file.path(joint.dir, "peaks.bed")
-    if(file.exists(peaks.bed)){
+    jpeaks.bed <- file.path(joint.dir, "peaks.bed")
+    if(file.exists(jpeaks.bed)){
       cat("Skipping since peaks.bed already exists.\n")
+      if(0 < file.size(jpeaks.bed)){
+        jprob.peaks <- fread(jpeaks.bed)
+        setnames(jprob.peaks, chrom, chromStart, chromEnd, name, mean)
+      }
     }else{
-      problem.joint.predict(joint.dir)
+      jprob.peaks <- problem.joint.predict(joint.dir)
     }
     gc()
+    jprob.peaks
   }
   ## out of memory errors, so don't run in parallel!
-  mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
+  peaks.list <- mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
   ##lapply(seq_along(joint.dir.vec), prob.progress)
-### Nothing.
+  peaks <- do.call(rbind, peaks.list)
+  fwrite(peaks, peaks.bed, quote=FALSE, sep="\t", col.names=FALSE)
+  peaks
+### data.table of predicted peaks.
 }
 
 problem.joint.targets.train <- function
@@ -269,7 +279,9 @@ problem.joint.predict <- function
     sep="\t",
     col.names=FALSE,
     row.names=FALSE)
-### Nothing.
+  pred.dt
+### data.table of predicted peaks, with 5 columns: chrom, chromStart,
+### chromEnd, name, mean.
 }
 
 problem.joint.target <- function
