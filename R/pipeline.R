@@ -14,19 +14,28 @@ problem.joint.predict.many <- function
       joint.dir.i, length(joint.dir.vec),
       joint.dir))
     jpeaks.bed <- file.path(joint.dir, "peaks.bed")
-    jprob.peaks <- if(file.exists(jpeaks.bed)){
-      cat("Skipping since peaks.bed already exists.\n")
-      if(0 == file.size(jpeaks.bed)){
-        data.table()
-      }else{
-        saved.dt <- fread(jpeaks.bed)
-        setnames(
-          saved.dt,
-          c("chrom", "chromStart", "chromEnd", "name", "mean"))
-        saved.dt
-      }
+    already.computed <- if(!file.exists(jpeaks.bed)){
+      FALSE
     }else{
-      problem.joint.predict(joint.dir)
+      if(0 == file.size(jpeaks.bed)){
+        jprob.peaks <- data.table()
+        TRUE
+      }else{
+        tryCatch({
+          jprob.peaks <- fread(jpeaks.bed)
+          setnames(
+            jprob.peaks,
+            c("chrom", "chromStart", "chromEnd", "name", "mean"))
+          TRUE
+        }, error=function(e){
+          FALSE
+        })
+      }
+    }
+    if(already.computed){
+      cat("Skipping since peaks.bed already exists.\n")
+    }else{
+      jprob.peaks <- problem.joint.predict(joint.dir)
     }
     gc()
     jprob.peaks
