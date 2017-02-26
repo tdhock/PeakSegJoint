@@ -230,6 +230,8 @@ problem.joint <- function
     sample.coverage[, chromStart1 := chromStart + 1L]
     setkey(sample.coverage, chromStart1, chromEnd)
     problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
+    problem.coverage[chromStart < problemStart, chromStart := problemStart]
+    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
     problem.dir <- dirname(coverage.bedGraph)
     problems.dir <- dirname(problem.dir)
     sample.dir <- dirname(problems.dir)
@@ -238,7 +240,8 @@ problem.joint <- function
     sample.group <- basename(group.dir)
     sample.path <- paste0(sample.group, "/", sample.id)
     coverage.list[[sample.path]] <- data.table(
-      sample.id, sample.group, problem.coverage)
+      sample.id, sample.group,
+      problem.coverage[chromStart < chromEnd,])
   }
   coverage <- do.call(rbind, coverage.list)
   profile.list <- ProfileList(coverage)
