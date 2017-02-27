@@ -5,10 +5,60 @@ problem.joint.predict.many <- function
 ){
   joint.dir.vec <- Sys.glob(file.path(
     prob.dir, "jointProblems", "*"))
-  problems.dir <- dirname(prob.dir)
-  set.dir <- dirname(problems.dir)
-  mclapply.or.stop(joint.dir.vec, problem.joint.predict)
-### Nothing.
+  peaks.bed <- file.path(prob.dir, "peaks.bed")
+  unlink(peaks.bed)
+  prob.progress <- function(joint.dir.i){
+    joint.dir <- joint.dir.vec[[joint.dir.i]]
+    cat(sprintf(
+      "%4d / %4d joint prediction problems %s\n",
+      joint.dir.i, length(joint.dir.vec),
+      joint.dir))
+    jpeaks.bed <- file.path(joint.dir, "peaks.bed")
+    already.computed <- if(!file.exists(jpeaks.bed)){
+      FALSE
+    }else{
+      if(0 == file.size(jpeaks.bed)){
+        jprob.peaks <- data.table()
+        TRUE
+      }else{
+        tryCatch({
+          jprob.peaks <- fread(jpeaks.bed)
+          setnames(
+            jprob.peaks,
+            c("chrom", "chromStart", "chromEnd", "name", "mean"))
+          TRUE
+        }, error=function(e){
+          FALSE
+        })
+      }
+    }
+    if(already.computed){
+      cat("Skipping since peaks.bed already exists.\n")
+    }else{
+      jprob.peaks <- problem.joint.predict(joint.dir)
+    }
+    gc()
+    jprob.peaks
+  }
+  ## out of memory errors, so don't run in parallel!
+  peaks.list <- mclapply.or.stop(seq_along(joint.dir.vec), prob.progress)
+  ##lapply(seq_along(joint.dir.vec), prob.progress)
+  peaks <- if(length(peaks.list)==0){
+    data.table()
+  }else{
+    do.call(rbind, peaks.list)
+  }
+  ##fread( does not support writing a data.table with 0 rows, so here
+  ##we use write.table instead, for convenience.
+  write.table(
+    peaks,
+    peaks.bed,
+    quote=FALSE,
+    sep="\t",
+    col.names=FALSE,
+    row.names=FALSE)
+  peaks
+### data.table of predicted peaks.
 }
 
 problem.joint.targets.train <- function
@@ -18,8 +68,14 @@ problem.joint.targets.train <- function
 ){
   labels.tsv.vec <- Sys.glob(file.path(
     data.dir, "problems", "*", "jointProblems", "*", "labels.tsv"))
-  mclapply.or.stop(labels.tsv.vec, function(labels.tsv){
-    problem.joint.target(dirname(labels.tsv))
+  mclapply.or.stop(seq_along(labels.tsv.vec), function(labels.i){
+    labels.tsv <- labels.tsv.vec[[labels.i]]
+    prob.dir <- dirname(labels.tsv)
+    cat(sprintf(
+      "%4d / %4d labeled joint problems %s\n",
+      labels.i, length(labels.tsv.vec),
+      prob.dir))
+    problem.joint.target(prob.dir)
   })
   problem.joint.train(data.dir)
 ### Nothing.
@@ -151,7 +207,7 @@ problem.joint <- function
   problem <- fread(problem.bed)
   setnames(problem, c("chrom",  "problemStart", "problemEnd", "problem.name"))
   problem[, problemStart1 := problemStart + 1L]
-  setkey(problem, chrom, problemStart1, problemEnd)
+  setkey(problem, problemStart1, problemEnd)
   jointProblems <- dirname(jointProblem.dir)
   prob.dir <- dirname(jointProblems)
   probs.dir <- dirname(prob.dir)
@@ -167,11 +223,15 @@ problem.joint <- function
     ## cat(sprintf(
     ##   "%4d / %4d %s\n",
     ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    sample.coverage <- fread(coverage.bedGraph)
-    setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
+    sample.coverage <- fread(
+      coverage.bedGraph,
+      colClasses=list(NULL=1, integer=2:4))
+    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
     sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chrom, chromStart1, chromEnd)
+    setkey(sample.coverage, chromStart1, chromEnd)
     problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
+    problem.coverage[chromStart < problemStart, chromStart := problemStart]
+    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
     problem.dir <- dirname(coverage.bedGraph)
     problems.dir <- dirname(problem.dir)
     sample.dir <- dirname(problems.dir)
@@ -180,10 +240,10 @@ problem.joint <- function
     sample.group <- basename(group.dir)
     sample.path <- paste0(sample.group, "/", sample.id)
     coverage.list[[sample.path]] <- data.table(
-      sample.id, sample.group, problem.coverage)
+      sample.id, sample.group,
+      problem.coverage[chromStart < chromEnd,])
   }
   coverage <- do.call(rbind, coverage.list)
-  setkey(coverage, sample.id, chrom, chromStart, chromEnd)
   profile.list <- ProfileList(coverage)
   fit <- PeakSegJointSeveral(coverage)
   segmentations <- ConvertModelList(fit)
@@ -248,7 +308,9 @@ problem.joint.predict <- function
     sep="\t",
     col.names=FALSE,
     row.names=FALSE)
-### Nothing.
+  pred.dt
+### data.table of predicted peaks, with 5 columns: chrom, chromStart,
+### chromEnd, name, mean.
 }
 
 problem.joint.target <- function
@@ -375,19 +437,26 @@ problem.joint.plot <- function
     sample.group <- basename(group.dir)
     sample.coverage <- fread(file.path(problem.dir, "coverage.bedGraph"))
     setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
-    sample.peaks <- fread(file.path(problem.dir, "peaks.bed"))
-    setnames(sample.peaks, c("chrom", "peakStart", "peakEnd", "status", "mean"))
-    sample.peaks[, peakStart1 := peakStart + 1L]
     sample.coverage[, chromStart1 := chromStart + 1L]
     setkey(sample.coverage, chromStart1, chromEnd)
-    setkey(sample.peaks, peakStart1, peakEnd)
     chunk.cov <- foverlaps(sample.coverage, chunk, nomatch=0L)
-    chunk.peaks <- foverlaps(sample.peaks, chunk, nomatch=0L)
     coverage.list[[problem.dir]] <- data.table(
       sample.id, sample.group, chunk.cov)
-    if(nrow(chunk.peaks)){
-      separate.peaks.list[[problem.dir]] <- data.table(
-        sample.id, sample.group, chunk.peaks)
+    ## Also store peaks in this chunk, if there are any.
+    sample.peaks <- tryCatch({
+      fread(file.path(problem.dir, "peaks.bed"))
+    }, error=function(e){
+      data.table()
+    })
+    if(nrow(sample.peaks)){
+      setnames(sample.peaks, c("chrom", "peakStart", "peakEnd", "status", "mean"))
+      sample.peaks[, peakStart1 := peakStart + 1L]
+      setkey(sample.peaks, peakStart1, peakEnd)
+      chunk.peaks <- foverlaps(sample.peaks, chunk, nomatch=0L)
+      if(nrow(chunk.peaks)){
+        separate.peaks.list[[problem.dir]] <- data.table(
+          sample.id, sample.group, chunk.peaks)
+      }
     }
   }
   coverage <- do.call(rbind, coverage.list)

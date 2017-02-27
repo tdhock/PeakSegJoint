@@ -7,7 +7,7 @@
   \item{prob.dir}{project/problems/problemID}
 }
 
-\value{Nothing.}
+\value{data.table of predicted peaks.}
 
 \author{Toby Dylan Hocking}
 
