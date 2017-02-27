@@ -1,3 +1,21 @@
+2017.02.27
+
+multiClusterPeaks is a new R/C function that clusters peaks into
+overlapping groups, with at most 1 peak per sample (in contrast,
+clusterPeaks allows more than one per per sample).
+
+problem.joint.predict.many now prints progress 1 / N joint prediction
+problems, and skips a joint prediction problem if its peaks.bed file
+already exists (allows restarting).
+
+problem.joint.targets.train now prints progress 1 / N labeled joint
+problems.
+
+problem.joint now sets first and last chromStart to corresponding
+problem start/end, before giving the data to ProfileList and
+PeakSegJoint. This ensures that the peak start/end are never outside
+of the problem start/end.
+
 2016.11.01
 
 New functions problem.joint.predict.many, problem.joint.targets.train,
