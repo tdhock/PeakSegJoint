@@ -75,7 +75,12 @@ problem.joint.targets.train <- function
       "%4d / %4d labeled joint problems %s\n",
       labels.i, length(labels.tsv.vec),
       prob.dir))
-    problem.joint.target(prob.dir)
+    target.tsv <- file.path(prob.dir, "target.tsv")
+    if(file.exists(target.tsv)){
+      cat("Skipping since target.tsv exists.\n")
+    }else{
+      problem.joint.target(prob.dir)
+    }
   })
   problem.joint.train(data.dir)
 ### Nothing.
@@ -318,16 +323,22 @@ problem.joint.target <- function
 (jointProblem.dir
 ### Joint problem directory.
 ){
-  converted <- problem.joint(jointProblem.dir)
+  segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
+  if(file.exists(segmentations.RData)){
+    cat("Loading model from ", segmentations.RData, "\n", sep="")
+    load(segmentations.RData)
+  }else{
+    segmentations <- problem.joint(jointProblem.dir)
+  }
   labels.bed <- file.path(jointProblem.dir, "labels.tsv")
   labels <- fread(labels.bed)
   setnames(labels, c(
     "chrom", "chromStart", "chromEnd", "annotation",
     "sample.id", "sample.group"))
-  fit.error <- PeakSegJointError(converted, labels)
+  fit.error <- PeakSegJointError(segmentations, labels)
   if(FALSE){
     show.peaks <- 8
-    show.peaks.df <- subset(converted$peaks, peaks==show.peaks)
+    show.peaks.df <- subset(segmentations$peaks, peaks==show.peaks)
     show.errors <- fit.error$error.regions[[paste(show.peaks)]]
     ann.colors <-
       c(noPeaks="#f6f4bf",
@@ -363,7 +374,7 @@ problem.joint.target <- function
                  "false negative"=3,
                  "false positive"=1))+
       geom_step(aes(chromStart/1e3, count),
-                data=converted$coverage,
+                data=segmentations$coverage,
                 color="grey50")+
       geom_segment(aes(chromStart/1e3, 0,
                        xend=chromEnd/1e3, yend=0),
@@ -376,8 +387,8 @@ problem.joint.target <- function
     ##              color="green")
   }
   cat("Train error:\n")
-  print(data.table(fit.error$modelSelection)[, .(
-    min.log.lambda, max.log.lambda, peaks, errors)])
+  print(fit.error$modelSelection[, c(
+    "min.log.lambda", "max.log.lambda", "peaks", "errors")])
   target.tsv <- file.path(jointProblem.dir, "target.tsv")
   cat(
     "Writing target interval (",
@@ -386,7 +397,7 @@ problem.joint.target <- function
     target.tsv,
     "\n", sep="")
   write(fit.error$target, target.tsv, sep="\t")
-### Nothing.
+### list of output from PeakSegJointError.
 }
 
 problem.joint.plot <- function

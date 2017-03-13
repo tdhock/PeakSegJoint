@@ -7,7 +7,7 @@
   \item{jointProblem.dir}{Joint problem directory.}
 }
 
-\value{Nothing.}
+\value{list of output from PeakSegJointError.}
 
 \author{Toby Dylan Hocking}
 
