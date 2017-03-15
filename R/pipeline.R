@@ -584,7 +584,12 @@ problem.joint.plot <- function
     cat("Writing ",
         f,
         "\n", sep="")
-    png(f, res=100, width=1000, height=60*n.rows)
+    cairo.limit <- 32767
+    h <- 60*n.rows
+    if(cairo.limit < h){
+      h <- floor(cairo.limit / n.rows) * n.rows
+    }
+    png(f, res=100, width=1000, height=h)
     print(g)
     dev.off()
     thumb.png <- sub(".png$", "-thumb.png", f)
