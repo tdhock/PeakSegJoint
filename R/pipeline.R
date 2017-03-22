@@ -61,6 +61,30 @@ problem.joint.predict.many <- function
 ### data.table of predicted peaks.
 }
 
+problem.joint.targets <- function
+### Compute targets for a separate problem.
+(problem.dir
+### project/problems/problemID
+ ){
+  labels.tsv.vec <- Sys.glob(file.path(
+    problem.dir, "jointProblems", "*", "labels.tsv"))
+  mclapply.or.stop(seq_along(labels.tsv.vec), function(labels.i){
+    labels.tsv <- labels.tsv.vec[[labels.i]]
+    jprob.dir <- dirname(labels.tsv)
+    cat(sprintf(
+      "%4d / %4d labeled joint problems %s\n",
+      labels.i, length(labels.tsv.vec),
+      jprob.dir))
+    target.tsv <- file.path(jprob.dir, "target.tsv")
+    if(file.exists(target.tsv)){
+      cat("Skipping since target.tsv exists.\n")
+    }else{
+      problem.joint.target(jprob.dir)
+    }
+  })
+### Nothing.
+}
+
 problem.joint.targets.train <- function
 ### Compute all target intervals then learn a penalty function.
 (data.dir
