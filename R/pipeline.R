@@ -507,8 +507,6 @@ problem.joint.plot <- function
     }
   }
   coverage <- do.call(rbind, coverage.list)
-  separate.peaks <- do.call(rbind, separate.peaks.list)
-  separate.peaks$peak.type <- "separate"
   cat("Read",
       length(coverage.list),
       "samples of coverage.\n")
@@ -602,18 +600,22 @@ problem.joint.plot <- function
         size=peak.type),
         data=joint.peaks)
   }
-  gg <- gg+
-    geom_segment(aes(
-      peakStart/1e3, 0,
-      xend=peakEnd/1e3, yend=0,
-      color=peak.type,
-      size=peak.type),
-      data=separate.peaks)+
-    geom_point(aes(
-      peakStart/1e3, 0,
-      color=peak.type,
-      size=peak.type),
-      data=separate.peaks)
+  if(length(separate.peaks.list)){
+    separate.peaks <- do.call(rbind, separate.peaks.list)
+    separate.peaks$peak.type <- "separate"
+    gg <- gg+
+      geom_segment(aes(
+        peakStart/1e3, 0,
+        xend=peakEnd/1e3, yend=0,
+        color=peak.type,
+        size=peak.type),
+                   data=separate.peaks)+
+      geom_point(aes(
+        peakStart/1e3, 0,
+        color=peak.type,
+        size=peak.type),
+                 data=separate.peaks)
+  }
   n.rows <- length(coverage.list) + 2
   mypng <- function(base, g){
     f <- file.path(chunk.dir, base)
