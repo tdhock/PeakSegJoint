@@ -335,6 +335,18 @@ problem.joint.target <- function
   setnames(labels, c(
     "chrom", "chromStart", "chromEnd", "annotation",
     "sample.id", "sample.group"))
+  jprob <- fread(file.path(jointProblem.dir, "problem.bed"))
+  setnames(jprob, c("chrom", "problemStart", "problemEnd", "problem.name"))
+  ##   [peakStart]   [peakEnd]   labels
+  ## ______   ___________  ______ joint problems
+  ## ____________________________
+  ## peakStart must end inside the joint problem,
+  ## and peakEnd must start inside the joint problem.
+  ## otherwise the annotation should be considered noPeaks.
+  labels[{
+    (annotation=="peakEnd" & chromStart < jprob$problemStart) |
+      (annotation=="peakStart" & jprob$problemEnd < chromEnd)
+  }, annotation := "noPeaks"]
   fit.error <- PeakSegJointError(segmentations, labels)
   if(FALSE){
     show.peaks <- 8
