@@ -252,25 +252,27 @@ problem.joint <- function
     ## cat(sprintf(
     ##   "%4d / %4d %s\n",
     ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    sample.coverage <- fread(
-      coverage.bedGraph,
-      colClasses=list(NULL=1, integer=2:4))
-    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
-    sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chromStart1, chromEnd)
-    problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
-    problem.coverage[chromStart < problemStart, chromStart := problemStart]
-    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
-    problem.dir <- dirname(coverage.bedGraph)
-    problems.dir <- dirname(problem.dir)
-    sample.dir <- dirname(problems.dir)
-    sample.id <- basename(sample.dir)
-    group.dir <- dirname(sample.dir)
-    sample.group <- basename(group.dir)
-    sample.path <- paste0(sample.group, "/", sample.id)
-    coverage.list[[sample.path]] <- data.table(
-      sample.id, sample.group,
-      problem.coverage[chromStart < chromEnd,])
+    if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
+      sample.coverage <- fread(
+        coverage.bedGraph,
+        colClasses=list(NULL=1, integer=2:4))
+      setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
+      sample.coverage[, chromStart1 := chromStart + 1L]
+      setkey(sample.coverage, chromStart1, chromEnd)
+      problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
+      problem.coverage[chromStart < problemStart, chromStart := problemStart]
+      problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
+      problem.dir <- dirname(coverage.bedGraph)
+      problems.dir <- dirname(problem.dir)
+      sample.dir <- dirname(problems.dir)
+      sample.id <- basename(sample.dir)
+      group.dir <- dirname(sample.dir)
+      sample.group <- basename(group.dir)
+      sample.path <- paste0(sample.group, "/", sample.id)
+      coverage.list[[sample.path]] <- data.table(
+        sample.id, sample.group,
+        problem.coverage[chromStart < chromEnd,])
+    }
   }
   coverage <- do.call(rbind, coverage.list)
   profile.list <- ProfileList(coverage)
