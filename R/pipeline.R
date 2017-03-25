@@ -262,16 +262,22 @@ problem.joint <- function
       problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
       problem.coverage[chromStart < problemStart, chromStart := problemStart]
       problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
-      problem.dir <- dirname(coverage.bedGraph)
-      problems.dir <- dirname(problem.dir)
-      sample.dir <- dirname(problems.dir)
-      sample.id <- basename(sample.dir)
-      group.dir <- dirname(sample.dir)
-      sample.group <- basename(group.dir)
-      sample.path <- paste0(sample.group, "/", sample.id)
-      coverage.list[[sample.path]] <- data.table(
-        sample.id, sample.group,
-        problem.coverage[chromStart < chromEnd,])
+      save.coverage <- problem.coverage[chromStart < chromEnd,]
+      ## If we don't have the if() below, we get Error in
+      ## data.table(sample.id, sample.group,
+      ## problem.coverage[chromStart < : Item 3 has no length.
+      if(0 < nrow(save.coverage)){
+        problem.dir <- dirname(coverage.bedGraph)
+        problems.dir <- dirname(problem.dir)
+        sample.dir <- dirname(problems.dir)
+        sample.id <- basename(sample.dir)
+        group.dir <- dirname(sample.dir)
+        sample.group <- basename(group.dir)
+        sample.path <- paste0(sample.group, "/", sample.id)
+        coverage.list[[sample.path]] <- data.table(
+          sample.id, sample.group,
+          save.coverage)
+      }
     }
   }
   coverage <- do.call(rbind, coverage.list)
