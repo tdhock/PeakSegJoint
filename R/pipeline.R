@@ -249,10 +249,19 @@ problem.joint <- function
   coverage.list <- list()
   for(coverage.i in seq_along(coverage.bedGraph.vec)){
     coverage.bedGraph <- coverage.bedGraph.vec[[coverage.i]]
+    problem.dir <- dirname(coverage.bedGraph)
+    problems.dir <- dirname(problem.dir)
+    sample.dir <- dirname(problems.dir)
     ## cat(sprintf(
     ##   "%4d / %4d %s\n",
     ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
+    coverage.bigWig <- file.path(sample.dir, "coverage.bigWig")
+    save.coverage <- if(file.exists(coverage.bigWig)){
+      ## If bigWig file has already been computed, then it is much
+      ## faster to read it since it is indexed!
+      problem[, readBigWig(
+        coverage.bigWig, chrom, problemStart, problemEnd)]
+    }else if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
       sample.coverage <- fread(
         coverage.bedGraph,
         colClasses=list(NULL=1, integer=2:4))
@@ -262,22 +271,19 @@ problem.joint <- function
       problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
       problem.coverage[chromStart < problemStart, chromStart := problemStart]
       problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
-      save.coverage <- problem.coverage[chromStart < chromEnd,]
-      ## If we don't have the if() below, we get Error in
-      ## data.table(sample.id, sample.group,
-      ## problem.coverage[chromStart < : Item 3 has no length.
-      if(0 < nrow(save.coverage)){
-        problem.dir <- dirname(coverage.bedGraph)
-        problems.dir <- dirname(problem.dir)
-        sample.dir <- dirname(problems.dir)
-        sample.id <- basename(sample.dir)
-        group.dir <- dirname(sample.dir)
-        sample.group <- basename(group.dir)
-        sample.path <- paste0(sample.group, "/", sample.id)
-        coverage.list[[sample.path]] <- data.table(
-          sample.id, sample.group,
-          save.coverage)
-      }
+      problem.coverage[chromStart < chromEnd,]
+    }
+    ## If we don't have the if() below, we get Error in
+    ## data.table(sample.id, sample.group,
+    ## problem.coverage[chromStart < : Item 3 has no length.
+    if(0 < nrow(save.coverage)){
+      sample.id <- basename(sample.dir)
+      group.dir <- dirname(sample.dir)
+      sample.group <- basename(group.dir)
+      sample.path <- paste0(sample.group, "/", sample.id)
+      coverage.list[[sample.path]] <- data.table(
+        sample.id, sample.group,
+        save.coverage)
     }
   }
   coverage <- do.call(rbind, coverage.list)
