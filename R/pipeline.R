@@ -68,7 +68,8 @@ problem.joint.predict.job <- function
 ### project/jobs/jobID
 ){
   jobProblems <- fread(file.path(job.dir, "jobProblems.bed"))
-  data.dir <- dirname(job.dir)
+  jobs.dir <- dirname(job.dir)
+  data.dir <- dirname(jobs.dir)
   problems.dir <- file.path(data.dir, "problems")
   setnames(jobProblems, c("chrom", "problemStart", "problemEnd", "problem.name"))
   prob.progress <- function(joint.dir.i){
