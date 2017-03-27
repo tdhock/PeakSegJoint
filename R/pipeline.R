@@ -355,7 +355,12 @@ problem.joint.predict <- function
 (jointProblem.dir
 ### project/problems/problemID/jointProblems/jointProbID
 ){
-  converted <- problem.joint(jointProblem.dir)
+  if(file.exists(segmentations.RData)){
+    cat("Loading model from ", segmentations.RData, "\n", sep="")
+    load(segmentations.RData)
+  }else{
+    segmentations <- problem.joint(jointProblem.dir)
+  }
   chrom <- sub(":.*", "", basename(jointProblem.dir))
   jprobs.dir <- dirname(jointProblem.dir)
   prob.dir <- dirname(jprobs.dir)
@@ -363,18 +368,18 @@ problem.joint.predict <- function
   set.dir <- dirname(probs.dir)
   joint.model.RData <- file.path(set.dir, "joint.model.RData")
   load(joint.model.RData)
-  log.penalty <- joint.model$predict(converted$features)
+  log.penalty <- joint.model$predict(segmentations$features)
   stopifnot(length(log.penalty)==1)
   selected <- subset(
-    converted$modelSelection,
+    segmentations$modelSelection,
     min.log.lambda < log.penalty & log.penalty < max.log.lambda)
   loss.tsv <- file.path(jointProblem.dir, "loss.tsv")
   pred.dt <- if(selected$peaks == 0){
     unlink(loss.tsv)
     data.table()
   }else{
-    selected.loss <- converted$loss[paste(selected$peaks), "loss"]
-    flat.loss <- converted$loss["0", "loss"]
+    selected.loss <- segmentations$loss[paste(selected$peaks), "loss"]
+    flat.loss <- segmentations$loss["0", "loss"]
     loss.dt <- data.table(
       loss.diff=flat.loss-selected.loss)
     write.table(
@@ -384,7 +389,7 @@ problem.joint.predict <- function
       sep="\t",
       col.names=FALSE,
       row.names=FALSE)
-    pred.df <- subset(converted$peaks, peaks==selected$peaks)
+    pred.df <- subset(segmentations$peaks, peaks==selected$peaks)
     with(pred.df, data.table(
       chrom,
       chromStart,
