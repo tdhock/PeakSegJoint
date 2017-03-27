@@ -109,7 +109,10 @@ problem.joint.predict.job <- function
     jprob.peaks
   }
   peak.list <- mclapply.or.stop(1:nrow(jobProblems), prob.progress)
-  do.call(rbind, peak.list)
+  peak.dt <- do.call(rbind, peak.list)
+  jobPeaks.bed <- file.path(job.dir, "jobPeaks.bed")
+  fwrite(peak.dt, jobPeaks.bed, sep="\t", col.names=FALSE)
+  peak.dt
 ### data.table of predicted peaks.
 }
 
@@ -275,6 +278,30 @@ problem.joint.train <- function
   cat("Train errors:\n")
   print(pred.dt[, list(targets=.N), by=status])
   save(joint.model, problems.list, file=joint.model.RData)
+  cat("Saved ", joint.model.RData, "\n", sep="")
+  jprobs.bed.dt <- data.table(jprobs.bed=Sys.glob(file.path(
+    data.dir, "problems", "*", "jointProblems.bed")))
+  jprobs <- jprobs.bed.dt[, {
+      fread(jprobs.bed),
+    }, by=jprobs.bed]
+  setnames(jprobs, c(
+    "jprobs.bed", "chrom", "problemStart", "problemEnd"))
+  jobs.dir <- file.path(data.dir, "jobs")
+  job.id.vec <- dir(jobs.dir)
+  jprobs[, job := job.id.vec ]
+  jprobs[, {
+    job.dir <- normalizePath(file.path(jobs.dir, job), mustWork=TRUE)
+    fwrite(
+      .SD[,.(chrom, problemStart, problemEnd, basename(dirname(jprobs.bed)))],
+      file.path(job.dir, "jobProblems.bed"),
+      sep="\t", col.names=FALSE)
+  }, by=job]
+  cat(
+    "Saved ",
+    length(job.id.vec),
+    " jobProblems.bed files to ",
+    job.dir,
+    "\n", sep="")
 ### Nothing.
 }
 
