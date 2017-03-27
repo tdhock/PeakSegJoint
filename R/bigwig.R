@@ -51,7 +51,7 @@ readBigWig <- function
       count
       )]
   }
-### data.table with columns chrom chromStart chromEnd count.
+### data.table with columns chromStart chromEnd count.
 }
 
 bigWigInfo <- function
