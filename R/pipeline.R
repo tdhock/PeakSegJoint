@@ -61,6 +61,57 @@ problem.joint.predict.many <- function
 ### data.table of predicted peaks.
 }
 
+problem.joint.predict.job <- function
+### Compute all joint peak predictions for the joint problems listed
+### in jobProblems.bed
+(job.dir
+### project/jobs/jobID
+){
+  jobProblems <- fread(file.path(job.dir, "jobProblems.bed"))
+  data.dir <- dirname(job.dir)
+  problems.dir <- file.path(job.dir, "problems")
+  setnames(jobProblems, c("chrom", "problemStart", "problemEnd", "problem.name"))
+  prob.progress <- function(joint.dir.i){
+    prob <- jobProblems[joint.dir.i]
+    jprob.name <- prob[, sprintf("%s:%d-%d", chrom, problemStart, problemEnd)]
+    joint.dir <- prob[, file.path(
+      problems.dir, problem.name, "jointProblems", jprob.name)]
+    cat(sprintf(
+      "%4d / %4d joint prediction problems %s\n",
+      joint.dir.i, nrow(jobProblems),
+      joint.dir))
+    jpeaks.bed <- file.path(joint.dir, "peaks.bed")
+    already.computed <- if(!file.exists(jpeaks.bed)){
+      FALSE
+    }else{
+      if(0 == file.size(jpeaks.bed)){
+        jprob.peaks <- data.table()
+        TRUE
+      }else{
+        tryCatch({
+          jprob.peaks <- fread(jpeaks.bed)
+          setnames(
+            jprob.peaks,
+            c("chrom", "chromStart", "chromEnd", "name", "mean"))
+          TRUE
+        }, error=function(e){
+          FALSE
+        })
+      }
+    }
+    if(already.computed){
+      cat("Skipping since peaks.bed already exists.\n")
+    }else{
+      jprob.peaks <- problem.joint.predict(joint.dir)
+    }
+    gc()
+    jprob.peaks
+  }
+  peak.list <- mclapply.or.stop(1:nrow(jobProblems), prob.progress)
+  do.call(rbind, peak.list)
+### data.table of predicted peaks.
+}
+
 problem.joint.targets <- function
 ### Compute targets for a separate problem.
 (problem.dir
