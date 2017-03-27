@@ -72,9 +72,10 @@ problem.joint.predict.job <- function
   data.dir <- dirname(jobs.dir)
   problems.dir <- file.path(data.dir, "problems")
   setnames(jobProblems, c("chrom", "problemStart", "problemEnd", "problem.name"))
+  jobProblems[, jprob.name := sprintf(
+    "%s:%d-%d", chrom, problemStart, problemEnd)]
   prob.progress <- function(joint.dir.i){
     prob <- jobProblems[joint.dir.i]
-    jprob.name <- prob[, sprintf("%s:%d-%d", chrom, problemStart, problemEnd)]
     joint.dir <- prob[, file.path(
       problems.dir, problem.name, "jointProblems", jprob.name)]
     cat(sprintf(
@@ -87,6 +88,7 @@ problem.joint.predict.job <- function
     }else{
       if(0 == file.size(jpeaks.bed)){
         jprob.peaks <- data.table()
+        loss.dt <- data.table()
         TRUE
       }else{
         tryCatch({
@@ -94,26 +96,39 @@ problem.joint.predict.job <- function
           setnames(
             jprob.peaks,
             c("chrom", "chromStart", "chromEnd", "name", "mean"))
+          loss.dt <- fread(file.path(joint.dir, "loss.tsv"))
+          setnames(loss.dt, "loss.diff")
           TRUE
         }, error=function(e){
           FALSE
         })
       }
     }
-    if(already.computed){
-      cat("Skipping since peaks.bed already exists.\n")
-    }else{
-      jprob.peaks <- problem.joint.predict(joint.dir)
-    }
     gc()
-    jprob.peaks
+    jmodel <- if(already.computed){
+      cat("Skipping since peaks.bed already exists.\n")
+      list(peaks=jprob.peaks, loss=loss.dt)
+    }else{
+      problem.joint.predict(joint.dir)
+    }
+    if(nrow(jmodel$peaks)){
+      with(jmodel, data.table(
+        chrom=peaks$chrom[1],
+        peakStart=peaks$chromStart[1],
+        peakEnd=peaks$chromEnd[1],
+        means=list(peaks[, structure(mean, names=name)]),
+        loss.diff=loss$loss.diff,
+        problem.name=prob$problem.name
+      ))
+    }
   }
-  peak.list <- mclapply.or.stop(1:nrow(jobProblems), prob.progress)
-  peak.dt <- do.call(rbind, peak.list)
-  jobPeaks.bed <- file.path(job.dir, "jobPeaks.bed")
-  fwrite(peak.dt, jobPeaks.bed, sep="\t", col.names=FALSE)
-  peak.dt
-### data.table of predicted peaks.
+  jmodel.list <- mclapply.or.stop(1:nrow(jobProblems), prob.progress)
+  jobPeaks <- do.call(rbind, jmodel.list)
+  jobPeaks.RData <- file.path(job.dir, "jobPeaks.RData")
+  save(jobPeaks, file=jobPeaks.RData)
+  jobPeaks
+### data.table of predicted loss, peak positions, and means per sample
+### (in a list column).
 }
 
 problem.joint.targets <- function
@@ -436,9 +451,8 @@ problem.joint.predict <- function
     sep="\t",
     col.names=FALSE,
     row.names=FALSE)
-  pred.dt
-### data.table of predicted peaks, with 5 columns: chrom, chromStart,
-### chromEnd, name, mean.
+  list(peaks=pred.dt, loss=loss.dt)
+### list of peaks and loss.
 }
 
 problem.joint.target <- function
