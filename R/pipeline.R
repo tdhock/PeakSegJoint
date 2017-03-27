@@ -282,13 +282,13 @@ problem.joint.train <- function
   jprobs.bed.dt <- data.table(jprobs.bed=Sys.glob(file.path(
     data.dir, "problems", "*", "jointProblems.bed")))
   jprobs <- jprobs.bed.dt[, {
-      fread(jprobs.bed),
+      fread(jprobs.bed)
     }, by=jprobs.bed]
   setnames(jprobs, c(
     "jprobs.bed", "chrom", "problemStart", "problemEnd"))
   jobs.dir <- file.path(data.dir, "jobs")
   job.id.vec <- dir(jobs.dir)
-  jprobs[, job := job.id.vec ]
+  jprobs[, job := rep(job.id.vec, l=.N) ]
   jprobs[, {
     job.dir <- normalizePath(file.path(jobs.dir, job), mustWork=TRUE)
     fwrite(
@@ -300,7 +300,7 @@ problem.joint.train <- function
     "Saved ",
     length(job.id.vec),
     " jobProblems.bed files to ",
-    job.dir,
+    jobs.dir,
     "\n", sep="")
 ### Nothing.
 }
@@ -382,6 +382,7 @@ problem.joint.predict <- function
 (jointProblem.dir
 ### project/problems/problemID/jointProblems/jointProbID
 ){
+  segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
   if(file.exists(segmentations.RData)){
     cat("Loading model from ", segmentations.RData, "\n", sep="")
     load(segmentations.RData)
