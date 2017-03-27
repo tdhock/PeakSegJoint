@@ -356,6 +356,7 @@ problem.joint.predict <- function
 ### project/problems/problemID/jointProblems/jointProbID
 ){
   converted <- problem.joint(jointProblem.dir)
+  chrom <- sub(":.*", "", basename(jointProblem.dir))
   jprobs.dir <- dirname(jointProblem.dir)
   prob.dir <- dirname(jprobs.dir)
   probs.dir <- dirname(prob.dir)
@@ -384,7 +385,6 @@ problem.joint.predict <- function
       col.names=FALSE,
       row.names=FALSE)
     pred.df <- subset(converted$peaks, peaks==selected$peaks)
-    chrom <- paste(converted$peaks$chrom[1])
     with(pred.df, data.table(
       chrom,
       chromStart,
