@@ -332,7 +332,7 @@ problem.joint.predict <- function
       col.names=FALSE,
       row.names=FALSE)
     pred.df <- subset(converted$peaks, peaks==selected$peaks)
-    chrom <- paste(converted$coverage$chrom[1])
+    chrom <- paste(converted$peaks$chrom[1])
     with(pred.df, data.table(
       chrom,
       chromStart,
