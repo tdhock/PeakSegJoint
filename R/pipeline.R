@@ -417,9 +417,10 @@ problem.joint.predict <- function
     segmentations$modelSelection,
     min.log.lambda < log.penalty & log.penalty < max.log.lambda)
   loss.tsv <- file.path(jointProblem.dir, "loss.tsv")
-  pred.dt <- if(selected$peaks == 0){
+  if(selected$peaks == 0){
     unlink(loss.tsv)
-    data.table()
+    pred.dt <- data.table()
+    loss.dt <- data.table()
   }else{
     selected.loss <- segmentations$loss[paste(selected$peaks), "loss"]
     flat.loss <- segmentations$loss["0", "loss"]
@@ -433,7 +434,7 @@ problem.joint.predict <- function
       col.names=FALSE,
       row.names=FALSE)
     pred.df <- subset(segmentations$peaks, peaks==selected$peaks)
-    with(pred.df, data.table(
+    pred.dt <- with(pred.df, data.table(
       chrom,
       chromStart,
       chromEnd,
