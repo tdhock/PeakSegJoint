@@ -8,7 +8,8 @@ in jobProblems.bed}
   \item{job.dir}{project/jobs/jobID}
 }
 
-\value{data.table of predicted peaks.}
+\value{data.table of predicted loss, peak positions, and means per sample
+(in a list column).}
 
 \author{Toby Dylan Hocking}
 

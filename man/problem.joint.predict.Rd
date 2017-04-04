@@ -7,8 +7,7 @@
   \item{jointProblem.dir}{project/problems/problemID/jointProblems/jointProbID}
 }
 
-\value{data.table of predicted peaks, with 5 columns: chrom, chromStart,
-chromEnd, name, mean.}
+\value{list of peaks and loss.}
 
 \author{Toby Dylan Hocking}
 

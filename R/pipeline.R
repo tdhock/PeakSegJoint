@@ -344,41 +344,9 @@ problem.joint <- function
   for(coverage.i in seq_along(coverage.bedGraph.vec)){
     coverage.bedGraph <- coverage.bedGraph.vec[[coverage.i]]
     problem.dir <- dirname(coverage.bedGraph)
-    problems.dir <- dirname(problem.dir)
-    sample.dir <- dirname(problems.dir)
-    ## cat(sprintf(
-    ##   "%4d / %4d %s\n",
-    ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    coverage.bigWig <- file.path(sample.dir, "coverage.bigWig")
-    save.coverage <- if(file.exists(coverage.bigWig)){
-      ## If bigWig file has already been computed, then it is much
-      ## faster to read it since it is indexed!
-      problem[, readBigWig(
-        coverage.bigWig, chrom, problemStart, problemEnd)]
-    }else if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
-      sample.coverage <- fread(
-        coverage.bedGraph,
-        colClasses=list(NULL=1, integer=2:4))
-      setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
-      sample.coverage[, chromStart1 := chromStart + 1L]
-      setkey(sample.coverage, chromStart1, chromEnd)
-      problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
-      problem.coverage[chromStart < problemStart, chromStart := problemStart]
-      problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
-      problem.coverage[chromStart < chromEnd,]
-    }
-    ## If we don't have the if() below, we get Error in
-    ## data.table(sample.id, sample.group,
-    ## problem.coverage[chromStart < : Item 3 has no length.
-    if(0 < nrow(save.coverage)){
-      sample.id <- basename(sample.dir)
-      group.dir <- dirname(sample.dir)
-      sample.group <- basename(group.dir)
-      sample.path <- paste0(sample.group, "/", sample.id)
-      coverage.list[[sample.path]] <- data.table(
-        sample.id, sample.group,
-        save.coverage)
-    }
+    save.coverage <- problem[, readCoverage(
+      problem.dir, problemStart, problemEnd)]
+    coverage.list[[problem.dir]] <- save.coverage
   }
   coverage <- do.call(rbind, coverage.list)
   profile.list <- ProfileList(coverage)
@@ -390,6 +358,54 @@ problem.joint <- function
   segmentations$coverage <- coverage
   segmentations
 ### Model from ConvertModelList.
+}
+
+readCoverage <- function
+### Read sample coverage for one problem from either
+### sampleID/coverage.bigWig if it exists, or
+### sampleID/problems/problemID/coverage.bedGraph
+(problem.dir,
+### project/samples/groupID/sampleID/problems/problemID
+  start,
+### start of coverage to read.
+  end
+### end of coverage to read.
+){
+  chrom <- sub(":.*", "", basename(problem.dir))
+  jprob <- data.table(chrom, problemStart=start, problemEnd=end)
+  problems.dir <- dirname(problem.dir)
+  sample.dir <- dirname(problems.dir)
+  coverage.bigWig <- file.path(sample.dir, "coverage.bigWig")
+  coverage.bedGraph <- file.path(problem.dir, "coverage.bedGraph")
+  save.coverage <- if(file.exists(coverage.bigWig)){
+    ## If bigWig file has already been computed, then it is much
+    ## faster to read it since it is indexed!
+    jprob[, readBigWig(
+      coverage.bigWig, chrom, problemStart, problemEnd)]
+  }else if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
+    sample.coverage <- fread(
+      coverage.bedGraph,
+      colClasses=list(NULL=1, integer=2:4))
+    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
+    sample.coverage[, chromStart1 := chromStart + 1L]
+    setkey(sample.coverage, chromStart1, chromEnd)
+    jprob[, problemStart1 := problemStart + 1L]
+    setkey(jprob, problemStart1, problemEnd)
+    problem.coverage <- foverlaps(sample.coverage, jprob, nomatch=0L)
+    problem.coverage[chromStart < problemStart, chromStart := problemStart]
+    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
+    problem.coverage[chromStart < chromEnd,]
+  }
+  ## If we don't have the if() below, we get Error in
+  ## data.table(sample.id, sample.group,
+  ## problem.coverage[chromStart < : Item 3 has no length.
+  if(is.data.table(save.coverage) && 0 < nrow(save.coverage)){
+    sample.id <- basename(sample.dir)
+    group.dir <- dirname(sample.dir)
+    sample.group <- basename(group.dir)
+    data.table(sample.id, sample.group, save.coverage)
+  }
+### Either the data.table of coverage, or NULL if no coverage data exists.
 }
 
 problem.joint.predict <- function
@@ -596,13 +612,8 @@ problem.joint.plot <- function
     sample.id <- basename(sample.dir)
     group.dir <- dirname(sample.dir)
     sample.group <- basename(group.dir)
-    sample.coverage <- fread(file.path(problem.dir, "coverage.bedGraph"))
-    setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
-    sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chromStart1, chromEnd)
-    chunk.cov <- foverlaps(sample.coverage, chunk, nomatch=0L)
-    coverage.list[[problem.dir]] <- data.table(
-      sample.id, sample.group, chunk.cov)
+    chunk.cov <- chunk[, readCoverage(problem.dir, chunkStart, chunkEnd)]
+    coverage.list[[problem.dir]] <- chunk.cov
     ## Also store peaks in this chunk, if there are any.
     sample.peaks <- tryCatch({
       fread(file.path(problem.dir, "peaks.bed"))
