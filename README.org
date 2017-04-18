@@ -97,3 +97,7 @@ uses bash instead of qsub, via
 QSUB='echo INTERACTIVE && bash' JOBS=2 Rscript 00_AllSteps_qsub.R path/to/labels.txt
 #+END_SRC
 
+** See also
+
+The [[https://github.com/tdhock/PeakSegFPOP][PeakSegFPOP]] repository contains a pipeline which includes our more
+recent PeakSegFPOP algorithm (faster and more accurate).
