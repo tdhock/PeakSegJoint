@@ -121,8 +121,12 @@ largestContinuousMinimum <- structure(function
     sum(size[ starts[i]:ends[i] ])
   })
   ##print(runs)
-  largest <- which.max(runs$size)
-  list(start=starts[largest],end=ends[largest])
+  if(1 < sum(runs$size==Inf)){
+    list(start=1, end=length(cost))
+  }else{
+    largest <- which.max(runs$size)
+    list(start=starts[largest],end=ends[largest])
+  }
 }, ex=function(){
   data(H3K36me3.TDH.other.chunk1)
   lims <- c(43000000, 43200000) # left

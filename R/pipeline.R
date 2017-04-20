@@ -61,6 +61,100 @@ problem.joint.predict.many <- function
 ### data.table of predicted peaks.
 }
 
+problem.joint.predict.job <- function
+### Compute all joint peak predictions for the joint problems listed
+### in jobProblems.bed
+(job.dir
+### project/jobs/jobID
+){
+  jobProblems <- fread(file.path(job.dir, "jobProblems.bed"))
+  jobs.dir <- dirname(job.dir)
+  data.dir <- dirname(jobs.dir)
+  problems.dir <- file.path(data.dir, "problems")
+  setnames(jobProblems, c("chrom", "problemStart", "problemEnd", "problem.name"))
+  jobProblems[, jprob.name := sprintf(
+    "%s:%d-%d", chrom, problemStart, problemEnd)]
+  prob.progress <- function(joint.dir.i){
+    prob <- jobProblems[joint.dir.i]
+    joint.dir <- prob[, file.path(
+      problems.dir, problem.name, "jointProblems", jprob.name)]
+    cat(sprintf(
+      "%4d / %4d joint prediction problems %s\n",
+      joint.dir.i, nrow(jobProblems),
+      joint.dir))
+    jpeaks.bed <- file.path(joint.dir, "peaks.bed")
+    already.computed <- if(!file.exists(jpeaks.bed)){
+      FALSE
+    }else{
+      if(0 == file.size(jpeaks.bed)){
+        jprob.peaks <- data.table()
+        loss.dt <- data.table()
+        TRUE
+      }else{
+        tryCatch({
+          jprob.peaks <- fread(jpeaks.bed)
+          setnames(
+            jprob.peaks,
+            c("chrom", "chromStart", "chromEnd", "name", "mean"))
+          loss.dt <- fread(file.path(joint.dir, "loss.tsv"))
+          setnames(loss.dt, "loss.diff")
+          TRUE
+        }, error=function(e){
+          FALSE
+        })
+      }
+    }
+    gc()
+    jmodel <- if(already.computed){
+      cat("Skipping since peaks.bed already exists.\n")
+      list(peaks=jprob.peaks, loss=loss.dt)
+    }else{
+      problem.joint.predict(joint.dir)
+    }
+    if(nrow(jmodel$peaks)){
+      with(jmodel, data.table(
+        chrom=peaks$chrom[1],
+        peakStart=peaks$chromStart[1],
+        peakEnd=peaks$chromEnd[1],
+        means=list(peaks[, structure(mean, names=name)]),
+        loss.diff=loss$loss.diff,
+        problem.name=prob$problem.name
+      ))
+    }
+  }
+  jmodel.list <- mclapply.or.stop(1:nrow(jobProblems), prob.progress)
+  jobPeaks <- do.call(rbind, jmodel.list)
+  jobPeaks.RData <- file.path(job.dir, "jobPeaks.RData")
+  save(jobPeaks, file=jobPeaks.RData)
+  jobPeaks
+### data.table of predicted loss, peak positions, and means per sample
+### (in a list column).
+}
+
+problem.joint.targets <- function
+### Compute targets for a separate problem.
+(problem.dir
+### project/problems/problemID
+ ){
+  labels.tsv.vec <- Sys.glob(file.path(
+    problem.dir, "jointProblems", "*", "labels.tsv"))
+  mclapply.or.stop(seq_along(labels.tsv.vec), function(labels.i){
+    labels.tsv <- labels.tsv.vec[[labels.i]]
+    jprob.dir <- dirname(labels.tsv)
+    cat(sprintf(
+      "%4d / %4d labeled joint problems %s\n",
+      labels.i, length(labels.tsv.vec),
+      jprob.dir))
+    target.tsv <- file.path(jprob.dir, "target.tsv")
+    if(file.exists(target.tsv)){
+      cat("Skipping since target.tsv exists.\n")
+    }else{
+      problem.joint.target(jprob.dir)
+    }
+  })
+### Nothing.
+}
+
 problem.joint.targets.train <- function
 ### Compute all target intervals then learn a penalty function.
 (data.dir
@@ -75,7 +169,12 @@ problem.joint.targets.train <- function
       "%4d / %4d labeled joint problems %s\n",
       labels.i, length(labels.tsv.vec),
       prob.dir))
-    problem.joint.target(prob.dir)
+    target.tsv <- file.path(prob.dir, "target.tsv")
+    if(file.exists(target.tsv)){
+      cat("Skipping since target.tsv exists.\n")
+    }else{
+      problem.joint.target(prob.dir)
+    }
   })
   problem.joint.train(data.dir)
 ### Nothing.
@@ -194,6 +293,30 @@ problem.joint.train <- function
   cat("Train errors:\n")
   print(pred.dt[, list(targets=.N), by=status])
   save(joint.model, problems.list, file=joint.model.RData)
+  cat("Saved ", joint.model.RData, "\n", sep="")
+  jprobs.bed.dt <- data.table(jprobs.bed=Sys.glob(file.path(
+    data.dir, "problems", "*", "jointProblems.bed")))
+  jprobs <- jprobs.bed.dt[, {
+      fread(jprobs.bed)
+    }, by=jprobs.bed]
+  setnames(jprobs, c(
+    "jprobs.bed", "chrom", "problemStart", "problemEnd"))
+  jobs.dir <- file.path(data.dir, "jobs")
+  job.id.vec <- dir(jobs.dir)
+  jprobs[, job := rep(job.id.vec, l=.N) ]
+  jprobs[, {
+    job.dir <- normalizePath(file.path(jobs.dir, job), mustWork=TRUE)
+    fwrite(
+      .SD[,.(chrom, problemStart, problemEnd, basename(dirname(jprobs.bed)))],
+      file.path(job.dir, "jobProblems.bed"),
+      sep="\t", col.names=FALSE)
+  }, by=job]
+  cat(
+    "Saved ",
+    length(job.id.vec),
+    " jobProblems.bed files to ",
+    jobs.dir,
+    "\n", sep="")
 ### Nothing.
 }
 
@@ -220,28 +343,10 @@ problem.joint <- function
   coverage.list <- list()
   for(coverage.i in seq_along(coverage.bedGraph.vec)){
     coverage.bedGraph <- coverage.bedGraph.vec[[coverage.i]]
-    ## cat(sprintf(
-    ##   "%4d / %4d %s\n",
-    ##   coverage.i, length(coverage.bedGraph.vec), coverage.bedGraph))
-    sample.coverage <- fread(
-      coverage.bedGraph,
-      colClasses=list(NULL=1, integer=2:4))
-    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
-    sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chromStart1, chromEnd)
-    problem.coverage <- foverlaps(sample.coverage, problem, nomatch=0L)
-    problem.coverage[chromStart < problemStart, chromStart := problemStart]
-    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
     problem.dir <- dirname(coverage.bedGraph)
-    problems.dir <- dirname(problem.dir)
-    sample.dir <- dirname(problems.dir)
-    sample.id <- basename(sample.dir)
-    group.dir <- dirname(sample.dir)
-    sample.group <- basename(group.dir)
-    sample.path <- paste0(sample.group, "/", sample.id)
-    coverage.list[[sample.path]] <- data.table(
-      sample.id, sample.group,
-      problem.coverage[chromStart < chromEnd,])
+    save.coverage <- problem[, readCoverage(
+      problem.dir, problemStart, problemEnd)]
+    coverage.list[[problem.dir]] <- save.coverage
   }
   coverage <- do.call(rbind, coverage.list)
   profile.list <- ProfileList(coverage)
@@ -255,30 +360,86 @@ problem.joint <- function
 ### Model from ConvertModelList.
 }
 
+readCoverage <- function
+### Read sample coverage for one problem from either
+### sampleID/coverage.bigWig if it exists, or
+### sampleID/problems/problemID/coverage.bedGraph
+(problem.dir,
+### project/samples/groupID/sampleID/problems/problemID
+  start,
+### start of coverage to read.
+  end
+### end of coverage to read.
+){
+  chrom <- sub(":.*", "", basename(problem.dir))
+  jprob <- data.table(chrom, problemStart=start, problemEnd=end)
+  problems.dir <- dirname(problem.dir)
+  sample.dir <- dirname(problems.dir)
+  coverage.bigWig <- file.path(sample.dir, "coverage.bigWig")
+  coverage.bedGraph <- file.path(problem.dir, "coverage.bedGraph")
+  save.coverage <- if(file.exists(coverage.bigWig)){
+    ## If bigWig file has already been computed, then it is much
+    ## faster to read it since it is indexed!
+    jprob[, readBigWig(
+      coverage.bigWig, chrom, problemStart, problemEnd)]
+  }else if(0 < file.size(coverage.bedGraph)){#otherwise fread gives error.
+    sample.coverage <- fread(
+      coverage.bedGraph,
+      colClasses=list(NULL=1, integer=2:4))
+    setnames(sample.coverage, c("chromStart", "chromEnd", "count"))
+    sample.coverage[, chromStart1 := chromStart + 1L]
+    setkey(sample.coverage, chromStart1, chromEnd)
+    jprob[, problemStart1 := problemStart + 1L]
+    setkey(jprob, problemStart1, problemEnd)
+    problem.coverage <- foverlaps(sample.coverage, jprob, nomatch=0L)
+    problem.coverage[chromStart < problemStart, chromStart := problemStart]
+    problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
+    problem.coverage[chromStart < chromEnd,]
+  }
+  ## If we don't have the if() below, we get Error in
+  ## data.table(sample.id, sample.group,
+  ## problem.coverage[chromStart < : Item 3 has no length.
+  if(is.data.table(save.coverage) && 0 < nrow(save.coverage)){
+    sample.id <- basename(sample.dir)
+    group.dir <- dirname(sample.dir)
+    sample.group <- basename(group.dir)
+    data.table(sample.id, sample.group, save.coverage)
+  }
+### Either the data.table of coverage, or NULL if no coverage data exists.
+}
+
 problem.joint.predict <- function
 ### Compute peak predictions for a joint problem.
 (jointProblem.dir
 ### project/problems/problemID/jointProblems/jointProbID
 ){
-  converted <- problem.joint(jointProblem.dir)
+  segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
+  if(file.exists(segmentations.RData)){
+    cat("Loading model from ", segmentations.RData, "\n", sep="")
+    load(segmentations.RData)
+  }else{
+    segmentations <- problem.joint(jointProblem.dir)
+  }
+  chrom <- sub(":.*", "", basename(jointProblem.dir))
   jprobs.dir <- dirname(jointProblem.dir)
   prob.dir <- dirname(jprobs.dir)
   probs.dir <- dirname(prob.dir)
   set.dir <- dirname(probs.dir)
   joint.model.RData <- file.path(set.dir, "joint.model.RData")
   load(joint.model.RData)
-  log.penalty <- joint.model$predict(converted$features)
+  log.penalty <- joint.model$predict(segmentations$features)
   stopifnot(length(log.penalty)==1)
   selected <- subset(
-    converted$modelSelection,
+    segmentations$modelSelection,
     min.log.lambda < log.penalty & log.penalty < max.log.lambda)
   loss.tsv <- file.path(jointProblem.dir, "loss.tsv")
-  pred.dt <- if(selected$peaks == 0){
+  if(selected$peaks == 0){
     unlink(loss.tsv)
-    data.table()
+    pred.dt <- data.table()
+    loss.dt <- data.table()
   }else{
-    selected.loss <- converted$loss[paste(selected$peaks), "loss"]
-    flat.loss <- converted$loss["0", "loss"]
+    selected.loss <- segmentations$loss[paste(selected$peaks), "loss"]
+    flat.loss <- segmentations$loss["0", "loss"]
     loss.dt <- data.table(
       loss.diff=flat.loss-selected.loss)
     write.table(
@@ -288,9 +449,8 @@ problem.joint.predict <- function
       sep="\t",
       col.names=FALSE,
       row.names=FALSE)
-    pred.df <- subset(converted$peaks, peaks==selected$peaks)
-    chrom <- paste(converted$coverage$chrom[1])
-    with(pred.df, data.table(
+    pred.df <- subset(segmentations$peaks, peaks==selected$peaks)
+    pred.dt <- with(pred.df, data.table(
       chrom,
       chromStart,
       chromEnd,
@@ -308,9 +468,8 @@ problem.joint.predict <- function
     sep="\t",
     col.names=FALSE,
     row.names=FALSE)
-  pred.dt
-### data.table of predicted peaks, with 5 columns: chrom, chromStart,
-### chromEnd, name, mean.
+  list(peaks=pred.dt, loss=loss.dt)
+### list of peaks and loss.
 }
 
 problem.joint.target <- function
@@ -318,16 +477,34 @@ problem.joint.target <- function
 (jointProblem.dir
 ### Joint problem directory.
 ){
-  converted <- problem.joint(jointProblem.dir)
+  segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
+  if(file.exists(segmentations.RData)){
+    cat("Loading model from ", segmentations.RData, "\n", sep="")
+    load(segmentations.RData)
+  }else{
+    segmentations <- problem.joint(jointProblem.dir)
+  }
   labels.bed <- file.path(jointProblem.dir, "labels.tsv")
   labels <- fread(labels.bed)
   setnames(labels, c(
     "chrom", "chromStart", "chromEnd", "annotation",
     "sample.id", "sample.group"))
-  fit.error <- PeakSegJointError(converted, labels)
+  jprob <- fread(file.path(jointProblem.dir, "problem.bed"))
+  setnames(jprob, c("chrom", "problemStart", "problemEnd", "problem.name"))
+  ##   [peakStart]   [peakEnd]   labels
+  ## ______   ___________  ______ joint problems
+  ## ____________________________
+  ## peakStart must end inside the joint problem,
+  ## and peakEnd must start inside the joint problem.
+  ## otherwise the annotation should be considered noPeaks.
+  labels[{
+    (annotation=="peakEnd" & chromStart < jprob$problemStart) |
+      (annotation=="peakStart" & jprob$problemEnd < chromEnd)
+  }, annotation := "noPeaks"]
+  fit.error <- PeakSegJointError(segmentations, labels)
   if(FALSE){
     show.peaks <- 8
-    show.peaks.df <- subset(converted$peaks, peaks==show.peaks)
+    show.peaks.df <- subset(segmentations$peaks, peaks==show.peaks)
     show.errors <- fit.error$error.regions[[paste(show.peaks)]]
     ann.colors <-
       c(noPeaks="#f6f4bf",
@@ -363,7 +540,7 @@ problem.joint.target <- function
                  "false negative"=3,
                  "false positive"=1))+
       geom_step(aes(chromStart/1e3, count),
-                data=converted$coverage,
+                data=segmentations$coverage,
                 color="grey50")+
       geom_segment(aes(chromStart/1e3, 0,
                        xend=chromEnd/1e3, yend=0),
@@ -376,8 +553,8 @@ problem.joint.target <- function
     ##              color="green")
   }
   cat("Train error:\n")
-  print(data.table(fit.error$modelSelection)[, .(
-    min.log.lambda, max.log.lambda, peaks, errors)])
+  print(fit.error$modelSelection[, c(
+    "min.log.lambda", "max.log.lambda", "peaks", "errors")])
   target.tsv <- file.path(jointProblem.dir, "target.tsv")
   cat(
     "Writing target interval (",
@@ -386,7 +563,7 @@ problem.joint.target <- function
     target.tsv,
     "\n", sep="")
   write(fit.error$target, target.tsv, sep="\t")
-### Nothing.
+### list of output from PeakSegJointError.
 }
 
 problem.joint.plot <- function
@@ -435,13 +612,8 @@ problem.joint.plot <- function
     sample.id <- basename(sample.dir)
     group.dir <- dirname(sample.dir)
     sample.group <- basename(group.dir)
-    sample.coverage <- fread(file.path(problem.dir, "coverage.bedGraph"))
-    setnames(sample.coverage, c("chrom", "chromStart", "chromEnd", "count"))
-    sample.coverage[, chromStart1 := chromStart + 1L]
-    setkey(sample.coverage, chromStart1, chromEnd)
-    chunk.cov <- foverlaps(sample.coverage, chunk, nomatch=0L)
-    coverage.list[[problem.dir]] <- data.table(
-      sample.id, sample.group, chunk.cov)
+    chunk.cov <- chunk[, readCoverage(problem.dir, chunkStart, chunkEnd)]
+    coverage.list[[problem.dir]] <- chunk.cov
     ## Also store peaks in this chunk, if there are any.
     sample.peaks <- tryCatch({
       fread(file.path(problem.dir, "peaks.bed"))
@@ -460,8 +632,6 @@ problem.joint.plot <- function
     }
   }
   coverage <- do.call(rbind, coverage.list)
-  separate.peaks <- do.call(rbind, separate.peaks.list)
-  separate.peaks$peak.type <- "separate"
   cat("Read",
       length(coverage.list),
       "samples of coverage.\n")
@@ -555,25 +725,34 @@ problem.joint.plot <- function
         size=peak.type),
         data=joint.peaks)
   }
-  gg <- gg+
-    geom_segment(aes(
-      peakStart/1e3, 0,
-      xend=peakEnd/1e3, yend=0,
-      color=peak.type,
-      size=peak.type),
-      data=separate.peaks)+
-    geom_point(aes(
-      peakStart/1e3, 0,
-      color=peak.type,
-      size=peak.type),
-      data=separate.peaks)
+  if(length(separate.peaks.list)){
+    separate.peaks <- do.call(rbind, separate.peaks.list)
+    separate.peaks$peak.type <- "separate"
+    gg <- gg+
+      geom_segment(aes(
+        peakStart/1e3, 0,
+        xend=peakEnd/1e3, yend=0,
+        color=peak.type,
+        size=peak.type),
+                   data=separate.peaks)+
+      geom_point(aes(
+        peakStart/1e3, 0,
+        color=peak.type,
+        size=peak.type),
+                 data=separate.peaks)
+  }
   n.rows <- length(coverage.list) + 2
   mypng <- function(base, g){
     f <- file.path(chunk.dir, base)
     cat("Writing ",
         f,
         "\n", sep="")
-    png(f, res=100, width=1000, height=60*n.rows)
+    cairo.limit <- 32767
+    h <- 60*n.rows
+    if(cairo.limit < h){
+      h <- floor(cairo.limit / n.rows) * n.rows
+    }
+    png(f, res=100, width=1000, height=h)
     print(g)
     dev.off()
     thumb.png <- sub(".png$", "-thumb.png", f)

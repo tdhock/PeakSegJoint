@@ -11,7 +11,7 @@ bigWigToBedGraph is present on your PATH).}
   \item{end}{plain text file where coverage is saved before reading into R.}
 }
 
-\value{data.table with columns chrom chromStart chromEnd count.}
+\value{data.table with columns chromStart chromEnd count.}
 
 \author{Toby Dylan Hocking}
 
