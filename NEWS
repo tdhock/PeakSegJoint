@@ -1,3 +1,9 @@
+2017.04.20
+
+better caching: readCoverage etc.
+
+problem.joint.predict.job with list column.
+
 2017.02.27
 
 multiClusterPeaks is a new R/C function that clusters peaks into
