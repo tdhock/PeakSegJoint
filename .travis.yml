@@ -18,6 +18,7 @@ before_install:
   - travis-tool.sh bootstrap
 
 install:
+  - travis-tool.sh install devtools
   - Rscript -e "devtools::install_github('tdhock/animint', upgrade_dependencies=FALSE)"
   - travis-tool.sh install_deps
   - Rscript -e "devtools::install(dependencies=FALSE)"
