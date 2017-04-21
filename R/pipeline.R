@@ -353,7 +353,7 @@ problem.joint.predict <- function
   joint.model.RData <- file.path(set.dir, "joint.model.RData")
   load(joint.model.RData)
   feature.mat <- rbind(colSums(segmentations$features))
-  log.penalty <- joint.model$predict(feature.mat)
+  log.penalty <- as.numeric(joint.model$predict(feature.mat))
   stopifnot(length(log.penalty)==1)
   selected <- subset(
     segmentations$modelSelection,
