@@ -207,7 +207,8 @@ problem.joint.train <- function
   cat("Training using", nrow(target.mat), "finite targets.\n")
   set.seed(1)
   joint.model <- penaltyLearning::IntervalRegressionCV(
-    feature.mat, target.mat)
+    feature.mat, target.mat,
+    min.observations=nrow(feature.mat))
   pred.log.penalty <- joint.model$predict(feature.mat)
   pred.dt <- data.table(
     too.lo=as.logical(pred.log.penalty < target.mat[,1]),
