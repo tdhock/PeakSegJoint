@@ -321,6 +321,14 @@ readCoverage <- function
     problem.coverage[chromStart < problemStart, chromStart := problemStart]
     problem.coverage[problemEnd < chromEnd, chromEnd := problemEnd]
     problem.coverage[chromStart < chromEnd,]
+    ## Note that problem.coverage (from coverage.bedGraph) is
+    ## guaranteed to have rows with 0 coverage -- this is required for
+    ## PeakSegFPOP! but readBigWig really just returns what is stored
+    ## in the bigWig -- if there are no rows with 0 coverage, then
+    ## there will be none in the output save.coverage. This is no
+    ## problem for running the PeakSegJoint model, but it could be a
+    ## problem for plotting (error in geom_step if only one row to
+    ## plot).
   }
   ## If we don't have the if() below, we get Error in
   ## data.table(sample.id, sample.group,
@@ -633,8 +641,9 @@ problem.joint.plot <- function
     scale_fill_manual("label", values=ann.colors)+
     scale_color_manual(values=c(separate="black", joint="deepskyblue"))+
     scale_size_manual(values=c(separate=2, joint=3))+
-    geom_step(aes(
-      chromStart/1e3, count),
+    geom_rect(aes(
+      xmin=chromStart/1e3, xmax=chromEnd/1e3,
+      ymin=0, ymax=count),
       data=coverage,
       color="grey50")
   if(length(joint.peaks)){
