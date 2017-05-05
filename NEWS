@@ -1,3 +1,10 @@
+2017.05.05
+
+Suggest penaltyLearning, used in pipeline.R with colSums features.
+
+Use geom_rect rather than geom_step in problem.joint.plot, to avoid an
+error when the data set has only 1 row.
+
 2017.04.20
 
 better caching: readCoverage etc.
