@@ -209,6 +209,7 @@ problem.joint.train <- function
   joint.model <- penaltyLearning::IntervalRegressionCV(
     feature.mat, target.mat,
     min.observations=nrow(feature.mat))
+  joint.model$train.mean.vec <- colMeans(feature.mat)
   pred.log.penalty <- joint.model$predict(feature.mat)
   pred.dt <- data.table(
     too.lo=as.logical(pred.log.penalty < target.mat[,1]),
@@ -362,8 +363,11 @@ problem.joint.predict <- function
   joint.model.RData <- file.path(set.dir, "joint.model.RData")
   load(joint.model.RData)
   feature.mat <- rbind(colSums(segmentations$features))
+  is.bad <- !is.finite(feature.mat)
+  feature.mat[is.bad] <- joint.model$train.mean.vec[is.bad]
   log.penalty <- as.numeric(joint.model$predict(feature.mat))
   stopifnot(length(log.penalty)==1)
+  stopifnot(is.finite(log.penalty))
   selected <- subset(
     segmentations$modelSelection,
     min.log.lambda < log.penalty & log.penalty < max.log.lambda)
