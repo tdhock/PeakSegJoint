@@ -363,8 +363,16 @@ problem.joint.predict <- function
   joint.model.RData <- file.path(set.dir, "joint.model.RData")
   load(joint.model.RData)
   feature.mat <- rbind(colSums(segmentations$features))
-  is.bad <- !is.finite(feature.mat)
-  feature.mat[is.bad] <- joint.model$train.mean.vec[is.bad]
+  stopifnot(nrow(feature.mat)==1)
+  if(length(feature.mat)==length(joint.model$train.mean.vec)){
+    is.bad <- !is.finite(feature.mat)
+    feature.mat[is.bad] <- joint.model$train.mean.vec[is.bad]
+  }else{
+    stop(
+      "feature.mat has ", length(feature.mat),
+      " columns but ", length(joint.model$train.mean.vec),
+      " features were used to train the joint model")
+  }    
   log.penalty <- as.numeric(joint.model$predict(feature.mat))
   stopifnot(length(log.penalty)==1)
   stopifnot(is.finite(log.penalty))
