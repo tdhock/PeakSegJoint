@@ -2,7 +2,7 @@ problem.joint.predict.many <- function
 ### Compute all joint peak predictions for one separate problem.
 (prob.dir
 ### project/problems/problemID
-){
+ ){
   joint.dir.vec <- Sys.glob(file.path(
     prob.dir, "jointProblems", "*"))
   peaks.bed <- file.path(prob.dir, "peaks.bed")
@@ -66,7 +66,9 @@ problem.joint.predict.job <- function
 ### in jobProblems.bed
 (job.dir
 ### project/jobs/jobID
-){
+ ){
+  jprob.name <- problem.name <- problemEnd <- problemStart <-
+    chrom <- NULL
   jobProblems <- fread(file.path(job.dir, "jobProblems.bed"))
   jobs.dir <- dirname(job.dir)
   data.dir <- dirname(jobs.dir)
@@ -184,7 +186,9 @@ problem.joint.train <- function
 ### Learn a penalty function for joint peak prediction.
 (data.dir
 ### project directory.
-){
+ ){
+  problemEnd <- problemStart <- chrom <- . <- job <- jprobs.bed <-
+    too.hi <- too.lo <- status <- segmentations <- NULL
   joint.model.RData <- file.path(data.dir, "joint.model.RData")
   target.tsv.vec <- Sys.glob(file.path(
     data.dir, "problems", "*", "jointProblems", "*", "target.tsv"))
@@ -250,7 +254,8 @@ problem.joint <- function
 ### Fit a joint model.
 (jointProblem.dir
 ### path/to/jointProblem
-){
+ ){
+  problemEnd <- problemStart <- problemStart1 <- NULL
   segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
   problem.bed <- file.path(jointProblem.dir, "problem.bed")
   problem <- fread(problem.bed)
@@ -296,7 +301,9 @@ readCoverage <- function
 ### start of coverage to read.
   end
 ### end of coverage to read.
-){
+ ){
+  problemStart <- chromEnd <- chromStart1 <- chromStart <-
+    chromEnd <- problemStart1 <- problemEnd <- NULL
   chrom <- sub(":.*", "", basename(problem.dir))
   jprob <- data.table(chrom, problemStart=start, problemEnd=end)
   problems.dir <- dirname(problem.dir)
@@ -346,7 +353,8 @@ problem.joint.predict <- function
 ### Compute peak predictions for a joint problem.
 (jointProblem.dir
 ### project/problems/problemID/jointProblems/jointProbID
-){
+ ){
+  max.log.lambda <- min.log.lambda <- joint.model <- peaks <- NULL
   segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
   if(file.exists(segmentations.RData)){
     cat("Loading model from ", segmentations.RData, "\n", sep="")
@@ -411,7 +419,8 @@ problem.joint.target <- function
 ### Compute target interval for a joint problem.
 (jointProblem.dir
 ### Joint problem directory.
-){
+ ){
+  chromStart <- chromEnd <- annotation <- NULL
   segmentations.RData <- file.path(jointProblem.dir, "segmentations.RData")
   if(file.exists(segmentations.RData)){
     cat("Loading model from ", segmentations.RData, "\n", sep="")
@@ -451,14 +460,14 @@ problem.joint.target <- function
       theme(panel.margin=grid::unit(0, "lines"))+
       facet_grid(sample.group + sample.id ~ ., scales="free")+
       scale_fill_manual(values=ann.colors)+
-      geom_tallrect(aes(
+      penaltyLearning::geom_tallrect(aes(
         xmin=chromStart/1e3,
         xmax=chromEnd/1e3,
         fill=annotation),
         color="grey",
         alpha=0.5,
         data=labels)+
-      geom_tallrect(aes(
+      penaltyLearning::geom_tallrect(aes(
         xmin=chromStart/1e3,
         xmax=chromEnd/1e3,
         linetype=status),
@@ -505,10 +514,11 @@ problem.joint.plot <- function
 ### Plot one chunk.
 (chunk.dir
 ### project/problems/problemID/chunks/chunkID
-){
-  if(!require(ggplot2)){
-    stop("please install ggplot2")
-  }
+ ){
+  peak.type <- count <- annotation <- chromEnd <- chromStart <-
+    sample.path <- peakEnd <- peakStart <- peakStart1 <- problemEnd <-
+      chrom <- problem.name <- problemStart <- problemStart1 <-
+        chunkEnd <- chunkStart <- chunkStart1 <- NULL
   chunks.dir <- dirname(chunk.dir)
   prob.dir <- dirname(chunks.dir)
   prob.name <- basename(prob.dir)
@@ -614,14 +624,6 @@ problem.joint.plot <- function
       "position on",
       coverage$chrom[1],
       "(kb = kilo bases)"))+
-    ## geom_tallrect(aes(
-    ##   xmin=problemStart/1e3,
-    ##   xmax=problemEnd/1e3),
-    ##   alpha=0.5,
-    ##   size=3,
-    ##   color="black",
-    ##   fill=NA,
-    ##   data=probs.in.chunk)+
     geom_segment(aes(
       problemStart/1e3, 0,
       xend=problemEnd/1e3, yend=0),
@@ -632,7 +634,7 @@ problem.joint.plot <- function
       problemStart/1e3, 0),
       color="blue",
       data=probs.in.chunk)+
-    geom_tallrect(aes(
+    penaltyLearning::geom_tallrect(aes(
       xmin=chromStart/1e3, 
       xmax=chromEnd/1e3,
       fill=annotation), 

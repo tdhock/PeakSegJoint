@@ -1,14 +1,17 @@
 Package: PeakSegJoint
-Maintainer: Toby Dylan Hocking <toby.hocking@mail.mcgill.ca>
+Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.05.05
+Version: 2017.06.20
 License: GPL-3
-Title: Joint peak detection via constrained optimal segmentation
- and supervised penalty learning
-Description: Segment several ChIP-seq samples to jointly find the peaks 
- which are the same and different across samples.
-Suggests: ggplot2 (>= 2.0), testthat, microbenchmark,
- PeakSegDP, xtable, penaltyLearning
-Depends: R (>= 2.14), data.table (>= 1.9.4), PeakError, parallel
-Imports: data.table, PeakError, parallel
-Remotes: tdhock/PeakSegDP, tdhock/PeakError, tdhock/penaltyLearning
+Title: Joint Peak Detection in Several ChIP-Seq Samples
+Description: Jointly segment several ChIP-seq samples to find the peaks 
+ which are the same and different across samples. The fast approximate
+ maximum Poisson likelihood algorithm is described in
+ "PeakSegJoint: fast supervised peak detection via joint segmentation
+ of multiple count data samples"
+ <arXiv:1506.01286> by TD Hocking and G Bourque.
+Suggests: testthat
+Depends: R (>= 2.14)
+Imports: data.table (>= 1.9.4),
+ PeakError, parallel, ggplot2 (>= 2.0), penaltyLearning
+

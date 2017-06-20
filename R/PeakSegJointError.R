@@ -63,13 +63,14 @@ PeakSegJointError <- structure(function
   exact <- converted$modelSelection
   exact$errors <- error.totals[paste(exact$peaks), "errors"]
   indices <- with(exact, {
-    largestContinuousMinimum(errors, max.log.lambda-min.log.lambda)
+    penaltyLearning::largestContinuousMinimumC(
+      errors, max.log.lambda-min.log.lambda)
   })
   list(error.totals=error.totals,
        error.regions=error.regions.list,
        modelSelection=exact,
-       target=c(exact$min.log.lambda[indices$start],
-         exact$max.log.lambda[indices$end]))
+       target=c(exact$min.log.lambda[ indices[["start"]] ],
+         exact$max.log.lambda[ indices[["end"]] ]))
 ### List of error.totals (data.frame with one row for each model size,
 ### with counts of incorrect labels), error.regions (list of
 ### data.frames with labels and error status for each model size),
@@ -78,7 +79,9 @@ PeakSegJointError <- structure(function
 ### and upper limits of target interval of log.lambda penalty values
 ### in the interval regression problem).
 }, ex=function(){
-  data(H3K36me3.TDH.other.chunk1, package="PeakSegJoint")
+
+  library(PeakSegJoint)
+  data(H3K36me3.TDH.other.chunk1, envir=environment())
   lims <- c(43000000, 43200000) # left
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
@@ -101,7 +104,8 @@ PeakSegJointError <- structure(function
       peakEnd="#ff4c4c",
       peaks="#a445ee")
   ggplot()+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3, fill=annotation),
+    penaltyLearning::geom_tallrect(aes(
+      xmin=chromStart/1e3, xmax=chromEnd/1e3, fill=annotation),
                   alpha=0.5,
                   color="grey",
                   data=some.regions)+
@@ -117,7 +121,8 @@ PeakSegJointError <- structure(function
     geom_step(aes(chromStart/1e3, count),
               color="grey50",
               data=some.counts)+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3, linetype=status),
+    penaltyLearning::geom_tallrect(aes(
+      xmin=chromStart/1e3, xmax=chromEnd/1e3, linetype=status),
                   fill=NA,
                   color="black",
                   size=1,
@@ -129,12 +134,6 @@ PeakSegJointError <- structure(function
                  data=show.peaks)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ peaks, labeller=function(var, val){
-      if(var=="peaks"){
-        paste(val, "peaks")
-      }else{
-        sub("McGill0", "", val)
-      }
-    }, scales="free")
+    facet_grid(sample.id ~ peaks, scales="free")
 
 })

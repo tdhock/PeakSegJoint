@@ -18,7 +18,7 @@ cluster.}
 \examples{
 
 library(PeakSegJoint)
-data(chr7.peaks)
+data(chr7.peaks, envir=environment())
 library(ggplot2)
 ggplot()+
   geom_segment(aes(

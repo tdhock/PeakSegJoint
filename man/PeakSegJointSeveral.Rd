@@ -33,7 +33,9 @@ for easier interpretation.}
 
 
 \examples{
-data(H3K4me3.TDH.other.chunk8)
+
+library(PeakSegJoint)
+data(H3K4me3.TDH.other.chunk8, envir=environment())
 bf.vec <- c(2, 3, 5)
 fit.list <-
   list(several=PeakSegJointSeveral(H3K4me3.TDH.other.chunk8, bf.vec))
@@ -78,13 +80,7 @@ ggplot()+
                data=segs1)+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(sample.id ~ fit.name, labeller=function(var, val){
-    if(var=="sample.id"){
-      sub("McGill0", "", val)
-    }else{
-      ifelse(val=="several", "best of several", paste("bin.factor =", val))
-    }
-  }, scales="free")
+  facet_grid(sample.id ~ fit.name, scales="free")
 
 segs.by.peaks <- list()
 for(peaks in 8:10){
@@ -110,12 +106,6 @@ ggplot()+
                data=segs)+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(sample.id ~ peaks, labeller=function(var, val){
-    if(var=="sample.id"){
-      sub("McGill0", "", val)
-    }else{
-      paste(val, "peaks")
-    }
-  }, scales="free")
+  facet_grid(sample.id ~ peaks, scales="free")
 
 }

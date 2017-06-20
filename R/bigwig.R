@@ -19,6 +19,7 @@ readBigWig <- function
  end
 ### plain text file where coverage is saved before reading into R.
  ){
+  count <- . <- chromStart <- chromEnd <- NULL
   stopifnot(length(bigwig.file) == 1)
   stopifnot(length(chrom) == 1)
   stopifnot(length(start) == 1)
