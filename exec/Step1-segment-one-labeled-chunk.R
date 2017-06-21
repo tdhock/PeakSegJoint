@@ -242,7 +242,7 @@ ProblemError <- function(row.i){
   problem.regions <- one.res$regions[[problem.name]]
   converted <- step2.model.list[[problem.name]]
   if(is.null(converted)){
-    pred.peaks <- Peaks()
+    pred.peaks <- PeakError::Peaks()
     prob.err.list <- PeakSegJointError(list(peaks=NULL), problem.regions)
   }else{
     prob.err.list <- PeakSegJointError(converted, problem.regions)
@@ -273,7 +273,7 @@ ResError <- function(res.str){
     pred.peaks.list[[error.row.name]] <- error.info$peaks
   }
   pred.peaks <- if(length(pred.peaks.list) == 0){
-    Peaks()
+    PeakError::Peaks()
   }else{
     do.call(rbind, pred.peaks.list)
   }
