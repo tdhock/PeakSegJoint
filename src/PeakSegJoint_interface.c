@@ -426,7 +426,7 @@ static R_CallMethodDef callMethods[] = {
 };
 
 void R_init_PeakSegJoint(DllInfo *info) {
-  R_registerRoutines(info, cMethods, NULL, NULL, NULL);
+  R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
   //R_useDynamicSymbols call says the DLL is not to be searched for
   //entry points specified by character strings so .C etc calls will
   //only find registered symbols.
