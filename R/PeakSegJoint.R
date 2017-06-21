@@ -216,25 +216,26 @@ PeakSegJointSeveral <- structure(function
 
   segs1 <- do.call(rbind, segs.by.peaks.fit[["1"]])
   breaks1 <- subset(segs1, min(chromStart) < chromStart)
-  library(ggplot2)
-  ggplot()+
-    ggtitle(paste("PeakSegJointSeveral runs PeakSegJointHeuristic",
-                  "and keeps only the most likely model"))+
-    geom_step(aes(chromStart/1e3, count),
-              color="grey50",
-              data=H3K4me3.TDH.other.chunk8)+
-    geom_vline(aes(xintercept=chromStart/1e3),
-               data=breaks1,
-               color="green",
-               linetype="dashed")+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 size=1,
+  if(interactive() && require(ggplot2)){
+    ggplot()+
+      ggtitle(paste("PeakSegJointSeveral runs PeakSegJointHeuristic",
+                    "and keeps only the most likely model"))+
+      geom_step(aes(chromStart/1e3, count),
+                color="grey50",
+                data=H3K4me3.TDH.other.chunk8)+
+      geom_vline(aes(xintercept=chromStart/1e3),
+                 data=breaks1,
                  color="green",
-                 data=segs1)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ fit.name, scales="free")
+                 linetype="dashed")+
+      geom_segment(aes(chromStart/1e3, mean,
+                       xend=chromEnd/1e3, yend=mean),
+                   size=1,
+                   color="green",
+                   data=segs1)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(sample.id ~ fit.name, scales="free")
+  }
 
   segs.by.peaks <- list()
   for(peaks in 8:10){
@@ -243,24 +244,25 @@ PeakSegJointSeveral <- structure(function
   }
   segs <- do.call(rbind, segs.by.peaks)
   breaks <- subset(segs, min(chromStart) < chromStart)
-  library(ggplot2)
-  ggplot()+
-    ggtitle("PeakSegJoint models with 8-10 peaks")+
-    geom_step(aes(chromStart/1e3, count),
-              color="grey50",
-              data=H3K4me3.TDH.other.chunk8)+
-    geom_vline(aes(xintercept=chromStart/1e3),
-               data=breaks,
-               color="green",
-               linetype="dashed")+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 size=1,
+  if(interactive() && require(ggplot2)){
+    ggplot()+
+      ggtitle("PeakSegJoint models with 8-10 peaks")+
+      geom_step(aes(chromStart/1e3, count),
+                color="grey50",
+                data=H3K4me3.TDH.other.chunk8)+
+      geom_vline(aes(xintercept=chromStart/1e3),
+                 data=breaks,
                  color="green",
-                 data=segs)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ peaks, scales="free")
+                 linetype="dashed")+
+      geom_segment(aes(chromStart/1e3, mean,
+                       xend=chromEnd/1e3, yend=mean),
+                   size=1,
+                   color="green",
+                   data=segs)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(sample.id ~ peaks, scales="free")
+  }
   
 })
 
