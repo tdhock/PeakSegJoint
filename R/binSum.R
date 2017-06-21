@@ -34,7 +34,7 @@ binSum <- structure(function
      bin.size=as.integer(bin.size),
      n.bins=as.integer(n.bins),
      bin.chromStart=as.integer(bin.chromStart),
-     package="PeakSegJoint")
+     PACKAGE="PeakSegJoint")
   total <- result$bin.total
   if(empty.as.zero){
     total[total == -1] <- 0L
