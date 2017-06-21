@@ -63,7 +63,7 @@ clusterProblems <- function
 (step1.peaks
 ### Maximum number of peaks from overlapping segmentation problems.
  ){
-  chrom <- NULL
+  chrom <- paste(step1.peaks$chrom[1])
   step2.overlap.list <- list()
   bases.per.problem <- step1.peaks$bases.per.problem[[1]]
   stopifnot(step1.peaks$bases.per.problem == bases.per.problem)
