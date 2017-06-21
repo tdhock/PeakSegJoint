@@ -1,6 +1,7 @@
 library(PeakSegJoint)
 library(ggplot2)
 library(xtable)
+library(data.table)
 options(xtable.print.results=FALSE)
 
 argv <- system.file("exampleData", "PeakSegJoint-chunks",

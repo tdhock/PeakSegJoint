@@ -1,4 +1,5 @@
 library(PeakSegJoint)
+library(data.table)
 
 argv <- # interactive default for debugging.
   system.file("exampleData", "manually_annotated_region_labels.txt",

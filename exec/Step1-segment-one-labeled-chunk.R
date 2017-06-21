@@ -1,5 +1,5 @@
 library(PeakSegJoint)
-library(PeakError)
+library(data.table)
 
 ## Compute PeakSegJoint segmentations for one labeled chunk in the
 ## train data set.

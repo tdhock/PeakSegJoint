@@ -1,5 +1,6 @@
 library(animint)
 library(PeakSegJoint)
+library(data.table)
 
 argv <- "~/projects/H3K27ac_TDH/PeakSegJoint-chunks/15"
 exampleData <-

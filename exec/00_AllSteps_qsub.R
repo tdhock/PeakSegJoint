@@ -1,4 +1,5 @@
 library(PeakSegJoint)
+library(data.table)
 
 getenv.or <- function(env.var, default){
   env.value <- Sys.getenv(env.var)

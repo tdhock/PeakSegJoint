@@ -1,5 +1,6 @@
 library(animint)
 library(PeakSegJoint)
+library(data.table)
 
 argv <- c(
   "~/projects/blueprint/results/H3K27ac/PeakSegJoint.predictions.RData",

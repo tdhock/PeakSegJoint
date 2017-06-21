@@ -1,4 +1,5 @@
 library(PeakSegJoint)
+library(data.table)
 
 argv <-
   c("~/exampleData/PeakSegJoint-chunks/trained.model.RData",
