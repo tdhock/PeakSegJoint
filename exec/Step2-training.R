@@ -129,9 +129,11 @@ out.file <- file.path(chunks.dir, "figure-train-errors", "index.html")
 
 cat(html.out, file=out.file)
 
-problems.by.chunk <- list()
-labeled.problems.by.chunk <- list()
+target.mat.list <- list()
+feature.mat.list <- list()
+all.feature.mat.list <- list()
 regions.by.chunk <- list()
+chunk.vec.list <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
   objs <- load(problems.RData)
@@ -149,10 +151,11 @@ for(chunk.i in seq_along(problems.RData.vec)){
     mlist <- step2.model.list[[problem.name]]
     stopifnot(prob.info$problemStart < mlist$peaks$chromStart)
     stopifnot(mlist$peaks$chromEnd < prob.info$problemEnd)
-    mlist$target <- target
-    problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
-    if(is.numeric(target)){
-      labeled.problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
+    all.feature.mat.list[[problem.name]] <- mlist$features
+    if(is.numeric(target) && length(target)==2 && any(is.finite(target))){
+      target.mat.list[[problem.name]] <- target
+      feature.mat.list[[problem.name]] <- colSums(mlist$features)
+      chunk.vec.list[[problem.name]] <- problems.RData
     }
   }
   chunk.dir <- dirname(problems.RData)
@@ -160,41 +163,22 @@ for(chunk.i in seq_along(problems.RData.vec)){
   load(regions.RData)
   regions.by.chunk[[problems.RData]] <- regions
 }
+target.mat <- do.call(rbind, target.mat.list)
+feature.mat <- do.call(rbind, feature.mat.list)
+chunk.vec <- do.call(rbind, chunk.vec.list)
 
-## Fit model to all training data. need (unlabeled) problems.by.chunk
-## here since the predictions must be made on all problems in the
-## validation set (not just the subset of problems for which we have
-## assigned some regions and computed a target).
-full.curves <- tv.curves(problems.by.chunk, regions.by.chunk)
-picked.error <- best.on.validation(full.curves)
+## Fit model to all training data. 
+set.seed(1)
+full.fit <- penaltyLearning::IntervalRegressionCV(
+  feature.mat, target.mat,
+  min.observations=nrow(target.mat),
+  n.folds=ifelse(nrow(target.mat)<10, 2L, 5L))
 
-tvPlot <- 
-  ggplot()+
-    geom_point(aes(-log10(regularization), metric.value, color=tv),
-               pch=1,
-               data=picked.error)+
-    geom_line(aes(-log10(regularization), metric.value, color=tv),
-              data=full.curves)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(metric.name ~ validation.fold, scales="free")
 reg.png <-
   file.path(chunks.dir, "figure-train-errors", "figure-regularization.png")
 png(reg.png, width=600, h=400, units="px")
-print(tvPlot)
+print(full.fit$plot.selectRegularization)
 dev.off()
-
-mean.reg <- mean(picked.error$regularization)
-
-## labeled.problems.by.chunk needed here since
-## IntervalRegressionProblems does not accept problems without
-## targets.
-train.list <- do.call(c, labeled.problems.by.chunk)
-full.fit <-
-  IntervalRegressionProblems(train.list,
-                             initial.regularization=mean.reg,
-                             factor.regularization=NULL,
-                             verbose=0)
 
 ## get chrom size info from a bigwig, so we can generate a list of
 ## segmentation problems and divide them into jobs.
@@ -239,8 +223,10 @@ trained.model.RData <- file.path(chunks.dir, "trained.model.RData")
 save(train.errors, train.errors.picked,
      full.fit,
      ## for estimating test error later:
-     problems.by.chunk,
      regions.by.chunk,
+     target.mat,
+     feature.mat,
+     chunk.vec,
      ## for parallelizing prediction on jobs:
      problems.by.job,
      file=trained.model.RData)
