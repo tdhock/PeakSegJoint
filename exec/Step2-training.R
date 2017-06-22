@@ -133,6 +133,7 @@ target.mat.list <- list()
 feature.mat.list <- list()
 all.feature.mat.list <- list()
 regions.by.chunk <- list()
+problems.by.chunk <- list()
 chunk.vec.list <- list()
 for(chunk.i in seq_along(problems.RData.vec)){
   problems.RData <- problems.RData.vec[[chunk.i]]
@@ -149,8 +150,10 @@ for(chunk.i in seq_along(problems.RData.vec)){
     problem.name <- paste(prob.info$problem.name)
     target <- step2.error.list[[paste(res.str, problem.name)]]$problem$target
     mlist <- step2.model.list[[problem.name]]
+    mlist$target <- target
     stopifnot(prob.info$problemStart < mlist$peaks$chromStart)
     stopifnot(mlist$peaks$chromEnd < prob.info$problemEnd)
+    problems.by.chunk[[problems.RData]][[problem.name]] <- mlist
     all.feature.mat.list[[problem.name]] <- mlist$features
     if(is.numeric(target) && length(target)==2 && any(is.finite(target))){
       target.mat.list[[problem.name]] <- target
@@ -227,7 +230,9 @@ save(train.errors, train.errors.picked,
      target.mat,
      feature.mat,
      chunk.vec,
+     problems.by.chunk,
      ## for parallelizing prediction on jobs:
      problems.by.job,
      file=trained.model.RData)
+
 

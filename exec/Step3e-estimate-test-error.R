@@ -35,12 +35,10 @@ chunks.by.file <- split(chunk.file.map, chunk.file.map$labels.file)
 all.chunk.names <- names(problems.by.chunk)
 names(all.chunk.names) <- basename(dirname(all.chunk.names))
 cv.chunk.names <- all.chunk.names[paste(chunk.file.map$chunk.id)]
-
-labeled.problems.by.chunk <- list()
-for(chunk.name in names(problems.by.chunk)){
-  by.problem <- problems.by.chunk[[chunk.name]]
-  has.target <- sapply(by.problem, function(L)is.numeric(L$target))
-  labeled.problems.by.chunk[[chunk.name]] <- by.problem[has.target]
+is.bad <- is.na(cv.chunk.names)
+if(any(is.bad)){
+  print(chunk.file.map[is.bad,])
+  stop("some chunks have not been computed")
 }
 
 ## For each test fold, hold it out and train a sequence of models with
@@ -54,29 +52,129 @@ sets <-
        train.validation=sample(cv.chunk.names[!is.test]))
 test.regions <- regions.by.chunk[sets$test]
 test.problems <- problems.by.chunk[sets$test]
+test.features <- feature.mat[chunk.vec %in% sets$test,]
+
+error.metrics <- function
+### Use a model to predict peaks, and evaluate several error metrics:
+### incorrect.targets, incorrect.regions, false.positives,
+### false.negatives.
+(problems.by.chunk,
+### List[[chunk.name]][[problem.name]], a list which must have
+### features, modelSelection, peaks (and if it also has target, it
+### will be used to compute number of incorrect targets).
+ regions.by.chunk,
+### List[[chunk.name]], a data.frame of annotated region labels for
+### each chunk on which the error metrics will be evaluated.
+ fit
+### Model fit list from IntervalRegressionCV.
+ ){
+  chunk.name.vec <- names(regions.by.chunk)
+  error.vec.list <- list()
+  regions.list <- list()
+  outside.target.list <- list()
+  result.list <- list()
+  for(chunk.name in chunk.name.vec){
+    chunk.regions <- regions.by.chunk[[chunk.name]]
+    regions.list[[chunk.name]] <- nrow(chunk.regions)
+    chunk.problems <- problems.by.chunk[[chunk.name]]
+    if(is.null(chunk.problems)){
+      stop("no problem data for chunk ", chunk.name)
+    }
+    peaks.by.regularization <- list()
+    for(problem.name in names(chunk.problems)){
+      problem <- chunk.problems[[problem.name]]
+      if(is.data.frame(problem$peaks) && 0 < nrow(problem$peaks)){
+        fmat <- rbind(colSums(problem$features))
+        log.lambda.vec <- fit$predict(fmat)
+        if(is.numeric(problem$target)){
+          too.hi <- problem$target[2] < log.lambda.vec
+          too.lo <- log.lambda.vec < problem$target[1]
+          outside.target.list[[problem.name]] <- too.hi | too.lo
+        }
+        for(regularization.i in seq_along(log.lambda.vec)){
+          log.lambda <- log.lambda.vec[[regularization.i]]
+          selected <- 
+            subset(problem$modelSelection,
+                   min.log.lambda < log.lambda &
+                     log.lambda < max.log.lambda)
+          stopifnot(nrow(selected) == 1)
+          reg.str <- paste(fit$regularization.vec[[regularization.i]])
+          peaks.by.regularization[[reg.str]][[problem.name]] <-
+            subset(problem$peaks, peaks == selected$peaks)
+        }#log.lambda
+      }#if(is.data.frame(problem$peaks)
+    }#problem.name
+    metric.vec.list <- list()
+    for(metric.name in c("fp", "fn", "possible.fp", "possible.tp")){
+      metric.vec.list[[metric.name]] <-
+        rep(NA, length(fit$regularization.vec))
+    }
+    for(regularization.i in seq_along(peaks.by.regularization)){
+      chunk.peaks <-
+        do.call(rbind, peaks.by.regularization[[regularization.i]])
+      chunk.error <- PeakErrorSamples(chunk.peaks, chunk.regions)
+      if(regularization.i == 1){ # first one for test error.
+        result.list$peaks[[chunk.name]] <- chunk.peaks
+        result.list$error.regions[[chunk.name]] <- chunk.error
+      }
+      for(metric.name in names(metric.vec.list)){
+        metric.vec.list[[metric.name]][[regularization.i]] <-
+          sum(chunk.error[, metric.name])
+      }
+    }
+    error.vec.list[[chunk.name]] <- metric.vec.list
+  }#chunk.name
+  fp.mat <- do.call(cbind, lapply(error.vec.list, "[[", "fp"))
+  fn.mat <- do.call(cbind, lapply(error.vec.list, "[[", "fn"))
+  fn.possible.mat <- do.call(cbind, lapply(error.vec.list, "[[", "possible.tp"))
+  fp.possible.mat <- do.call(cbind, lapply(error.vec.list, "[[", "possible.fp"))
+  false.positives <- rowSums(fp.mat)
+  false.negatives <- rowSums(fn.mat)
+  false.positives.possible <- rowSums(fp.possible.mat)
+  false.negatives.possible <- rowSums(fn.possible.mat)
+  regions.vec <- do.call(c, regions.list)
+  outside.target.mat <- do.call(rbind, outside.target.list)
+  incorrect.regions <- false.positives + false.negatives
+  incorrect.regions.possible <- sum(regions.vec)
+  incorrect.targets <- colSums(outside.target.mat)
+  incorrect.targets.possible <- nrow(outside.target.mat)
+  metrics <- function(...){
+    df.list <- list()
+    for(metric.name in c(...)){
+      possible <- get(paste0(metric.name, ".possible"))
+      df.list[[metric.name]] <- 
+        data.frame(metric.name,
+                   metric.value=get(metric.name),
+                   possible,
+                   regularization=fit$regularization.vec,
+                   row.names=NULL)
+    }
+    do.call(rbind, df.list)
+  }
+  result.list$metrics <-
+    metrics("incorrect.targets", "incorrect.regions",
+            "false.positives", "false.negatives")
+  result.list
+### list of metrics, error.regions, peaks.
+}
 
 if(length(sets$train.validation) < 2){
   print(sets$train.validation)
   stop("need at least 2 train chunks, please add more labels")
 }
+## to estimate if we have enough labeled chunks, we fit a sequence of
+## models from 2 to N chunks.
 train.chunks.vec <- 2:length(sets$train.validation)
 for(train.chunks in train.chunks.vec){
   print(system.time({
     cat("estimating test error:",
         train.chunks, "/", length(sets$train.validation), "chunks.\n")
     some.train.validation <- sets$train.validation[1:train.chunks]
-    some.problems <- problems.by.chunk[some.train.validation]
-    some.regions <- regions.by.chunk[some.train.validation]
-    full.curves <- tv.curves(some.problems, some.regions)
-    picked.error <- best.on.validation(full.curves)
-    mean.reg <- mean(picked.error$regularization)
-    tv.list <- do.call(c, labeled.problems.by.chunk[some.train.validation])
-    tv.fit <-
-      IntervalRegressionProblems(tv.list,
-                                 initial.regularization=mean.reg,
-                                 factor.regularization=NULL,
-                                 verbose=0)
-    test.results <- error.metrics(test.problems, test.regions, tv.fit)
+    row.is.train <- chunk.vec %in% some.train.validation
+    fit <- penaltyLearning::IntervalRegressionCV(
+      feature.mat[row.is.train,], target.mat[row.is.train,],
+      min.observations=sum(row.is.train))
+    test.results <- error.metrics(test.problems, test.regions, fit)
     test.results$metrics$test.fold <- test.fold
     test.results$metrics$chunk.order.seed <- chunk.order.seed
     test.results$metrics$train.chunks <- train.chunks
