@@ -1,6 +1,7 @@
 library(ggplot2)
 library(xtable)
 library(PeakSegJoint)
+library(data.table)
 options(xtable.print.results=FALSE)
 
 argv <-
