@@ -50,7 +50,7 @@ SegmentFinal <- function(row.i){
   if(is.data.frame(info$peaks)){
     features <- featureMatrix(profile.list)
     fmat <- rbind(colSums(features))
-    pred.log.lambda <- full.fit$predict(fmat)
+    pred.log.lambda <- as.numeric(full.fit$predict(fmat))
     selected <- 
       subset(info$modelSelection,
              min.log.lambda < pred.log.lambda &
