@@ -170,26 +170,13 @@ test_that("no segfault", {
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
            43100000 < chromEnd & chromStart < 43205000)
-  m.args <- list()
-  results <- list()
   param.values <-
     c(2, 3, 5, 10, 15, 20, 25, 30, 50, 75, 100, 125, 150,
       200, 300, 400, 500, 600)
   for(param in param.values){
     param.name <- paste(param)
     param.int <- as.integer(param)
-    m.args[[param.name]] <- substitute({
-      print(PINT)
-      fit <- PeakSegJointHeuristic(some.counts, PINT)
-      model <- fit$models[[3]]
-      peak <- model$peak_start_end
-      peak.df <- data.frame(chromStart=peak[1], chromEnd=peak[2])
-      loss <- model$loss
-      results[[paste(PINT)]] <- data.frame(param=PINT, peak.df, loss)
-    }, list(PINT=param.int))
+    fit <- PeakSegJointHeuristic(some.counts, param.int)
   }
-  set.seed(1)
-  require(microbenchmark)
-  times <- microbenchmark(list=m.args, times=3)
 })
 

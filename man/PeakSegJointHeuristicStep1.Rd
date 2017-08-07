@@ -25,7 +25,7 @@ for easier interpretation.}
 \examples{
 library(PeakSegJoint)
 library(ggplot2)
-data(H3K36me3.TDH.other.chunk1)
+data(H3K36me3.TDH.other.chunk1, envir=environment())
 lims <- c(43000000, 43200000) # left
 some.counts <-
   subset(H3K36me3.TDH.other.chunk1$counts,
@@ -76,7 +76,5 @@ ggplot()+
             data=best.peaks)+
   theme_bw()+
   theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
-    sub("McGill0", "", val)
-  })
+  facet_grid(sample.id ~ ., scales="free")
 }

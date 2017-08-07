@@ -17,7 +17,7 @@
 
 \examples{
 library(PeakSegJoint)
-data(H3K36me3.TDH.other.chunk1)
+data(H3K36me3.TDH.other.chunk1, envir=environment())
 lims <- c(43000000, 43200000) # left
 some.counts <-
   subset(H3K36me3.TDH.other.chunk1$counts,

@@ -5,6 +5,82 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <stdlib.h>
+#include <R_ext/Rdynload.h>
+#include "clusterPeaks.h"
+#include "multiClusterPeaks.h"
+
+static R_NativePrimitiveArgType clusterPeaks_args[] = {
+    INTSXP, INTSXP, INTSXP, INTSXP
+};
+
+void clusterPeaks_interface
+(int *peakStart, int *peakEnd,
+ int *cluster,
+ int *peaks) {
+  int status;
+  status = clusterPeaks(peakStart, peakEnd, 
+			cluster,
+			*peaks);
+  if(status == ERROR_PEAKSTART_DECREASING){
+    error("peakStart decreasing");
+  }
+  if(status != 0){
+    error("unrecognized error code");
+  }
+}
+
+static R_NativePrimitiveArgType multiClusterPeaks_args[] = {
+    INTSXP, INTSXP, INTSXP, INTSXP
+};
+
+void multiClusterPeaks_interface
+(int *peakStart, int *peakEnd, int *cluster, 
+ int *peaks) {
+  int status;
+  status = multiClusterPeaks
+    (peakStart, peakEnd, cluster,
+     *peaks);
+  if(status != 0){
+    error("unrecognized error code");
+  }
+}
+
+static R_NativePrimitiveArgType binSum_args[] = {
+  INTSXP, INTSXP, INTSXP, INTSXP,
+  INTSXP, INTSXP, INTSXP, INTSXP
+};
+
+void binSum_interface(
+  int *profile_chromStart,
+  int *profile_chromEnd,
+  int *profile_coverage,
+  int *n_profiles,
+  int *bin_total,
+  int *bin_size,
+  int *n_bins,
+  int *bin_chromStart){
+  int status;
+  status = binSum(profile_chromStart, 
+		  profile_chromEnd,
+		  profile_coverage,
+		  *n_profiles,
+		  bin_total,
+		  *bin_size,
+		  *n_bins,
+		  *bin_chromStart, 0);
+  if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND){
+    error("chromStart not less than chromEnd");
+  }
+  if(status == ERROR_CHROMSTART_BEFORE_PREVIOUS_CHROMEND){
+    error("chromStart before previous chromEnd");
+  }
+  if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH){
+    error("chromStart[i] != chromEnd[i-1]");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+}
 
 // TODO: for each malloc, check for out of memory error.
 void * malloc_or_error(size_t size, const char * msg){
@@ -325,3 +401,34 @@ PeakSegJointHeuristic_interface(
   return model_list_sexp;
 }
 
+R_CMethodDef cMethods[] = {
+  {"clusterPeaks_interface",
+   (DL_FUNC) &clusterPeaks_interface, 4, clusterPeaks_args
+  },
+  {"multiClusterPeaks_interface",
+   (DL_FUNC) &multiClusterPeaks_interface, 4, multiClusterPeaks_args
+  },
+  {"binSum_interface",
+   (DL_FUNC) &binSum_interface, 8, binSum_args
+   //,{INTSXP, REALSXP, REALSXP, INTSXP}
+  },
+  {NULL, NULL, 0}
+};
+
+static R_CallMethodDef callMethods[] = {
+   {"PeakSegJointHeuristicStep1_interface",
+    (DL_FUNC) &PeakSegJointHeuristicStep1_interface, 2},
+   {"PeakSegJointHeuristicStep2_interface",
+    (DL_FUNC) &PeakSegJointHeuristicStep2_interface, 2},
+   {"PeakSegJointHeuristic_interface",
+    (DL_FUNC) &PeakSegJointHeuristic_interface, 2},
+   {NULL, NULL, 0}
+};
+
+void R_init_PeakSegJoint(DllInfo *info) {
+  R_registerRoutines(info, cMethods, callMethods, NULL, NULL);
+  //R_useDynamicSymbols call says the DLL is not to be searched for
+  //entry points specified by character strings so .C etc calls will
+  //only find registered symbols.
+  R_useDynamicSymbols(info, FALSE);
+}

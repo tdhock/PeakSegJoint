@@ -57,7 +57,7 @@ PeakSegJointHeuristicStep1 <- structure(function
 }, ex=function(){
   library(PeakSegJoint)
   library(ggplot2)
-  data(H3K36me3.TDH.other.chunk1)
+  data(H3K36me3.TDH.other.chunk1, envir=environment())
   lims <- c(43000000, 43200000) # left
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
@@ -108,9 +108,7 @@ PeakSegJointHeuristicStep1 <- structure(function
               data=best.peaks)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
-      sub("McGill0", "", val)
-    })
+    facet_grid(sample.id ~ ., scales="free")
 })
 
 PeakSegJointHeuristicStep2 <- function
@@ -189,7 +187,9 @@ PeakSegJointSeveral <- structure(function
 ### List of model fit results, which can be passed to ConvertModelList
 ### for easier interpretation.
 }, ex=function(){
-  data(H3K4me3.TDH.other.chunk8)
+
+  library(PeakSegJoint)
+  data(H3K4me3.TDH.other.chunk8, envir=environment())
   bf.vec <- c(2, 3, 5)
   fit.list <-
     list(several=PeakSegJointSeveral(H3K4me3.TDH.other.chunk8, bf.vec))
@@ -216,31 +216,26 @@ PeakSegJointSeveral <- structure(function
 
   segs1 <- do.call(rbind, segs.by.peaks.fit[["1"]])
   breaks1 <- subset(segs1, min(chromStart) < chromStart)
-  library(ggplot2)
-  ggplot()+
-    ggtitle(paste("PeakSegJointSeveral runs PeakSegJointHeuristic",
-                  "and keeps only the most likely model"))+
-    geom_step(aes(chromStart/1e3, count),
-              color="grey50",
-              data=H3K4me3.TDH.other.chunk8)+
-    geom_vline(aes(xintercept=chromStart/1e3),
-               data=breaks1,
-               color="green",
-               linetype="dashed")+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 size=1,
+  if(interactive() && require(ggplot2)){
+    ggplot()+
+      ggtitle(paste("PeakSegJointSeveral runs PeakSegJointHeuristic",
+                    "and keeps only the most likely model"))+
+      geom_step(aes(chromStart/1e3, count),
+                color="grey50",
+                data=H3K4me3.TDH.other.chunk8)+
+      geom_vline(aes(xintercept=chromStart/1e3),
+                 data=breaks1,
                  color="green",
-                 data=segs1)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ fit.name, labeller=function(var, val){
-      if(var=="sample.id"){
-        sub("McGill0", "", val)
-      }else{
-        ifelse(val=="several", "best of several", paste("bin.factor =", val))
-      }
-    }, scales="free")
+                 linetype="dashed")+
+      geom_segment(aes(chromStart/1e3, mean,
+                       xend=chromEnd/1e3, yend=mean),
+                   size=1,
+                   color="green",
+                   data=segs1)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(sample.id ~ fit.name, scales="free")
+  }
 
   segs.by.peaks <- list()
   for(peaks in 8:10){
@@ -249,30 +244,25 @@ PeakSegJointSeveral <- structure(function
   }
   segs <- do.call(rbind, segs.by.peaks)
   breaks <- subset(segs, min(chromStart) < chromStart)
-  library(ggplot2)
-  ggplot()+
-    ggtitle("PeakSegJoint models with 8-10 peaks")+
-    geom_step(aes(chromStart/1e3, count),
-              color="grey50",
-              data=H3K4me3.TDH.other.chunk8)+
-    geom_vline(aes(xintercept=chromStart/1e3),
-               data=breaks,
-               color="green",
-               linetype="dashed")+
-    geom_segment(aes(chromStart/1e3, mean,
-                     xend=chromEnd/1e3, yend=mean),
-                 size=1,
+  if(interactive() && require(ggplot2)){
+    ggplot()+
+      ggtitle("PeakSegJoint models with 8-10 peaks")+
+      geom_step(aes(chromStart/1e3, count),
+                color="grey50",
+                data=H3K4me3.TDH.other.chunk8)+
+      geom_vline(aes(xintercept=chromStart/1e3),
+                 data=breaks,
                  color="green",
-                 data=segs)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ peaks, labeller=function(var, val){
-      if(var=="sample.id"){
-        sub("McGill0", "", val)
-      }else{
-        paste(val, "peaks")
-      }
-    }, scales="free")
+                 linetype="dashed")+
+      geom_segment(aes(chromStart/1e3, mean,
+                       xend=chromEnd/1e3, yend=mean),
+                   size=1,
+                   color="green",
+                   data=segs)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "cm"))+
+      facet_grid(sample.id ~ peaks, scales="free")
+  }
   
 })
 
@@ -308,19 +298,15 @@ PeakSegJointHeuristic <- structure(function
 ### List of model fit results, which can be passed to ConvertModelList
 ### for easier interpretation.
 }, ex=function(){
+
   library(PeakSegJoint)
-  data(H3K36me3.TDH.other.chunk1)
+  data(H3K36me3.TDH.other.chunk1, envir=environment())
   lims <- c(43000000, 43200000) # left
   some.counts <-
     subset(H3K36me3.TDH.other.chunk1$counts,
            lims[1] < chromEnd & chromStart < lims[2])
-  library(microbenchmark)
-  microbenchmark(fit={
-    fit <- PeakSegJointHeuristic(some.counts)
-  }, fit.convert={
-    fit <- PeakSegJointHeuristic(some.counts)
-    converted <- ConvertModelList(fit)
-  }, times=10)
+  fit <- PeakSegJointHeuristic(some.counts)
+  converted <- ConvertModelList(fit)
   ## Normalize profile counts to [0,1].
   profile.list <- split(some.counts, some.counts$sample.id)
   norm.list <- list()
@@ -354,53 +340,12 @@ PeakSegJointHeuristic <- structure(function
               data=best.peaks)+
     theme_bw()+
     theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
-      sub("McGill0", "", val)
-    })
-  ggplot()+
-    geom_segment(aes(chromStart/1e3, peaks,
-                     xend=chromEnd/1e3, yend=peaks),
-                 data=best.peaks)
+    facet_grid(sample.id ~ ., scales="free")
+  
   ggplot(converted$loss, aes(peaks, loss))+
     geom_point()+
     geom_line()
-  ## PeakSegJointHeuristic can also be used as a fast approximate
-  ## solver for the PeakSeg model with just 1 peak.
-  some.counts <-
-    subset(H3K36me3.TDH.other.chunk1$counts,
-           43379893 < chromEnd)
-  profile.list <- split(some.counts, some.counts$sample.id)
-  require(PeakSegDP)
-  sample.peak.list <- list()
-  for(sample.id in names(profile.list)){
-    sample.counts <- profile.list[[sample.id]]
-    fit <- PeakSegJointHeuristic(sample.counts)
-    heuristic <- fit$models[[2]]$peak_start_end
-    dp <- PeakSegDP(sample.counts, maxPeaks=1L)
-    dp.peak <- dp$peaks[["1"]]
-    sample.peak.list[[sample.id]] <-
-      data.frame(sample.id,
-                 y=-0.1 * (1:2) * max(sample.counts$count),
-                 algorithm=c("heuristic", "cDPA"),
-                 chromStart=c(heuristic[1], dp.peak$chromStart),
-                 chromEnd=c(heuristic[2], dp.peak$chromEnd))
-  }
-  sample.peaks <- do.call(rbind, sample.peak.list)
-  ggplot()+
-    scale_color_discrete(limits=c("heuristic", "cDPA"))+
-    geom_step(aes(chromStart/1e3, count),
-              data=some.counts,
-              color="grey50")+
-    geom_segment(aes(chromStart/1e3, y,
-                     color=algorithm,
-                     xend=chromEnd/1e3, yend=y),
-                 data=sample.peaks,
-                 size=2)+
-    theme_bw()+
-    theme(panel.margin=grid::unit(0, "cm"))+
-    facet_grid(sample.id ~ ., scales="free", labeller=function(var, val){
-      sub("McGill0", "", val)
-    })
+
 })
 
 ConvertModelList <- function
@@ -492,9 +437,8 @@ ConvertModelList <- function
   ## keep the model with max peaks:
   cummin.reduced <- rev(c(TRUE, diff(rev(some.loss$cummin)) > 0))
   decreasing.loss <- some.loss[cummin.reduced, ]
-  info$modelSelection <- with(decreasing.loss, {
-    exactModelSelection(loss, model.complexity, peaks)
-  })
+  info$modelSelection <- penaltyLearning::modelSelection(
+    decreasing.loss, "loss", "peaks")
   info
 ### List of data.frames: segments has 1 row for each segment mean,
 ### sample, and model size (peaks, sample.id, sample.group,

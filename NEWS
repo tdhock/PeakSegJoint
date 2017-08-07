@@ -1,3 +1,7 @@
+2017.06.20
+
+Import penaltyLearning, remove interval regression code.
+
 2017.05.05
 
 Suggest penaltyLearning, used in pipeline.R with colSums features.
