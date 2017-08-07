@@ -6,7 +6,7 @@ There are two major differences between PeakSegJoint and all of the
 other peak detection algorithms for ChIP-seq data analysis:
 
 - *Supervised machine learning:* PeakSegJoint is trained by providing
-  labels ([[file:inst/exampleData/manually_annotated_region_labels.txt][example]]) that indicate regions with and without peaks. So if
+  labels that indicate regions with and without peaks. So if
   you see false positives (a peak called where there is clearly only
   background noise) or false negatives (no peak called where there
   should be one) you can add labels to correct PeakSegJoint, and it
@@ -21,7 +21,7 @@ other peak detection algorithms for ChIP-seq data analysis:
   peaks). In contrast, it is not easy to find similarities and
   differences between samples using single-sample peak detection
   methods (e.g. [[https://github.com/taoliu/MACS][MACS]]), and other multi-sample peak detection methods
-  are limited to one (e.g. [[https://github.com/mahmoudibrahim/jamm][JAMM]]) or two (e.g. [[https://code.google.com/p/pepr-chip-seq/][PePr]]) cell types
+  are limited to one (e.g. [[https://github.com/mahmoudibrahim/jamm][JAMM]]) or two (e.g. [[https://github.com/shawnzhangyx/PePr][PePr]]) cell types
   (assuming all samples of the same cell type are replicates with the
   same peak pattern).
 
