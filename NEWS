@@ -1,3 +1,8 @@
+2017.08.08
+
+if(interactive()) to avoid slow CRAN check on
+example(PeakSegJointHeuristic)
+
 2017.06.20
 
 Import penaltyLearning, remove interval regression code.
