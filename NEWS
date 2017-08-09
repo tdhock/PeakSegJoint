@@ -1,3 +1,7 @@
+TODOs
+
+halve test time for CRAN submission -- 30 minutes is way too long.
+
 2017.08.08
 
 Remove free/malloc for seg[123]_mean_vec in C code, instead use
