@@ -122,7 +122,7 @@ free_profile_list
 }
 
 SEXP allocPeakSegJointModelList(){
-  return allocVector(VECSXP, 9);
+  return allocVector(VECSXP, 10);
 }
 
 void
@@ -134,12 +134,13 @@ Ralloc_model_struct
     model_list_names, flat_loss_sexp,
     model_vec_sexp, data_start_end_sexp,
     n_bins_sexp, bases_per_bin_sexp, bin_factor_sexp,
-    bin_start_end_sexp, sample_mean_sexp, last_cumsum_sexp;
+    bin_start_end_sexp, sample_mean_sexp, last_cumsum_sexp,
+    mean_mat_sexp;
   int model_i;
   int n_profiles = model_list->n_models - 1;
   struct PeakSegJointModel *model;
 
-  PROTECT(model_list_names = allocVector(STRSXP, 9));
+  PROTECT(model_list_names = allocVector(STRSXP, 10));
   SET_STRING_ELT(model_list_names,0,mkChar("models"));
   SET_STRING_ELT(model_list_names,1,mkChar("bin_start_end"));
   SET_STRING_ELT(model_list_names,2,mkChar("sample_mean_vec"));
@@ -149,6 +150,7 @@ Ralloc_model_struct
   SET_STRING_ELT(model_list_names,6,mkChar("bases_per_bin"));
   SET_STRING_ELT(model_list_names,7,mkChar("bin_factor"));
   SET_STRING_ELT(model_list_names,8,mkChar("data_start_end"));
+  SET_STRING_ELT(model_list_names,9,mkChar("mean_mat"));
   namesgets(model_list_sexp, model_list_names);
   UNPROTECT(1);
 
@@ -161,6 +163,7 @@ Ralloc_model_struct
   PROTECT(bases_per_bin_sexp = allocVector(INTSXP, 1));
   PROTECT(bin_factor_sexp = allocVector(INTSXP, 1));
   PROTECT(data_start_end_sexp = allocVector(INTSXP, 2));
+  PROTECT(mean_mat_sexp = allocMatrix(REALSXP, n_profiles, 3));
   SET_VECTOR_ELT(model_list_sexp,0,model_vec_sexp);
   SET_VECTOR_ELT(model_list_sexp,1,bin_start_end_sexp);
   SET_VECTOR_ELT(model_list_sexp,2,sample_mean_sexp);
@@ -170,6 +173,7 @@ Ralloc_model_struct
   SET_VECTOR_ELT(model_list_sexp, 6, bases_per_bin_sexp);
   SET_VECTOR_ELT(model_list_sexp, 7, bin_factor_sexp);
   SET_VECTOR_ELT(model_list_sexp, 8, data_start_end_sexp);
+  SET_VECTOR_ELT(model_list_sexp, 9, mean_mat_sexp);
   model_list->bin_start_end = INTEGER(bin_start_end_sexp);
   model_list->sample_mean_vec = REAL(sample_mean_sexp);
   model_list->last_cumsum_vec = INTEGER(last_cumsum_sexp);
@@ -178,7 +182,8 @@ Ralloc_model_struct
   model_list->bases_per_bin = INTEGER(bases_per_bin_sexp);
   model_list->bin_factor = INTEGER(bin_factor_sexp);
   model_list->data_start_end = INTEGER(data_start_end_sexp);
-  UNPROTECT(9);
+  model_list->mean_mat = REAL(mean_mat_sexp);
+  UNPROTECT(10);
 
   SEXP loss_sexp, peak_start_end_sexp, samples_with_peaks_sexp,
     left_cumsum_sexp, right_cumsum_sexp, 

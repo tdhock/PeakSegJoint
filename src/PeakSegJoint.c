@@ -170,9 +170,9 @@ int PeakSegJointHeuristicStep1(
 
   int n_peaks;
   int sample_i;
-  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg1_mean_vec = model_list->mean_mat;
+  double *seg2_mean_vec = model_list->mean_mat + n_samples;
+  double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
   double *peak_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   /*
@@ -289,9 +289,6 @@ int PeakSegJointHeuristicStep1(
   free(sample_count_mat);
   free(peak_loss_vec);
   free(seg1_loss_vec);
-  free(seg1_mean_vec);
-  free(seg2_mean_vec);
-  free(seg3_mean_vec);
   free(diff_index_vec);
   return status;
 }
@@ -426,9 +423,9 @@ PeakSegJointHeuristicStep2
   int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
   int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg1_mean_vec = model_list->mean_mat;
+  double *seg2_mean_vec = model_list->mean_mat + n_samples;
+  double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
   double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   //printf("after malloc\n");
   double total_loss, loss_value, mean_value;
@@ -484,9 +481,6 @@ PeakSegJointHeuristicStep2
 	    free(right_bin_vec);
 	    free(left_cumsum_mat);
 	    free(right_cumsum_mat);
-	    free(seg1_mean_vec);
-	    free(seg2_mean_vec);
-	    free(seg3_mean_vec);
 	    free(seg1_loss_vec);
 	    return status;
 	  }
@@ -658,9 +652,6 @@ PeakSegJointHeuristicStep2
   free(right_bin_vec);
   free(left_cumsum_mat);
   free(right_cumsum_mat);
-  free(seg1_mean_vec);
-  free(seg2_mean_vec);
-  free(seg3_mean_vec);
   free(seg1_loss_vec);
   return 0;
 }
@@ -672,9 +663,9 @@ int PeakSegJointHeuristicStep3
   struct PeakSegJointModel *model, *prev_model;
   int n_samples = model_list->n_models - 1;
   double flat_loss_total = model_list->model_vec[0].loss[0];
-  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg1_mean_vec = model_list->mean_mat;
+  double *seg2_mean_vec = model_list->mean_mat + n_samples;
+  double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
   struct LossIndex *diff_index_vec = 
     (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
   int n_feasible, peakStart, peakEnd, status, total;
@@ -696,9 +687,6 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, dataStart, peakStart);
 	if(status != 0){
-	  free(seg1_mean_vec);
-	  free(seg2_mean_vec);
-	  free(seg3_mean_vec);
 	  free(diff_index_vec);
 	  return status;
 	}
@@ -711,9 +699,6 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, peakStart, peakEnd);
 	if(status != 0){
-	  free(seg1_mean_vec);
-	  free(seg2_mean_vec);
-	  free(seg3_mean_vec);
 	  free(diff_index_vec);
 	  return status;
 	}
@@ -726,9 +711,6 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, peakEnd, dataEnd);
 	if(status != 0){
-	  free(seg1_mean_vec);
-	  free(seg2_mean_vec);
-	  free(seg3_mean_vec);
 	  free(diff_index_vec);
 	  return status;
 	}
@@ -778,9 +760,6 @@ int PeakSegJointHeuristicStep3
       }//if(n_feasible)
     }//if(prev_model->loss[0] < INFINITY
   }//for(n_peaks
-  free(seg1_mean_vec);
-  free(seg2_mean_vec);
-  free(seg3_mean_vec);
   free(diff_index_vec);
   return 0;
 }

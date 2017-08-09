@@ -1,5 +1,9 @@
 2017.08.08
 
+Remove free/malloc for seg[123]_mean_vec in C code, instead use
+pointers from one allocMatrix which is returned in the model_list, and
+can be used to quantify the peak height relative to nearby background.
+
 if(interactive()) to avoid slow CRAN check on
 example(PeakSegJointHeuristic)
 
