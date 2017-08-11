@@ -1,6 +1,17 @@
-TODOs
+2017.08.11
 
-halve test time for CRAN submission -- 30 minutes is way too long.
+halve test time for CRAN submission -- 30 minutes is way too long. to
+do that we remove test-functions-real-data.R for the CRAN submission:
+
+                               f seconds
+1:      test-functions-trivial.R   0.077
+2:    test-functions-converted.R   0.423
+3:     test-functions-features.R   0.526
+4:   test-functions-likelihood.R   2.928
+5:       test-functions-binSum.R  29.041
+6:     test-functions-no-zeros.R  38.127
+7: test-functions-PeakSegJoint.R  56.224
+8:    test-functions-real-data.R 674.881
 
 2017.08.08
 
