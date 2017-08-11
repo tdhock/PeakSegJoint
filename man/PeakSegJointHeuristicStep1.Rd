@@ -51,30 +51,36 @@ bin.df <- do.call(rbind, bin.list)
 norm.df <- do.call(rbind, norm.list)
 converted <- ConvertModelList(fit)
 best.peaks <- transform(converted$peaks, y=peaks*-0.1, what="peaks")
-ggplot()+
-  scale_color_manual(values=c(data="grey50",
-                       peaks="deepskyblue",
-                       bins="black", segments="green"))+
-  geom_step(aes(chromStart/1e3, count.norm, color=what),
-            data=data.frame(norm.df, what="data"))+
-  geom_segment(aes(chromStart/1e3, mean.norm,
-                   xend=chromEnd/1e3, yend=mean.norm,
-                   color=what),
-               data=data.frame(bin.df, what="bins"))+
-  geom_segment(aes(chromStart/1e3, y,
-                   xend=chromEnd/1e3, yend=y,
-                   color=what),
-               size=1,
-               data=best.peaks)+
-  geom_text(aes(chromStart/1e3, y,
-                   label=paste0(peaks, " peak",
-                     ifelse(peaks==1, "", "s"), " "),
-                   color=what),
-            hjust=1,
-            size=3,
-            vjust=0.5,
-            data=best.peaks)+
-  theme_bw()+
-  theme(panel.margin=grid::unit(0, "cm"))+
-  facet_grid(sample.id ~ ., scales="free")
+
+if(require(ggplot2) && interactive()){
+
+  ggplot()+
+    scale_color_manual(values=c(data="grey50",
+                                peaks="deepskyblue",
+                                bins="black", segments="green"))+
+    geom_step(aes(chromStart/1e3, count.norm, color=what),
+              data=data.frame(norm.df, what="data"))+
+    geom_segment(aes(chromStart/1e3, mean.norm,
+                     xend=chromEnd/1e3, yend=mean.norm,
+                     color=what),
+                 data=data.frame(bin.df, what="bins"))+
+    geom_segment(aes(chromStart/1e3, y,
+                     xend=chromEnd/1e3, yend=y,
+                     color=what),
+                 size=1,
+                 data=best.peaks)+
+    geom_text(aes(chromStart/1e3, y,
+                  label=paste0(peaks, " peak",
+                               ifelse(peaks==1, "", "s"), " "),
+                  color=what),
+              hjust=1,
+              size=3,
+              vjust=0.5,
+              data=best.peaks)+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "cm"))+
+    facet_grid(sample.id ~ ., scales="free")
+
+}
+
 }
