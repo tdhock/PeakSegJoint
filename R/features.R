@@ -1,5 +1,5 @@
 ### Compute the feature matrix for this joint segmentation problem.
-featureMatrix <- structure(function(profile.list){
+featureMatrixJoint <- structure(function(profile.list){
   chromEnd <- chromStart <- NULL
   stopifnot(is.list(profile.list))
   stopifnot(is.data.frame(profile.list[[1]]))
@@ -70,5 +70,5 @@ featureMatrix <- structure(function(profile.list){
     subset(H3K36me3.TDH.other.chunk1$counts,
            lims[1] < chromEnd & chromStart < lims[2])
   profile.list <- ProfileList(some.counts)
-  featureMatrix(profile.list)
+  featureMatrixJoint(profile.list)
 })

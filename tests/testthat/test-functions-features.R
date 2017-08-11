@@ -10,6 +10,6 @@ profile.list$empty <-
              count=integer())
 
 test_that("feature computation works for sample with no coverage rows", {
-  fmat <- featureMatrix(profile.list)
+  fmat <- featureMatrixJoint(profile.list)
   expect_identical(rownames(fmat), names(profile.list))
 })

@@ -1,8 +1,8 @@
-\name{featureMatrix}
-\alias{featureMatrix}
-\title{featureMatrix}
+\name{featureMatrixJoint}
+\alias{featureMatrixJoint}
+\title{featureMatrixJoint}
 \description{Compute the feature matrix for this joint segmentation problem.}
-\usage{featureMatrix(profile.list)}
+\usage{featureMatrixJoint(profile.list)}
 \arguments{
   \item{profile.list}{
 }
@@ -23,5 +23,5 @@ some.counts <-
   subset(H3K36me3.TDH.other.chunk1$counts,
          lims[1] < chromEnd & chromStart < lims[2])
 profile.list <- ProfileList(some.counts)
-featureMatrix(profile.list)
+featureMatrixJoint(profile.list)
 }

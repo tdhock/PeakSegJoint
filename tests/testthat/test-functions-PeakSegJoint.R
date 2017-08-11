@@ -3,7 +3,6 @@ context("PeakSegJoint")
 
 library(PeakSegJoint)
 library(ggplot2)
-library(PeakError) # for tallrect.
 
 test_that("PeakSegJointHeuristic C result agrees with R", {
   data(H3K36me3.TDH.other.chunk1)
@@ -22,8 +21,9 @@ test_that("PeakSegJointHeuristic C result agrees with R", {
       peakEnd="#ff4c4c",
       peaks="#a445ee")
   ggplot()+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-                      fill=annotation),
+    penaltyLearning::geom_tallrect(aes(
+      xmin=chromStart/1e3, xmax=chromEnd/1e3,
+      fill=annotation),
                   alpha=0.5,
                   data=some.regions)+
     scale_fill_manual(values=ann.colors)+
@@ -725,10 +725,11 @@ test_that("Step1 C result agrees with R", {
       peakEnd="#ff4c4c",
       peaks="#a445ee")
   ggplot()+
-    geom_tallrect(aes(xmin=chromStart/1e3, xmax=chromEnd/1e3,
-                      fill=annotation),
-                  alpha=0.5,
-                  data=some.regions)+
+    penaltyLearning::geom_tallrect(aes(
+      xmin=chromStart/1e3, xmax=chromEnd/1e3,
+      fill=annotation),
+      alpha=0.5,
+      data=some.regions)+
     scale_fill_manual(values=ann.colors)+
     geom_step(aes(chromStart/1e3, count), data=some.counts)+
     theme_bw()+
