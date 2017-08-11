@@ -1,5 +1,7 @@
 2017.08.11
 
+move some functions to PeakSegPipeline: mclapply funs, bigwig funs.
+
 halve test time for CRAN submission -- 30 minutes is way too long. to
 do that we remove test-functions-real-data.R for the CRAN submission:
 
