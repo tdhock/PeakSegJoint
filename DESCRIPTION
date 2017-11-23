@@ -12,6 +12,6 @@ Description: Jointly segment several ChIP-seq samples to find the peaks
  <arXiv:1506.01286> by TD Hocking and G Bourque.
 Suggests: testthat, ggplot2 (>= 2.0)
 Depends: R (>= 2.14)
-Imports: data.table (>= 1.9.4),
+Imports: 
  PeakError, parallel, penaltyLearning
 

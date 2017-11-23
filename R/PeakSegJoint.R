@@ -220,7 +220,7 @@ PeakSegJointSeveral <- structure(function
   }
   do.call(rbind, loss.list)
 
-  segs1 <- do.call(rbind, segs.by.peaks.fit[["1"]])
+  segs1 <- do.call(rbind, segs.by.peaks.fit[["10"]])
   breaks1 <- subset(segs1, min(chromStart) < chromStart)
   if(interactive() && require(ggplot2)){
     ggplot()+

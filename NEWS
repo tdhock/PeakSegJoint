@@ -1,3 +1,12 @@
+TODOs
+
+Add to C code:
+- loss difference for each sample individually,
+  so we can rank peaks from least to most significant
+  for a given sample. positive numbers for peaks going up,
+  negative numbers for peaks going down.
+- peak height for each sample -- either positive or negative.
+
 2017.08.11
 
 move some functions to PeakSegPipeline: mclapply funs, bigwig funs.

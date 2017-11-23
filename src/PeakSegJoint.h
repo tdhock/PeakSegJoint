@@ -35,6 +35,7 @@ struct PeakSegJointModelList {
   int *bin_factor; //size 1.
   int *data_start_end; //size 2.
   double *mean_mat;//size n_samples x 3.
+  double *loss_change_vec;//size n_samples.
 };
 
 struct LossIndex {

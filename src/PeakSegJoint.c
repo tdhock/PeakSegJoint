@@ -723,14 +723,20 @@ int PeakSegJointHeuristicStep3
 	/* 	     n_peaks, seg1_mean_vec[sample_i], */
 	/* 	     seg2_mean_vec[sample_i], */
 	/* 	     seg3_mean_vec[sample_i]); */
+	double sample_loss_diff =
+	  loss_value-model_list->flat_loss_vec[sample_i];
+	double sample_sign;
 	if(seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
 	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
 	  //printf(" FEASIBLE");
+	  sample_sign = -1.0;
 	  diff_index_vec[n_feasible].sample_i = sample_i;
-	  diff_index_vec[n_feasible].loss = 
-	    loss_value-model_list->flat_loss_vec[sample_i];
+	  diff_index_vec[n_feasible].loss = sample_loss_diff;
 	  n_feasible++;
+	}else{
+	  sample_sign = 1.0;
 	}
+	model_list->loss_change_vec[sample_i] = sample_loss_diff*sample_sign;
 	//printf("\n");
       }//sample_i
       if(n_peaks <= n_feasible){

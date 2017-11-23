@@ -1,6 +1,5 @@
 useDynLib(PeakSegJoint)
 exportPattern("^[[:alpha:]]+")
-import(data.table)
 import(PeakError)
 import(parallel)
 importFrom("grDevices", "dev.off", "png")
