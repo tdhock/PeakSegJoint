@@ -2,6 +2,7 @@
 
 #include "binSum.h"
 #include "PeakSegJoint.h"
+#include "PeakSegJointFaster.h"
 #include <R.h>
 #include <Rinternals.h>
 #include <stdlib.h>
@@ -401,6 +402,59 @@ PeakSegJointHeuristic_interface(
   return model_list_sexp;
 }
 
+SEXP PeakSegJointFaster_interface(
+  SEXP profile_list_sexp,
+  SEXP bin_factor
+  ){
+  int n_profiles = length(profile_list_sexp);
+  // malloc Profiles for input data.
+  struct ProfileList profile_list;
+  Ralloc_profile_list(profile_list_sexp, &profile_list);
+  // allocVector for outputs.
+  struct PeakSegJointModelList *model_list = 
+    malloc_PeakSegJointModelList(n_profiles+1);
+  SEXP model_list_sexp, model_list_names,
+    mean_sexp, flat_loss_sexp, peak_loss_sexp,
+    peak_start_end_sexp, data_start_end_sexp;
+  //alloc list.
+  PROTECT(model_list_sexp = allocVector(VECSXP, 5));
+  //alloc list names.
+  PROTECT(model_list_names = allocVector(STRSXP, 5));
+  SET_STRING_ELT(model_list_names,0,mkChar("mean_mat"));
+  SET_STRING_ELT(model_list_names,1,mkChar("flat_loss_vec"));
+  SET_STRING_ELT(model_list_names,2,mkChar("peak_loss_vec"));
+  SET_STRING_ELT(model_list_names,3,mkChar("peak_start_end"));
+  SET_STRING_ELT(model_list_names,4,mkChar("data_start_end"));
+  namesgets(model_list_sexp, model_list_names);
+  UNPROTECT(1);//model_list_names
+  //alloc list components.
+  PROTECT(mean_sexp = allocMatrix(REALSXP, n_profiles, 3));
+  PROTECT(flat_loss_sexp = allocVector(REALSXP, n_profiles));
+  PROTECT(peak_loss_sexp = allocVector(REALSXP, n_profiles));
+  PROTECT(peak_start_end_sexp = allocVector(INTSXP, 2));
+  PROTECT(data_start_end_sexp = allocVector(INTSXP, 2));
+  SET_VECTOR_ELT(model_list_sexp,0,mean_sexp);
+  SET_VECTOR_ELT(model_list_sexp,1,flat_loss_sexp);
+  SET_VECTOR_ELT(model_list_sexp,2,peak_loss_sexp);
+  SET_VECTOR_ELT(model_list_sexp,3,peak_start_end_sexp);
+  SET_VECTOR_ELT(model_list_sexp,4,data_start_end_sexp);
+  UNPROTECT(5);
+  // run seg algo.
+  int status = PeakSegJointFaster(
+    &profile_list, INTEGER(bin_factor)[0],
+    REAL(mean_sexp),
+    REAL(flat_loss_sexp),
+    REAL(peak_loss_sexp),
+    INTEGER(peak_start_end_sexp),
+    INTEGER(data_start_end_sexp));
+  if(status != 0){
+    stop("error code %d", status);
+  }
+  free_profile_list(&profile_list);
+  UNPROTECT(1); //model_list_sexp.
+  return model_list_sexp;
+}
+
 R_CMethodDef cMethods[] = {
   {"clusterPeaks_interface",
    (DL_FUNC) &clusterPeaks_interface, 4, clusterPeaks_args
@@ -422,6 +476,8 @@ static R_CallMethodDef callMethods[] = {
     (DL_FUNC) &PeakSegJointHeuristicStep2_interface, 2},
    {"PeakSegJointHeuristic_interface",
     (DL_FUNC) &PeakSegJointHeuristic_interface, 2},
+   {"PeakSegJointFaster_interface",
+    (DL_FUNC) &PeakSegJointFaster_interface, 2},
    {NULL, NULL, 0}
 };
 
