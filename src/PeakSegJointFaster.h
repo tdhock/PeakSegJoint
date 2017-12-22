@@ -1,4 +1,8 @@
+/* -*- compile-command: "R CMD INSTALL .." -*- */
+
+#ifndef PROFILEH
 #include "profile.h"
+#endif
 
 #define ERROR_FASTER_NO_COVERAGE_DATA 1
 #define ERROR_FASTER_BIN_FACTOR_TOO_LARGE 2

@@ -448,7 +448,7 @@ SEXP PeakSegJointFaster_interface(
     INTEGER(peak_start_end_sexp),
     INTEGER(data_start_end_sexp));
   if(status != 0){
-    stop("error code %d", status);
+    error("error code %d", status);
   }
   free_profile_list(&profile_list);
   UNPROTECT(1); //model_list_sexp.

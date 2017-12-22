@@ -6,120 +6,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-int
-binSumLR
-(int *data_start_end,
- int *chromStart, int *chromEnd,
- int *coverage, int n_entries,
- int *left_bin_vec, int *right_bin_vec,
- int left_chromStart, int right_chromStart,
- int bases_per_bin, int n_bins){
-  int bin_chromEnd, bin_chromStart;
-  int extra_chromStart, extra_chromEnd, extra_bases, extra_coverage;
-  int status;
-  /* printf("left bin_size=%d bins=%d start=%d\n",  */
-  /* 	 bases_per_bin, n_bins, left_chromStart); */
-  status = binSum(chromStart, chromEnd,
-		  coverage, n_entries,
-		  left_bin_vec,
-		  bases_per_bin,
-		  n_bins,
-		  left_chromStart,
-		  EMPTY_AS_ZERO);
-  if(status != 0){
-    return status;
-  }
-  /* printf("right bin_size=%d bins=%d start=%d\n",  */
-  /* 	 bases_per_bin, n_bins, right_chromStart); */
-  status = binSum(chromStart, chromEnd,
-		  coverage, n_entries,
-		  right_bin_vec,
-		  bases_per_bin,
-		  n_bins,
-		  right_chromStart,
-		  EMPTY_AS_ZERO);
-  if(status != 0){
-    return status;
-  }
-  for(int bin_i=0; bin_i < n_bins; bin_i++){
-    //left bin.
-    bin_chromStart = left_chromStart + bases_per_bin * bin_i;
-    bin_chromEnd = bin_chromStart + bases_per_bin;
-    if(data_start_end[0] < bin_chromEnd){
-      if(data_start_end[0] <= bin_chromStart){
-	//   (     data   ]
-	//   (bin]
-	//       (bin]
-	// bin is completely data, leave it alone!
-      }else{
-	//    (  data  ]
-	//   (bin]
-	//    - extra
-	// (bin]
-	//  --- extra
-	// bin has some data, so subtract the extra.
-	extra_chromStart = bin_chromStart;
-	extra_chromEnd = data_start_end[0];
-	extra_bases = extra_chromEnd - extra_chromStart;
-	//printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
-	status = binSum(chromStart, chromEnd,
-			coverage, n_entries,
-			&extra_coverage,
-			extra_bases,
-			1,
-			extra_chromStart,
-			EMPTY_AS_ZERO);
-	if(status != 0){
-	  return status;
-	}
-	left_bin_vec[bin_i] -= extra_coverage;
-      }
-    }else{
-      //      (  data  ]
-      //  (bin]
-      // bin does not overlap data, so set it to zero.
-      left_bin_vec[bin_i] = 0;
-    }
-    //right bin.
-    bin_chromStart = right_chromStart + bases_per_bin * bin_i;
-    bin_chromEnd = bin_chromStart + bases_per_bin;
-    if(bin_chromStart < data_start_end[1]){
-      if(bin_chromEnd <= data_start_end[1]){
-	// (  data  ]
-	//      (bin]    
-	//  (bin]
-	// bin is completely data, leave it alone!
-      }else{
-	// (  data  ]
-	//        (bin]
-	//           -- extra
-	extra_chromStart = data_start_end[1];
-	extra_chromEnd = bin_chromEnd;
-	extra_bases = extra_chromEnd - extra_chromStart;
-	//printf("right start=%d bases=%d\n", extra_chromStart, extra_bases);
-	status = binSum(chromStart, chromEnd,
-			coverage, n_entries,
-			&extra_coverage,
-			extra_bases,
-			1,
-			extra_chromStart,
-			EMPTY_AS_ZERO);
-	if(status != 0){
-	  return status;
-	}
-	right_bin_vec[bin_i] -= extra_coverage;
-      }
-    }else{
-      // (  data  ]
-      //          (bin]
-      //              (bin]
-      // bin does not overlap data, so set it to zero.
-      right_bin_vec[bin_i] = 0;
-    }
-  }
-  return 0;
-}
-
 int PeakSegJointFaster(
   struct ProfileList *profile_list,
   int bin_factor,
@@ -186,7 +72,23 @@ int PeakSegJointFaster(
   //int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
+
   int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *last_cumsum_vec = (double*) malloc(n_samples*sizeof(double));
+  int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+
+  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
+  
+  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *candidate_loss_vec = (double*)malloc(sizeof(double)*n_samples);
+
+  int *left_bin_vec = (int*) malloc(n_bins * sizeof(int));
+  int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
+  int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  
   int *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
@@ -204,9 +106,7 @@ int PeakSegJointFaster(
   }//for sample_i
   int bin_i, offset;
   double mean_value, loss_value;
-  double total_loss, flat_loss_total = 0.0;
-  double *last_cumsum_vec = (double*) malloc(n_samples*sizeof(double));
-  int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double flat_loss_total = 0.0;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
     offset = n_bins * sample_i;
@@ -226,11 +126,6 @@ int PeakSegJointFaster(
   }
   int n_peaks;
   int sample_i;
-  double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg3_mean_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *candidate_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   /*
     The for loops below implement the GridSearch() function mentioned
     on line 2 of the JointZoom algorithm in the PeakSegJoint paper.
@@ -274,6 +169,7 @@ int PeakSegJointFaster(
 	candidate_loss += candidate_loss_vec[sample_i];
       }//sample_i
       if(candidate_loss < best_loss){
+	best_loss = candidate_loss;
 	peak_start_end[0] =
 	  seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	peak_start_end[1] =
@@ -287,14 +183,7 @@ int PeakSegJointFaster(
       }
     }//seg2_LastIndex
   }//seg2_FirstIndex
-  free(sample_cumsum_mat);
-  free(sample_count_mat);
-  free(seg1_loss_vec);
   //return status;//old end of Step1.
-  int *left_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *left_cumsum_vec, *right_cumsum_vec;
   int left_cumsum_value, right_cumsum_value;
   int peakStart, peakEnd;
@@ -377,45 +266,49 @@ int PeakSegJointFaster(
       //printf("\n");
       for(int seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
 	peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	total_loss = flat_loss_total;
+	candidate_loss = 0.0;
 	if(peakEnd <= peakStart){
-	  total_loss = INFINITY;
-	}
-	//printf("[seg2last=%d]\n", seg2_LastIndex);
-	for(int sample_i=0; sample_i < n_samples; sample_i++){
-	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	  total_loss -= flat_loss_vec[sample_i];
-	  //segment 1.
-	  total_loss += seg1_loss_vec[sample_i];
-	  //segment 2.
-	  cumsum_value = 
-	    right_cumsum_vec[seg2_LastIndex]-
-	    left_cumsum_vec[seg1_LastIndex];
-	  data_bases = peakEnd-peakStart;
-	  mean_value = cumsum_value/data_bases;
-	  seg2_mean_vec[sample_i] = mean_value;
-	  loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	  total_loss += loss_value;
-	  //segment 3.
-	  cumsum_value = 
-	    last_cumsum_vec[sample_i]-
-	    right_cumsum_vec[seg2_LastIndex];
-	  bin_bases = seg3_chromEnd - peakEnd;
-	  data_bases = bin_bases - extra_after;
-	  mean_value = cumsum_value/data_bases;
-	  seg3_mean_vec[sample_i] = mean_value;
-	  loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	  total_loss += loss_value;
-	}
-	//printf("loss=%f\n", total_loss);
-	if(candidate_loss < best_loss){
-	  peak_start_end[0] = peakStart;
-	  peak_start_end[1] = peakEnd;
-	  best_seg1 = seg1_LastIndex;
-	  best_seg2 = seg2_LastIndex;
-	  for(sample_i=0; sample_i < n_samples; sample_i++){
-	    peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
+	  candidate_loss = INFINITY;
+	}else{ 
+	  //printf("[seg2last=%d]\n", seg2_LastIndex);
+	  for(int sample_i=0; sample_i < n_samples; sample_i++){
+	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	    right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+	    //segment 1.
+	    candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
+	    //segment 2.
+	    cumsum_value = 
+	      right_cumsum_vec[seg2_LastIndex]-
+	      left_cumsum_vec[seg1_LastIndex];
+	    data_bases = peakEnd-peakStart;
+	    mean_value = cumsum_value/data_bases;
+	    seg2_mean_vec[sample_i] = mean_value;
+	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	    candidate_loss_vec[sample_i] += loss_value;
+	    //segment 3.
+	    cumsum_value = 
+	      last_cumsum_vec[sample_i]-
+	      right_cumsum_vec[seg2_LastIndex];
+	    bin_bases = seg3_chromEnd - peakEnd;
+	    data_bases = bin_bases - extra_after;
+	    mean_value = cumsum_value/data_bases;
+	    seg3_mean_vec[sample_i] = mean_value;
+	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
+	    candidate_loss_vec[sample_i] += loss_value;
+	    candidate_loss += candidate_loss_vec[sample_i];
+	  }
+	  if(candidate_loss < best_loss){
+	    best_loss = candidate_loss;
+	    peak_start_end[0] = peakStart;
+	    peak_start_end[1] = peakEnd;
+	    best_seg1 = seg1_LastIndex;
+	    best_seg2 = seg2_LastIndex;
+	    for(sample_i=0; sample_i < n_samples; sample_i++){
+	      peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
+	      mean_mat[sample_i] = seg1_mean_vec[sample_i];
+	      mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
+	      mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
+	    }
 	  }
 	}
       }//seg2_LastIndex
@@ -447,15 +340,21 @@ int PeakSegJointFaster(
     //printf("\n");
   }//while(1 < bases_per_bin)
   //printf("free at end\n");
-  free(left_bin_vec);
-  free(right_bin_vec);
+  free(sample_count_mat);
   free(last_cumsum_vec);
-  free(left_cumsum_mat);
-  free(right_cumsum_mat);
-  free(seg1_loss_vec);
+  free(sample_cumsum_mat);
+  
   free(seg1_mean_vec);
   free(seg2_mean_vec);
   free(seg3_mean_vec);
+
+  free(seg1_loss_vec);
   free(candidate_loss_vec);
+
+  free(left_bin_vec);
+  free(right_bin_vec);
+  free(left_cumsum_mat);
+  free(right_cumsum_mat);
+  
   return 0;
 }

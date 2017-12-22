@@ -1,3 +1,7 @@
+/* -*- compile-command: "R CMD INSTALL .." -*- */
+
+#define PROFILEH
+
 struct ProfileList {
   struct Profile * profile_vec;
   int n_profiles;
