@@ -588,6 +588,7 @@ PeakSegJointFaster <- structure(function
     fit.list[[paste(bin.factor)]] <- fit.fast
   }
   fit.best <- fit.list[[which.min(sapply(fit.list, "[[", "min.loss"))]]
+  rownames(fit.best$mean_mat) <- fit.best$sample.id
   fit.best$group.list <- group.list
   fit.best$sample.loss.diff.vec <- sort(with(fit.best, structure(
     peak_loss_vec-flat_loss_vec, names=sample.id)))
