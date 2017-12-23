@@ -2,13 +2,21 @@ library(testthat)
 library(PeakSegJoint)
 context("Faster")
 data(H3K36me3.TDH.other.chunk1, envir=environment())
-some.counts <- subset(
+nogroup <- subset(
   H3K36me3.TDH.other.chunk1$counts,
   43000000 < chromEnd &
   chromStart < 43200000)
-some.counts$sample.group <- some.counts$cell.type
+test_that("Faster needs group", {
+  expect_error({
+    fit <- PeakSegJointFaster(nogroup, 2:7)
+  }, "no sample.group")
+})
 
-fit <- PeakSegJointFaster(some.counts, 2:7)
+some.counts <- data.frame(
+  nogroup,
+  sample.group=nogroup$cell.type)
+plist <- ProfileList(some.counts)
+fit <- PeakSegJointFaster(plist, 2:7)
 max.samples <- fit$sample.modelSelection$complexity[1]
 sample.id.vec <- names(fit$sample.loss.diff.vec[1:max.samples])
 mean.mat <- fit$mean_mat[sample.id.vec,]

@@ -573,13 +573,17 @@ PeakSegJointFaster <- structure(function
  ){
   stopifnot(is.numeric(bin.factor))
   stopifnot(length(bin.factor)>0)
-  stopifnot(is.data.frame(profiles))
-  if(is.null(profiles$sample.group)){
-    profiles$sample.group <- "all"
-  }
   profile.list <- ProfileList(profiles)
-  id.df <- unique(profiles[, c("sample.group", "sample.id")])
-  id.df$sample.path <- with(id.df, paste0(sample.group, "/", sample.id))
+  bad.names <- grep("/", names(profile.list), invert=TRUE, value=TRUE)
+  if(length(bad.names)){
+    print(bad.names)
+    stop("no sample.group column in profile data but this is needed for PeakSegJointFaster")
+  }
+  sample.group <- sub("/.*", "", names(profile.list))
+  sample.id <- sub(".*/", "", names(profile.list))
+  id.df <- data.frame(
+    sample.group, sample.id,
+    sample.path=paste0(sample.group, "/", sample.id))
   group.list <- split(paste(id.df$sample.path), id.df$sample.group, drop=TRUE)
   fit.list <- list()
   for(bin.factor in 2:7){
