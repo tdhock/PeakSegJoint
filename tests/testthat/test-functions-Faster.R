@@ -16,6 +16,9 @@ is.feasible <- mean.mat[,1] < mean.mat[,2] & mean.mat[,2] > mean.mat[,3]
 test_that("all selectable samples are feasible", {
   expect_true(all(is.feasible))
 })
+test_that("sample loss diff is sorted", {
+  expect_identical(sort(fit$sample.loss.diff.vec), fit$sample.loss.diff.vec)
+})
 
 fit <- PeakSegJointFaster(some.counts, 2:7)
 max.groups <- fit$group.modelSelection$complexity[1]
