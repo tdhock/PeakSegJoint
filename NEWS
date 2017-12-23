@@ -12,6 +12,7 @@ Added PeakSegJointFaster C code with corresponding R functions:
   minimizing over several bin.factor values,
   then computing modelSelection data.frames,
   (the likelihood vectors are sorted to determine the path of models).
+  Infeasible models are excluded in R code before modelSelection.
 - example(PeakSegJointFasterOne) shows that it is O(N) whereas
   PeakSegJointHeuristic is O(N^2).
 
