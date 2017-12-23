@@ -1,11 +1,19 @@
 TODOs
 
-Add to C code:
-- loss difference for each sample individually,
-  so we can rank peaks from least to most significant
-  for a given sample. positive numbers for peaks going up,
-  negative numbers for peaks going down.
-- peak height for each sample -- either positive or negative.
+2017.12.23
+
+Added PeakSegJointFaster C code with corresponding R functions:
+- Step1 (GridSearch) and Step2 (SearchNearPeak) sub-routines
+  are run, with the assumption that peak is present in all samples
+  (we do not exclude samples with infeasible means during optimization).
+- PeakSegJointFasterOne returns likelihood vectors for flat and peak models,
+  along with matrix of segment mean values, for one bin.factor value.
+- PeakSegJointFaster returns the same,
+  minimizing over several bin.factor values,
+  then computing modelSelection data.frames,
+  (the likelihood vectors are sorted to determine the path of models).
+- example(PeakSegJointFasterOne) shows that it is O(N) whereas
+  PeakSegJointHeuristic is O(N^2).
 
 2017.08.11
 

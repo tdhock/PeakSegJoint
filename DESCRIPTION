@@ -1,7 +1,7 @@
 Package: PeakSegJoint
 Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Author: Toby Dylan Hocking
-Version: 2017.08.11
+Version: 2017.12.23
 License: GPL-3
 Title: Joint Peak Detection in Several ChIP-Seq Samples
 Description: Jointly segment several ChIP-seq samples to find the peaks 
