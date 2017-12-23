@@ -595,7 +595,7 @@ PeakSegJointFaster <- structure(function
   feasible.name.vec <- names(is.feasible.vec)[is.feasible.vec]
   fit.best$group.list <- group.list
   fit.best$sample.loss.diff.vec <- sort(with(fit.best, structure(
-    peak_loss_vec-flat_loss_vec, names=sample.id)))[feasible.name.vec]
+    peak_loss_vec-flat_loss_vec, names=sample.id))[feasible.name.vec])
   fit.best$group.loss.diff.vec <- sort(sapply(group.list, function(sid.vec){
     sum(fit.best$sample.loss.diff.vec[sid.vec])
   }))
