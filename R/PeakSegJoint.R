@@ -511,6 +511,47 @@ PeakSegJointFasterOne <- structure(function
       geom_line(aes(peaks, loss, group=bin.factor), data=loss.df)+
       geom_text(aes(peaks, loss, label=bin.factor), data=min.df, hjust=0)
 
+    if(require(microbenchmark)){
+
+      N.samples.vec <- 10^seq(1, 3, by=0.5)
+      max.N <- max(N.samples.vec)
+      N.bases <- 10
+      rmat <- function(Nr, Nc, mu){
+        matrix(rpois(Nr*Nc, mu), Nr, Nc)
+      }
+      set.seed(1)
+      big.mat <- cbind(
+        rmat(max.N, N.bases, 5),
+        rmat(max.N, N.bases, 10),
+        rmat(max.N, N.bases, 5))
+      big.df <- data.frame(
+        sample.id=as.integer(row(big.mat)),
+        chromStart=as.integer(col(big.mat)-1),
+        chromEnd=as.integer(col(big.mat)),
+        count=as.integer(big.mat))
+      full.list <- ProfileList(big.df)
+      time.df.list <- list()
+      for(N.samples in N.samples.vec){
+        partial.list <- full.list[1:N.samples]
+        result <- microbenchmark(
+          Heuristic=PeakSegJointHeuristic(partial.list, 2L),
+          Faster=PeakSegJointFasterOne(partial.list, 2L),
+          times=2L)
+        time.df.list[[paste(N.samples)]] <- data.frame(
+          N.samples,
+          result)
+      }
+      time.df <- do.call(rbind, time.df.list)
+
+      ggplot()+
+        geom_point(aes(
+          N.samples, time/1e9, color=expr),
+          data=time.df)+
+        scale_x_log10()+
+        scale_y_log10("seconds")
+      
+    }
+
   }
 
 })
