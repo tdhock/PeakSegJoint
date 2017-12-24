@@ -9,11 +9,11 @@ this function computes a sequence of S+1 PeakSegJoint models, with
 0, ..., S samples with an overlapping peak (maximum of one peak
 per sample). It also computes for G groups, the seq of G+1
 models, with 0, ..., G groups with an overlapping peak.}
-\usage{PeakSegJointFaster(profiles, bin.factor = 2:7)}
+\usage{PeakSegJointFaster(profiles, bin.factor.vec = 2:7)}
 \arguments{
   \item{profiles}{data.frame with columns sample.id, sample.group, chromStart,
 chromEnd, count.}
-  \item{bin.factor}{Size of bin pyramid. Bigger values result in slower computation.}
+  \item{bin.factor.vec}{Size of bin pyramid. Bigger values result in slower computation.}
 }
 
 \value{List of model fit results.}
