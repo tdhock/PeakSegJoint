@@ -20,6 +20,7 @@ int PeakSegJointFaster(
     return ERROR_FASTER_NO_COVERAGE_DATA;
   }
   int chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
+  double seg1_mean, seg2_mean, seg3_mean;
   struct Profile *profile, *samples = profile_list->profile_vec;
   profile = samples;
   unfilled_chromEnd = get_max_chromEnd(profile);
@@ -119,8 +120,6 @@ int PeakSegJointFaster(
     }
   }//for sample_i
   int bin_i, offset;
-  double mean_value, loss_value;
-  double flat_loss_total = 0.0;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
     offset = n_bins * sample_i;
@@ -133,10 +132,8 @@ int PeakSegJointFaster(
       cumsum_vec[bin_i] = cumsum_value;
     }
     last_cumsum_vec[sample_i] = cumsum_value;
-    mean_value = cumsum_value / data_bases;
-    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-    flat_loss_vec[sample_i] = loss_value;
-    flat_loss_total += loss_value;
+    seg1_mean = cumsum_value / data_bases;
+    flat_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
   }
   int n_peaks;
   int sample_i;
@@ -144,7 +141,7 @@ int PeakSegJointFaster(
     The for loops below implement the GridSearch() function mentioned
     on line 2 of the JointZoom algorithm in the PeakSegJoint paper.
   */
-  double best_loss = INFINITY, candidate_loss;
+  double best_loss = INFINITY, feasible_loss;
   for(int seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
     for(int sample_i=0; sample_i < n_samples; sample_i++){
       cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
@@ -153,37 +150,38 @@ int PeakSegJointFaster(
       data_bases = bin_bases - (double)extra_before;
       /* printf("sample_i=%d extra_before=%d bin_bases=%f data_bases=%f\n", */
       /* 	     sample_i, extra_before, bin_bases, data_bases); */
-      mean_value = cumsum_value/data_bases;
-      seg1_mean_vec[sample_i] = mean_value;
-      loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-      seg1_loss_vec[sample_i] = loss_value;
+      seg1_mean = cumsum_value/data_bases;
+      seg1_mean_vec[sample_i] = seg1_mean;
+      seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
     }
     for(int seg2_LastIndex=seg1_LastIndex+1; 
 	seg2_LastIndex < n_bins-1; 
 	seg2_LastIndex++){
-      candidate_loss=0.0;
+      feasible_loss=0.0;
       for(sample_i=0; sample_i < n_samples; sample_i++){
 	candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
 	cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
 	//segment 2.
 	cumsum_value = cumsum_vec[seg2_LastIndex]-cumsum_vec[seg1_LastIndex];
 	data_bases = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
-	mean_value = cumsum_value/data_bases;
-	seg2_mean_vec[sample_i] = mean_value;
-	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	candidate_loss_vec[sample_i] += loss_value;
+	seg2_mean = cumsum_value/data_bases;
+	seg2_mean_vec[sample_i] = seg2_mean;
+	candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
 	//segment 3.
 	cumsum_value = cumsum_vec[n_bins-1]-cumsum_vec[seg2_LastIndex];
 	bin_bases = (n_bins-1-seg2_LastIndex)*bases_per_bin;
 	data_bases = bin_bases - extra_after;
-	mean_value = cumsum_value/data_bases;
-	seg3_mean_vec[sample_i] = mean_value;
-	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	candidate_loss_vec[sample_i] += loss_value;
-	candidate_loss += candidate_loss_vec[sample_i];
+	seg3_mean = cumsum_value/data_bases;
+	seg3_mean_vec[sample_i] = seg3_mean;
+	candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
+	if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
+	  feasible_loss += candidate_loss_vec[sample_i];
+	}else{
+	  feasible_loss += flat_loss_vec[sample_i];
+	}
       }//sample_i
-      if(candidate_loss < best_loss){
-	best_loss = candidate_loss;
+      if(feasible_loss < best_loss){
+	best_loss = feasible_loss;
 	peak_start_end[0] =
 	  seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	peak_start_end[1] =
@@ -281,19 +279,16 @@ int PeakSegJointFaster(
 	cumsum_value = left_cumsum_vec[seg1_LastIndex];
 	bin_bases = peakStart - seg1_chromStart;
 	data_bases = bin_bases - extra_before;
-	mean_value = cumsum_value/data_bases;
+	seg1_mean = cumsum_value/data_bases;
 	//printf("%d %f ", cumsum_value, bases_value);
-	seg1_mean_vec[sample_i] = mean_value;
-	loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	seg1_loss_vec[sample_i] = loss_value;
+	seg1_mean_vec[sample_i] = seg1_mean;
+	seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
       }
       //printf("\n");
       for(int seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
 	peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	candidate_loss = 0.0;
-	if(peakEnd <= peakStart){
-	  candidate_loss = INFINITY;
-	}else{ 
+	if(peakStart < peakEnd){
+	  feasible_loss = 0.0;
 	  //printf("[seg2last=%d]\n", seg2_LastIndex);
 	  for(int sample_i=0; sample_i < n_samples; sample_i++){
 	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
@@ -305,24 +300,26 @@ int PeakSegJointFaster(
 	      right_cumsum_vec[seg2_LastIndex]-
 	      left_cumsum_vec[seg1_LastIndex];
 	    data_bases = peakEnd-peakStart;
-	    mean_value = cumsum_value/data_bases;
-	    seg2_mean_vec[sample_i] = mean_value;
-	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	    candidate_loss_vec[sample_i] += loss_value;
+	    seg2_mean = cumsum_value/data_bases;
+	    seg2_mean_vec[sample_i] = seg2_mean;
+	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
 	    //segment 3.
 	    cumsum_value = 
 	      last_cumsum_vec[sample_i]-
 	      right_cumsum_vec[seg2_LastIndex];
 	    bin_bases = seg3_chromEnd - peakEnd;
 	    data_bases = bin_bases - extra_after;
-	    mean_value = cumsum_value/data_bases;
-	    seg3_mean_vec[sample_i] = mean_value;
-	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
-	    candidate_loss_vec[sample_i] += loss_value;
-	    candidate_loss += candidate_loss_vec[sample_i];
-	  }
-	  if(candidate_loss < best_loss){
-	    best_loss = candidate_loss;
+	    seg3_mean = cumsum_value/data_bases;
+	    seg3_mean_vec[sample_i] = seg3_mean;
+	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
+	    if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
+	      feasible_loss += candidate_loss_vec[sample_i];
+	    }else{
+	      feasible_loss += flat_loss_vec[sample_i];
+	    }
+	  }//for(sample_i
+	  if(feasible_loss < best_loss){
+	    best_loss = feasible_loss;
 	    peak_start_end[0] = peakStart;
 	    peak_start_end[1] = peakEnd;
 	    best_seg1 = seg1_LastIndex;
@@ -333,8 +330,8 @@ int PeakSegJointFaster(
 	      mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
 	      mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
 	    }
-	  }
-	}
+	  }//feasible_loss<best_loss
+	}//peakStart<peakEnd
       }//seg2_LastIndex
     }//seg1_LastIndex
     if(best_seg1 == -1){

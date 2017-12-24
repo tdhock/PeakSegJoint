@@ -588,18 +588,22 @@ PeakSegJointFaster <- structure(function
   fit.list <- list()
   for(bin.factor in bin.factor.vec){
     fit.fast <- PeakSegJointFasterOne(profile.list, bin.factor)
-    fit.fast$min.loss <- sum(fit.fast$peak_loss_vec)
+    rownames(fit.fast$mean_mat) <- fit.fast$sample.id
+    fit.fast$is.feasible <- with(fit.fast, {
+      mean_mat[,1] < mean_mat[,2] & mean_mat[,2] > mean_mat[,3]
+    })
+    fit.fast$min.loss <- with(fit.fast, {
+      sum(ifelse(is.feasible, peak_loss_vec, flat_loss_vec))
+    })
     fit.list[[paste(bin.factor)]] <- fit.fast
   }
   fit.best <- fit.list[[which.min(sapply(fit.list, "[[", "min.loss"))]]
-  rownames(fit.best$mean_mat) <- fit.best$sample.id
-  is.feasible.vec <- with(fit.best, {
-    mean_mat[,1] < mean_mat[,2] & mean_mat[,2] > mean_mat[,3]
-  })
-  feasible.name.vec <- names(is.feasible.vec)[is.feasible.vec]
   fit.best$group.list <- group.list
-  fit.best$sample.loss.diff.vec <- sort(with(fit.best, structure(
-    peak_loss_vec-flat_loss_vec, names=sample.id))[feasible.name.vec])
+  fit.best$sample.loss.diff.vec <- sort(with(fit.best, {
+    structure(
+      peak_loss_vec-flat_loss_vec,
+      names=sample.id)[is.feasible]
+  }))
   fit.best$group.loss.diff.vec <- sort(sapply(group.list, function(sid.vec){
     sum(fit.best$sample.loss.diff.vec[sid.vec])
   }))

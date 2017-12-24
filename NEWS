@@ -5,7 +5,8 @@ TODOs
 Added PeakSegJointFaster C code with corresponding R functions:
 - Step1 (GridSearch) and Step2 (SearchNearPeak) sub-routines
   are run, with the assumption that peak is present in all samples
-  (we do not exclude samples with infeasible means during optimization).
+  For samples with infeasible means during optimization,
+  we use flat loss rather than peak loss.
 - PeakSegJointFasterOne returns likelihood vectors for flat and peak models,
   along with matrix of segment mean values, for one bin.factor value.
 - PeakSegJointFaster returns the same,
