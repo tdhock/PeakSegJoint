@@ -37,3 +37,22 @@ is.feasible <- mean.mat[,1] < mean.mat[,2] & mean.mat[,2] > mean.mat[,3]
 test_that("all selectable samples are feasible for max groups", {
   expect_true(all(is.feasible))
 })
+
+## what if there are no samples up?
+pathological <- data.frame(
+  sample.id="foo",
+  sample.group="bar",
+  chromStart=0:9,
+  chromEnd=1:10,
+  count=1:10)
+fit <- PeakSegJointFaster(pathological, 2L)
+test_that("no feasible samples is fine", {
+  expect_identical(fit$sample.modelSelection$complexity, 0L)
+  expect_identical(fit$group.modelSelection$complexity, 0L)
+})
+
+test_that("informative error", {
+  expect_error({
+    fit <- PeakSegJointFaster(pathological, 3L)
+  }, "bin factor too large")
+})

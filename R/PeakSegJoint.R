@@ -568,11 +568,11 @@ PeakSegJointFaster <- structure(function
 (profiles,
 ### data.frame with columns sample.id, sample.group, chromStart,
 ### chromEnd, count.
- bin.factor=2:7
+ bin.factor.vec=2:7
 ### Size of bin pyramid. Bigger values result in slower computation.
  ){
-  stopifnot(is.numeric(bin.factor))
-  stopifnot(length(bin.factor)>0)
+  stopifnot(is.numeric(bin.factor.vec))
+  stopifnot(length(bin.factor.vec)>0)
   profile.list <- ProfileList(profiles)
   bad.names <- grep("/", names(profile.list), invert=TRUE, value=TRUE)
   if(length(bad.names)){
@@ -586,7 +586,7 @@ PeakSegJointFaster <- structure(function
     sample.path=paste0(sample.group, "/", sample.id))
   group.list <- split(paste(id.df$sample.path), id.df$sample.group, drop=TRUE)
   fit.list <- list()
-  for(bin.factor in 2:7){
+  for(bin.factor in bin.factor.vec){
     fit.fast <- PeakSegJointFasterOne(profile.list, bin.factor)
     fit.fast$min.loss <- sum(fit.fast$peak_loss_vec)
     fit.list[[paste(bin.factor)]] <- fit.fast

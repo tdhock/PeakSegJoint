@@ -447,6 +447,12 @@ SEXP PeakSegJointFaster_interface(
     REAL(peak_loss_sexp),
     INTEGER(peak_start_end_sexp),
     INTEGER(data_start_end_sexp));
+  if(status == ERROR_FASTER_NO_COVERAGE_DATA){
+    error("no coverage data");
+  }
+  if(status == ERROR_FASTER_BIN_FACTOR_TOO_LARGE){
+    error("bin factor too large");
+  }
   if(status != 0){
     error("error code %d", status);
   }

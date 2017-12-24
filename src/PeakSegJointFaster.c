@@ -101,6 +101,20 @@ int PeakSegJointFaster(
 		    EMPTY_AS_ZERO);
     if(status != 0){
       free(sample_count_mat);
+      free(last_cumsum_vec);
+      free(sample_cumsum_mat);
+  
+      free(seg1_mean_vec);
+      free(seg2_mean_vec);
+      free(seg3_mean_vec);
+
+      free(seg1_loss_vec);
+      free(candidate_loss_vec);
+
+      free(left_bin_vec);
+      free(right_bin_vec);
+      free(left_cumsum_mat);
+      free(right_cumsum_mat);
       return status;
     }
   }//for sample_i
@@ -222,11 +236,21 @@ int PeakSegJointFaster(
 			bases_per_bin, n_bins);
       if(status != 0){
 	//printf("binSumLR bad status\n");
+	free(sample_count_mat);
+	free(last_cumsum_vec);
+	free(sample_cumsum_mat);
+  
+	free(seg1_mean_vec);
+	free(seg2_mean_vec);
+	free(seg3_mean_vec);
+
+	free(seg1_loss_vec);
+	free(candidate_loss_vec);
+
 	free(left_bin_vec);
 	free(right_bin_vec);
 	free(left_cumsum_mat);
 	free(right_cumsum_mat);
-	free(seg1_loss_vec);
 	return status;
       }
       left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
