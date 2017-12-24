@@ -27,6 +27,9 @@ test_that("all selectable samples are feasible", {
 test_that("sample loss diff is sorted", {
   expect_identical(sort(fit$sample.loss.diff.vec), fit$sample.loss.diff.vec)
 })
+test_that("biggest selectable model has min.loss", {
+  expect_equal(fit$sample.modelSelection$loss[1], fit$min.loss)
+})
 
 fit <- PeakSegJointFaster(some.counts, 2:7)
 max.groups <- fit$group.modelSelection$complexity[1]
