@@ -10,7 +10,7 @@ Description: Jointly segment several ChIP-seq samples to find the peaks
  "PeakSegJoint: fast supervised peak detection via joint segmentation
  of multiple count data samples"
  <arXiv:1506.01286> by TD Hocking and G Bourque.
-Suggests: testthat, ggplot2 (>= 2.0)
+Suggests: testthat, ggplot2 (>= 2.0), microbenchmark
 Depends: R (>= 2.14)
 Imports: 
  PeakError, parallel, penaltyLearning
