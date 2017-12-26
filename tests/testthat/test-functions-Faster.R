@@ -1,6 +1,7 @@
 library(testthat)
 library(PeakSegJoint)
 context("Faster")
+
 data(H3K36me3.TDH.other.chunk1, envir=environment())
 nogroup <- subset(
   H3K36me3.TDH.other.chunk1$counts,
@@ -59,3 +60,39 @@ test_that("informative error", {
     fit <- PeakSegJointFaster(pathological, 3L)
   }, "bin factor too large")
 })
+
+data(demo.profiles)
+
+test_that("mean always positive, no memory issues", {
+  fit <- PeakSegJointFaster(demo.profiles)
+  print(fit$peak_start_end)
+  expect_true(all(0 <= fit$mean_mat))
+  if(FALSE){##more
+    for(i in 1:1000){
+      fit <- PeakSegJointFasterOne(demo.profiles, 2L)
+      print(fit$peak_start_end)
+      expect_true(all(0 <= fit$mean_mat))
+    }
+    peak.df <- data.frame(
+      peakStart=fit$peak_start_end[1],
+      peakEnd=fit$peak_start_end[2])
+    ggplot()+
+      geom_rect(aes(
+        xmin=chromStart/1e3, xmax=chromEnd/1e3,
+        ymin=0, ymax=count),
+        color="grey",
+        data=demo.profiles)+
+      facet_grid(sample.id + sample.group ~ .)+
+      geom_segment(aes(
+        peakStart/1e3, 0,
+        xend=peakEnd/1e3, yend=0),
+        data=peak.df)+
+      geom_point(aes(
+        peakStart/1e3, 0),
+        shape=1,
+        data=peak.df)+
+      theme_bw()+
+      theme(panel.margin=grid::unit(0, "lines"))
+  }
+})
+

@@ -70,6 +70,8 @@ int PeakSegJointFaster(
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;
+  /* printf("n_bins=%d bases_per_bin=%d extra_before=%d extra_after=%d\n", */
+  /* 	 n_bins, bases_per_bin, extra_before, extra_after); */
   //int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
@@ -89,6 +91,8 @@ int PeakSegJointFaster(
   int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
   int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
   int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  int *left_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
+  int *right_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
   
   int *count_vec, *cumsum_vec, cumsum_value;
   int status;
@@ -116,6 +120,8 @@ int PeakSegJointFaster(
       free(right_bin_vec);
       free(left_cumsum_mat);
       free(right_cumsum_mat);
+      free(left_initial_cumsum_vec);
+      free(right_initial_cumsum_vec);
       return status;
     }
   }//for sample_i
@@ -135,8 +141,6 @@ int PeakSegJointFaster(
     seg1_mean = cumsum_value / data_bases;
     flat_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
   }
-  int n_peaks;
-  int sample_i;
   /*
     The for loops below implement the GridSearch() function mentioned
     on line 2 of the JointZoom algorithm in the PeakSegJoint paper.
@@ -158,7 +162,7 @@ int PeakSegJointFaster(
 	seg2_LastIndex < n_bins-1; 
 	seg2_LastIndex++){
       feasible_loss=0.0;
-      for(sample_i=0; sample_i < n_samples; sample_i++){
+      for(int sample_i=0; sample_i < n_samples; sample_i++){
 	candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
 	cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
 	//segment 2.
@@ -186,11 +190,20 @@ int PeakSegJointFaster(
 	  seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
 	peak_start_end[1] =
 	  seg1_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	for(sample_i=0; sample_i < n_samples; sample_i++){
+	for(int sample_i=0; sample_i < n_samples; sample_i++){
 	  peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
 	  mean_mat[sample_i] = seg1_mean_vec[sample_i];
 	  mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
 	  mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
+	  // Also save the left/right cumsums, which are needed to
+	  // perform the step2 optimization.
+	  cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+	  if(seg1_LastIndex == 0){
+	    left_initial_cumsum_vec[sample_i] = 0;
+	  }else{
+	    left_initial_cumsum_vec[sample_i] = cumsum_vec[seg1_LastIndex-1];
+	  }
+	  right_initial_cumsum_vec[sample_i] = cumsum_vec[seg2_LastIndex-1];
 	}
       }
     }//seg2_LastIndex
@@ -249,12 +262,14 @@ int PeakSegJointFaster(
 	free(right_bin_vec);
 	free(left_cumsum_mat);
 	free(right_cumsum_mat);
+	free(left_initial_cumsum_vec);
+	free(right_initial_cumsum_vec);
 	return status;
       }
       left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-      left_cumsum_value = left_cumsum_vec[sample_i];
+      left_cumsum_value = left_initial_cumsum_vec[sample_i];
       right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-      right_cumsum_value = right_cumsum_vec[sample_i];
+      right_cumsum_value = right_initial_cumsum_vec[sample_i];
       //printf("%d ", left_cumsum_value);
       //printf("%d ", right_cumsum_value);
       for(int bin_i=0; bin_i < n_bins; bin_i++){
@@ -324,7 +339,7 @@ int PeakSegJointFaster(
 	    peak_start_end[1] = peakEnd;
 	    best_seg1 = seg1_LastIndex;
 	    best_seg2 = seg2_LastIndex;
-	    for(sample_i=0; sample_i < n_samples; sample_i++){
+	    for(int sample_i=0; sample_i < n_samples; sample_i++){
 	      peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
 	      mean_mat[sample_i] = seg1_mean_vec[sample_i];
 	      mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
@@ -336,25 +351,21 @@ int PeakSegJointFaster(
     }//seg1_LastIndex
     if(best_seg1 == -1){
       //printf("no min found\n");
-      for(int sample_i_i=0; sample_i < n_samples; sample_i++){
+      for(int sample_i=0; sample_i < n_samples; sample_i++){
 	left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	left_cumsum_vec[sample_i] = 
-	  left_cumsum_vec[no_min_index];
+	left_initial_cumsum_vec[sample_i] = left_cumsum_vec[no_min_index];
 	right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	right_cumsum_vec[sample_i] = 
-	  right_cumsum_vec[no_min_index];
+	right_initial_cumsum_vec[sample_i] = right_cumsum_vec[no_min_index];
       }
     }else{
       for(int sample_i=0; sample_i < n_samples; sample_i++){
 	if(best_seg1 != 0){
 	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	  left_cumsum_vec[sample_i] = 
-	    left_cumsum_vec[best_seg1-1];
+	  left_initial_cumsum_vec[sample_i] = left_cumsum_vec[best_seg1-1];
 	}
 	if(best_seg2 != 0){
 	  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	  right_cumsum_vec[sample_i] = 
-	    right_cumsum_vec[best_seg2-1];
+	  right_initial_cumsum_vec[sample_i] = right_cumsum_vec[best_seg2-1];
 	}
       }//diff_i
     }
@@ -376,6 +387,8 @@ int PeakSegJointFaster(
   free(right_bin_vec);
   free(left_cumsum_mat);
   free(right_cumsum_mat);
+  free(left_initial_cumsum_vec);
+  free(right_initial_cumsum_vec);
   
   return 0;
 }
