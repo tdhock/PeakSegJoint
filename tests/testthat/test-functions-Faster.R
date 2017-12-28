@@ -96,3 +96,25 @@ test_that("mean always positive, no memory issues", {
   }
 })
 
+test_that("same model for Heuristic and Faster", {
+  N <- 10
+  N.bases <- 10
+  rmat <- function(Nr, Nc, mu){
+    matrix(rpois(Nr*Nc, mu), Nr, Nc)
+  }
+  set.seed(1)
+  big.mat <- cbind(
+    rmat(N, N.bases, 5),
+    rmat(N, N.bases, 10),
+    rmat(N, N.bases, 5))
+  big.df <- data.frame(
+    sample.id=as.integer(row(big.mat)),
+    sample.group="all",
+    chromStart=as.integer(col(big.mat)-1),
+    chromEnd=as.integer(col(big.mat)),
+    count=as.integer(big.mat))
+  full.list <- ProfileList(big.df)
+  fit.h <- PeakSegJointHeuristicStep2(full.list, 2L)
+  fit.f <- PeakSegJointFaster(full.list, 2L)
+  expect_equal(fit.f$min.loss, fit.h$models[[11]]$loss)
+})
