@@ -2,6 +2,7 @@
 
 #include "binSum.h"
 #include "PeakSegJoint.h"
+#include "PeakSegJointFaster.h"
 #include <R.h>
 #include <Rinternals.h>
 #include <stdlib.h>
@@ -82,15 +83,6 @@ void binSum_interface(
   }
 }
 
-// TODO: for each malloc, check for out of memory error.
-void * malloc_or_error(size_t size, const char * msg){
-  void * ptr = malloc(size);
-  if(ptr == 0){
-    //memory_error();
-  }
-  return ptr;
-}
-
 void 
 Ralloc_profile_list
 (SEXP profile_list_sexp, 
@@ -122,7 +114,7 @@ free_profile_list
 }
 
 SEXP allocPeakSegJointModelList(){
-  return allocVector(VECSXP, 10);
+  return allocVector(VECSXP, 11);
 }
 
 void
@@ -135,12 +127,12 @@ Ralloc_model_struct
     model_vec_sexp, data_start_end_sexp,
     n_bins_sexp, bases_per_bin_sexp, bin_factor_sexp,
     bin_start_end_sexp, sample_mean_sexp, last_cumsum_sexp,
-    mean_mat_sexp;
+    mean_mat_sexp, loss_change_sexp;
   int model_i;
   int n_profiles = model_list->n_models - 1;
   struct PeakSegJointModel *model;
 
-  PROTECT(model_list_names = allocVector(STRSXP, 10));
+  PROTECT(model_list_names = allocVector(STRSXP, 11));
   SET_STRING_ELT(model_list_names,0,mkChar("models"));
   SET_STRING_ELT(model_list_names,1,mkChar("bin_start_end"));
   SET_STRING_ELT(model_list_names,2,mkChar("sample_mean_vec"));
@@ -151,6 +143,7 @@ Ralloc_model_struct
   SET_STRING_ELT(model_list_names,7,mkChar("bin_factor"));
   SET_STRING_ELT(model_list_names,8,mkChar("data_start_end"));
   SET_STRING_ELT(model_list_names,9,mkChar("mean_mat"));
+  SET_STRING_ELT(model_list_names,10,mkChar("loss_change_vec"));
   namesgets(model_list_sexp, model_list_names);
   UNPROTECT(1);
 
@@ -164,6 +157,7 @@ Ralloc_model_struct
   PROTECT(bin_factor_sexp = allocVector(INTSXP, 1));
   PROTECT(data_start_end_sexp = allocVector(INTSXP, 2));
   PROTECT(mean_mat_sexp = allocMatrix(REALSXP, n_profiles, 3));
+  PROTECT(loss_change_sexp = allocVector(REALSXP, n_profiles));
   SET_VECTOR_ELT(model_list_sexp,0,model_vec_sexp);
   SET_VECTOR_ELT(model_list_sexp,1,bin_start_end_sexp);
   SET_VECTOR_ELT(model_list_sexp,2,sample_mean_sexp);
@@ -174,6 +168,7 @@ Ralloc_model_struct
   SET_VECTOR_ELT(model_list_sexp, 7, bin_factor_sexp);
   SET_VECTOR_ELT(model_list_sexp, 8, data_start_end_sexp);
   SET_VECTOR_ELT(model_list_sexp, 9, mean_mat_sexp);
+  SET_VECTOR_ELT(model_list_sexp, 10, loss_change_sexp);
   model_list->bin_start_end = INTEGER(bin_start_end_sexp);
   model_list->sample_mean_vec = REAL(sample_mean_sexp);
   model_list->last_cumsum_vec = INTEGER(last_cumsum_sexp);
@@ -183,7 +178,8 @@ Ralloc_model_struct
   model_list->bin_factor = INTEGER(bin_factor_sexp);
   model_list->data_start_end = INTEGER(data_start_end_sexp);
   model_list->mean_mat = REAL(mean_mat_sexp);
-  UNPROTECT(10);
+  model_list->loss_change_vec = REAL(loss_change_sexp);
+  UNPROTECT(11);
 
   SEXP loss_sexp, peak_start_end_sexp, samples_with_peaks_sexp,
     left_cumsum_sexp, right_cumsum_sexp, 
@@ -406,6 +402,74 @@ PeakSegJointHeuristic_interface(
   return model_list_sexp;
 }
 
+SEXP PeakSegJointFaster_interface(
+  SEXP profile_list_sexp,
+  SEXP bin_factor
+  ){
+  int n_profiles = length(profile_list_sexp);
+  // malloc Profiles for input data.
+  struct ProfileList profile_list;
+  Ralloc_profile_list(profile_list_sexp, &profile_list);
+  // allocVector for outputs.
+  struct PeakSegJointModelList *model_list = 
+    malloc_PeakSegJointModelList(n_profiles+1);
+  SEXP model_list_sexp, model_list_names,
+    mean_sexp, flat_loss_sexp, peak_loss_sexp,
+    peak_start_end_sexp, data_start_end_sexp;
+  //alloc list.
+  PROTECT(model_list_sexp = allocVector(VECSXP, 5));
+  //alloc list names.
+  PROTECT(model_list_names = allocVector(STRSXP, 5));
+  SET_STRING_ELT(model_list_names,0,mkChar("mean_mat"));
+  SET_STRING_ELT(model_list_names,1,mkChar("flat_loss_vec"));
+  SET_STRING_ELT(model_list_names,2,mkChar("peak_loss_vec"));
+  SET_STRING_ELT(model_list_names,3,mkChar("peak_start_end"));
+  SET_STRING_ELT(model_list_names,4,mkChar("data_start_end"));
+  namesgets(model_list_sexp, model_list_names);
+  UNPROTECT(1);//model_list_names
+  //alloc list components.
+  PROTECT(mean_sexp = allocMatrix(REALSXP, n_profiles, 3));
+  PROTECT(flat_loss_sexp = allocVector(REALSXP, n_profiles));
+  PROTECT(peak_loss_sexp = allocVector(REALSXP, n_profiles));
+  PROTECT(peak_start_end_sexp = allocVector(INTSXP, 2));
+  PROTECT(data_start_end_sexp = allocVector(INTSXP, 2));
+  SET_VECTOR_ELT(model_list_sexp,0,mean_sexp);
+  SET_VECTOR_ELT(model_list_sexp,1,flat_loss_sexp);
+  SET_VECTOR_ELT(model_list_sexp,2,peak_loss_sexp);
+  SET_VECTOR_ELT(model_list_sexp,3,peak_start_end_sexp);
+  SET_VECTOR_ELT(model_list_sexp,4,data_start_end_sexp);
+  UNPROTECT(5);
+  // run seg algo.
+  int status = PeakSegJointFaster(
+    &profile_list, INTEGER(bin_factor)[0],
+    REAL(mean_sexp),
+    REAL(flat_loss_sexp),
+    REAL(peak_loss_sexp),
+    INTEGER(peak_start_end_sexp),
+    INTEGER(data_start_end_sexp));
+  if(status == ERROR_FASTER_NO_COVERAGE_DATA){
+    error("no coverage data");
+  }
+  if(status == ERROR_FASTER_BIN_FACTOR_TOO_LARGE){
+    error("bin factor too large");
+  }
+  if(status == ERROR_CHROMSTART_NOT_LESS_THAN_CHROMEND){
+    error("chromStart not less than chromEnd");
+  }
+  if(status == ERROR_CHROMSTART_BEFORE_PREVIOUS_CHROMEND){
+    error("chromStart before previous chromEnd");
+  }
+  if(status == ERROR_CHROMSTART_CHROMEND_MISMATCH){
+    error("chromStart[i] != chromEnd[i-1]");
+  }
+  if(status != 0){
+    error("error code %d", status);
+  }
+  free_profile_list(&profile_list);
+  UNPROTECT(1); //model_list_sexp.
+  return model_list_sexp;
+}
+
 R_CMethodDef cMethods[] = {
   {"clusterPeaks_interface",
    (DL_FUNC) &clusterPeaks_interface, 4, clusterPeaks_args
@@ -427,6 +491,8 @@ static R_CallMethodDef callMethods[] = {
     (DL_FUNC) &PeakSegJointHeuristicStep2_interface, 2},
    {"PeakSegJointHeuristic_interface",
     (DL_FUNC) &PeakSegJointHeuristic_interface, 2},
+   {"PeakSegJointFaster_interface",
+    (DL_FUNC) &PeakSegJointFaster_interface, 2},
    {NULL, NULL, 0}
 };
 

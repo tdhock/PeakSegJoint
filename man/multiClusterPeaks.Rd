@@ -27,11 +27,16 @@ ggplot()+
     data=chr7.peaks)
 
 clustered <- multiClusterPeaks(chr7.peaks)
-library(data.table)
-clusters <- data.table(clustered)[, list(
-  clusterStart=as.integer(median(chromStart)),
-  clusterEnd=as.integer(median(chromEnd))
-  ), by=cluster]
+clustered.list <- split(clustered, clustered$cluster)
+clusters.list <- list()
+for(cluster.name in names(clustered.list)){
+  clusters.list[[cluster.name]] <- with(
+    clustered.list[[cluster.name]], data.frame(
+      cluster=cluster[1],
+      clusterStart=as.integer(median(chromStart)),
+      clusterEnd=as.integer(median(chromEnd))))
+}
+clusters <- do.call(rbind, clusters.list)
 ggplot()+
   geom_segment(aes(
     chromStart/1e3, sample.id,

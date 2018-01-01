@@ -293,120 +293,6 @@ int PeakSegJointHeuristicStep1(
   return status;
 }
 
-int
-binSumLR
-(int *data_start_end,
- int *chromStart, int *chromEnd,
- int *coverage, int n_entries,
- int *left_bin_vec, int *right_bin_vec,
- int left_chromStart, int right_chromStart,
- int bases_per_bin, int n_bins){
-  int bin_chromEnd, bin_chromStart;
-  int extra_chromStart, extra_chromEnd, extra_bases, extra_coverage;
-  int status;
-  /* printf("left bin_size=%d bins=%d start=%d\n",  */
-  /* 	 bases_per_bin, n_bins, left_chromStart); */
-  status = binSum(chromStart, chromEnd,
-		  coverage, n_entries,
-		  left_bin_vec,
-		  bases_per_bin,
-		  n_bins,
-		  left_chromStart,
-		  EMPTY_AS_ZERO);
-  if(status != 0){
-    return status;
-  }
-  /* printf("right bin_size=%d bins=%d start=%d\n",  */
-  /* 	 bases_per_bin, n_bins, right_chromStart); */
-  status = binSum(chromStart, chromEnd,
-		  coverage, n_entries,
-		  right_bin_vec,
-		  bases_per_bin,
-		  n_bins,
-		  right_chromStart,
-		  EMPTY_AS_ZERO);
-  if(status != 0){
-    return status;
-  }
-  for(int bin_i=0; bin_i < n_bins; bin_i++){
-    //left bin.
-    bin_chromStart = left_chromStart + bases_per_bin * bin_i;
-    bin_chromEnd = bin_chromStart + bases_per_bin;
-    if(data_start_end[0] < bin_chromEnd){
-      if(data_start_end[0] <= bin_chromStart){
-	//   (     data   ]
-	//   (bin]
-	//       (bin]
-	// bin is completely data, leave it alone!
-      }else{
-	//    (  data  ]
-	//   (bin]
-	//    - extra
-	// (bin]
-	//  --- extra
-	// bin has some data, so subtract the extra.
-	extra_chromStart = bin_chromStart;
-	extra_chromEnd = data_start_end[0];
-	extra_bases = extra_chromEnd - extra_chromStart;
-	//printf("left start=%d bases=%d\n", extra_chromStart, extra_bases);
-	status = binSum(chromStart, chromEnd,
-			coverage, n_entries,
-			&extra_coverage,
-			extra_bases,
-			1,
-			extra_chromStart,
-			EMPTY_AS_ZERO);
-	if(status != 0){
-	  return status;
-	}
-	left_bin_vec[bin_i] -= extra_coverage;
-      }
-    }else{
-      //      (  data  ]
-      //  (bin]
-      // bin does not overlap data, so set it to zero.
-      left_bin_vec[bin_i] = 0;
-    }
-    //right bin.
-    bin_chromStart = right_chromStart + bases_per_bin * bin_i;
-    bin_chromEnd = bin_chromStart + bases_per_bin;
-    if(bin_chromStart < data_start_end[1]){
-      if(bin_chromEnd <= data_start_end[1]){
-	// (  data  ]
-	//      (bin]    
-	//  (bin]
-	// bin is completely data, leave it alone!
-      }else{
-	// (  data  ]
-	//        (bin]
-	//           -- extra
-	extra_chromStart = data_start_end[1];
-	extra_chromEnd = bin_chromEnd;
-	extra_bases = extra_chromEnd - extra_chromStart;
-	//printf("right start=%d bases=%d\n", extra_chromStart, extra_bases);
-	status = binSum(chromStart, chromEnd,
-			coverage, n_entries,
-			&extra_coverage,
-			extra_bases,
-			1,
-			extra_chromStart,
-			EMPTY_AS_ZERO);
-	if(status != 0){
-	  return status;
-	}
-	right_bin_vec[bin_i] -= extra_coverage;
-      }
-    }else{
-      // (  data  ]
-      //          (bin]
-      //              (bin]
-      // bin does not overlap data, so set it to zero.
-      right_bin_vec[bin_i] = 0;
-    }
-  }
-  return 0;
-}
-
 int 
 PeakSegJointHeuristicStep2
 (struct ProfileList *profile_list,
@@ -723,14 +609,20 @@ int PeakSegJointHeuristicStep3
 	/* 	     n_peaks, seg1_mean_vec[sample_i], */
 	/* 	     seg2_mean_vec[sample_i], */
 	/* 	     seg3_mean_vec[sample_i]); */
+	double sample_loss_diff =
+	  loss_value-model_list->flat_loss_vec[sample_i];
+	double sample_sign;
 	if(seg1_mean_vec[sample_i] < seg2_mean_vec[sample_i] &&
 	   seg3_mean_vec[sample_i] < seg2_mean_vec[sample_i]){
 	  //printf(" FEASIBLE");
+	  sample_sign = -1.0;
 	  diff_index_vec[n_feasible].sample_i = sample_i;
-	  diff_index_vec[n_feasible].loss = 
-	    loss_value-model_list->flat_loss_vec[sample_i];
+	  diff_index_vec[n_feasible].loss = sample_loss_diff;
 	  n_feasible++;
+	}else{
+	  sample_sign = 1.0;
 	}
+	model_list->loss_change_vec[sample_i] = sample_loss_diff*sample_sign;
 	//printf("\n");
       }//sample_i
       if(n_peaks <= n_feasible){

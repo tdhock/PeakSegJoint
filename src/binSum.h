@@ -23,3 +23,12 @@ int oneBin
  int *bin_total,
  int bin_chromStart,
  int bin_chromEnd);
+
+int
+binSumLR
+(int *data_start_end,
+ int *chromStart, int *chromEnd,
+ int *coverage, int n_entries,
+ int *left_bin_vec, int *right_bin_vec,
+ int left_chromStart, int right_chromStart,
+ int bases_per_bin, int n_bins);
