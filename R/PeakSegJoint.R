@@ -534,7 +534,7 @@ PeakSegJointFasterOne <- structure(function
       for(N.samples in N.samples.vec){
         partial.list <- full.list[1:N.samples]
         result <- microbenchmark(
-          Heuristic=PeakSegJointHeuristic(partial.list, 2L),
+          Heuristic=PeakSegJointHeuristicStep2(partial.list, 2L),
           Faster=PeakSegJointFasterOne(partial.list, 2L),
           times=2L)
         time.df.list[[paste(N.samples)]] <- data.frame(
