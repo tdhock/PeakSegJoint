@@ -94,6 +94,11 @@ int PeakSegJointFaster(
   int *left_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
   int *right_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
   
+  int *left_cumsum_vec, *right_cumsum_vec;
+  int left_cumsum_value, right_cumsum_value;
+  int peakStart, peakEnd;
+  int best_seg1, best_seg2;
+
   int *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
@@ -147,72 +152,72 @@ int PeakSegJointFaster(
   */
   double best_loss = INFINITY, feasible_loss;
   for(int seg1_LastIndex=0; seg1_LastIndex < n_bins-2; seg1_LastIndex++){
-    for(int sample_i=0; sample_i < n_samples; sample_i++){
-      cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
-      cumsum_value = cumsum_vec[seg1_LastIndex];
-      bin_bases = (seg1_LastIndex+1)*bases_per_bin;
-      data_bases = bin_bases - (double)extra_before;
-      /* printf("sample_i=%d extra_before=%d bin_bases=%f data_bases=%f\n", */
-      /* 	     sample_i, extra_before, bin_bases, data_bases); */
-      seg1_mean = cumsum_value/data_bases;
-      seg1_mean_vec[sample_i] = seg1_mean;
-      seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
-    }
-    for(int seg2_LastIndex=seg1_LastIndex+1; 
-	seg2_LastIndex < n_bins-1; 
-	seg2_LastIndex++){
-      feasible_loss=0.0;
+    peakStart = seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
+    if(unfilled_chromStart < peakStart){
       for(int sample_i=0; sample_i < n_samples; sample_i++){
-	candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
 	cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
-	//segment 2.
-	cumsum_value = cumsum_vec[seg2_LastIndex]-cumsum_vec[seg1_LastIndex];
-	data_bases = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
-	seg2_mean = cumsum_value/data_bases;
-	seg2_mean_vec[sample_i] = seg2_mean;
-	candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
-	//segment 3.
-	cumsum_value = cumsum_vec[n_bins-1]-cumsum_vec[seg2_LastIndex];
-	bin_bases = (n_bins-1-seg2_LastIndex)*bases_per_bin;
-	data_bases = bin_bases - extra_after;
-	seg3_mean = cumsum_value/data_bases;
-	seg3_mean_vec[sample_i] = seg3_mean;
-	candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
-	if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
-	  feasible_loss += candidate_loss_vec[sample_i];
-	}else{
-	  feasible_loss += flat_loss_vec[sample_i];
-	}
-      }//sample_i
-      if(feasible_loss < best_loss){
-	best_loss = feasible_loss;
-	peak_start_end[0] =
-	  seg1_chromStart + (seg1_LastIndex+1)*bases_per_bin;
-	peak_start_end[1] =
-	  seg1_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	for(int sample_i=0; sample_i < n_samples; sample_i++){
-	  peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
-	  mean_mat[sample_i] = seg1_mean_vec[sample_i];
-	  mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
-	  mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
-	  // Also save the left/right cumsums, which are needed to
-	  // perform the step2 optimization.
-	  cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
-	  if(seg1_LastIndex == 0){
-	    left_initial_cumsum_vec[sample_i] = 0;
-	  }else{
-	    left_initial_cumsum_vec[sample_i] = cumsum_vec[seg1_LastIndex-1];
-	  }
-	  right_initial_cumsum_vec[sample_i] = cumsum_vec[seg2_LastIndex-1];
-	}
+	cumsum_value = cumsum_vec[seg1_LastIndex];
+	bin_bases = (seg1_LastIndex+1)*bases_per_bin;
+	data_bases = bin_bases - (double)extra_before;
+	/* printf("sample_i=%d extra_before=%d bin_bases=%f data_bases=%f\n", */
+	/* 	     sample_i, extra_before, bin_bases, data_bases); */
+	seg1_mean = cumsum_value/data_bases;
+	seg1_mean_vec[sample_i] = seg1_mean;
+	seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
       }
-    }//seg2_LastIndex
-  }//seg2_FirstIndex
+      for(int seg2_LastIndex=seg1_LastIndex+1; 
+	  seg2_LastIndex < n_bins-1; 
+	  seg2_LastIndex++){
+	feasible_loss=0.0;
+	peakEnd = seg1_chromStart + (seg2_LastIndex+1)*bases_per_bin;
+	if(peakEnd < unfilled_chromEnd){
+	  for(int sample_i=0; sample_i < n_samples; sample_i++){
+	    candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
+	    cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+	    //segment 2.
+	    cumsum_value = cumsum_vec[seg2_LastIndex]-cumsum_vec[seg1_LastIndex];
+	    data_bases = (seg2_LastIndex-seg1_LastIndex)*bases_per_bin;
+	    seg2_mean = cumsum_value/data_bases;
+	    seg2_mean_vec[sample_i] = seg2_mean;
+	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
+	    //segment 3.
+	    cumsum_value = cumsum_vec[n_bins-1]-cumsum_vec[seg2_LastIndex];
+	    bin_bases = (n_bins-1-seg2_LastIndex)*bases_per_bin;
+	    data_bases = bin_bases - extra_after;
+	    seg3_mean = cumsum_value/data_bases;
+	    seg3_mean_vec[sample_i] = seg3_mean;
+	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
+	    if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
+	      feasible_loss += candidate_loss_vec[sample_i];
+	    }else{
+	      feasible_loss += flat_loss_vec[sample_i];
+	    }
+	  }//sample_i
+	  if(feasible_loss < best_loss){
+	    best_loss = feasible_loss;
+	    peak_start_end[0] = peakStart;
+	    peak_start_end[1] = peakEnd;
+	    for(int sample_i=0; sample_i < n_samples; sample_i++){
+	      peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
+	      mean_mat[sample_i] = seg1_mean_vec[sample_i];
+	      mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
+	      mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
+	      // Also save the left/right cumsums, which are needed to
+	      // perform the step2 optimization.
+	      cumsum_vec = sample_cumsum_mat + n_bins*sample_i;
+	      if(seg1_LastIndex == 0){
+		left_initial_cumsum_vec[sample_i] = 0;
+	      }else{
+		left_initial_cumsum_vec[sample_i] = cumsum_vec[seg1_LastIndex-1];
+	      }
+	      right_initial_cumsum_vec[sample_i] = cumsum_vec[seg2_LastIndex-1];
+	    }//for(sample_i
+	  }//if(feasible_loss < best_loss
+	}//if(peakEnd < unfilled_chromEnd
+      }//for(seg2_LastIndex
+    }//if(unfilled_chromStart < peakStart
+  }//for(seg1_LastIndex
   //return status;//old end of Step1.
-  int *left_cumsum_vec, *right_cumsum_vec;
-  int left_cumsum_value, right_cumsum_value;
-  int peakStart, peakEnd;
-  int best_seg1, best_seg2;
   /* When performing the minimization over peakStart/End locations, it
    * is possible that at any given bases_per_bin value, there is no
    * better solution than what we found for the previous bases_per_bin
@@ -288,67 +293,69 @@ int PeakSegJointFaster(
     */
     for(int seg1_LastIndex=0; seg1_LastIndex < n_bins; seg1_LastIndex++){
       peakStart = left_chromStart + (seg1_LastIndex+1)*bases_per_bin;
-      //printf("[seg1last=%d] seg1 cumsum bases ", seg1_LastIndex);
-      for(int sample_i=0; sample_i < n_samples; sample_i++){
-	left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	cumsum_value = left_cumsum_vec[seg1_LastIndex];
-	bin_bases = peakStart - seg1_chromStart;
-	data_bases = bin_bases - extra_before;
-	seg1_mean = cumsum_value/data_bases;
-	//printf("%d %f ", cumsum_value, bases_value);
-	seg1_mean_vec[sample_i] = seg1_mean;
-	seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
-      }
-      //printf("\n");
-      for(int seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
-	peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
-	if(peakStart < peakEnd){
-	  feasible_loss = 0.0;
-	  //printf("[seg2last=%d]\n", seg2_LastIndex);
-	  for(int sample_i=0; sample_i < n_samples; sample_i++){
-	    left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	    right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	    //segment 1.
-	    candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
-	    //segment 2.
-	    cumsum_value = 
-	      right_cumsum_vec[seg2_LastIndex]-
-	      left_cumsum_vec[seg1_LastIndex];
-	    data_bases = peakEnd-peakStart;
-	    seg2_mean = cumsum_value/data_bases;
-	    seg2_mean_vec[sample_i] = seg2_mean;
-	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
-	    //segment 3.
-	    cumsum_value = 
-	      last_cumsum_vec[sample_i]-
-	      right_cumsum_vec[seg2_LastIndex];
-	    bin_bases = seg3_chromEnd - peakEnd;
-	    data_bases = bin_bases - extra_after;
-	    seg3_mean = cumsum_value/data_bases;
-	    seg3_mean_vec[sample_i] = seg3_mean;
-	    candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
-	    if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
-	      feasible_loss += candidate_loss_vec[sample_i];
-	    }else{
-	      feasible_loss += flat_loss_vec[sample_i];
-	    }
-	  }//for(sample_i
-	  if(feasible_loss < best_loss){
-	    best_loss = feasible_loss;
-	    peak_start_end[0] = peakStart;
-	    peak_start_end[1] = peakEnd;
-	    best_seg1 = seg1_LastIndex;
-	    best_seg2 = seg2_LastIndex;
+      if(unfilled_chromStart < peakStart){
+	//printf("[seg1last=%d] seg1 cumsum bases ", seg1_LastIndex);
+	for(int sample_i=0; sample_i < n_samples; sample_i++){
+	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	  cumsum_value = left_cumsum_vec[seg1_LastIndex];
+	  bin_bases = peakStart - seg1_chromStart;
+	  data_bases = bin_bases - extra_before;
+	  seg1_mean = cumsum_value/data_bases;
+	  //printf("%d %f ", cumsum_value, bases_value);
+	  seg1_mean_vec[sample_i] = seg1_mean;
+	  seg1_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
+	}
+	//printf("\n");
+	for(int seg2_LastIndex=0; seg2_LastIndex < n_bins; seg2_LastIndex++){
+	  peakEnd = right_chromStart + (seg2_LastIndex+1)*bases_per_bin;
+	  if(peakStart < peakEnd && peakEnd < unfilled_chromEnd){
+	    feasible_loss = 0.0;
+	    //printf("[seg2last=%d]\n", seg2_LastIndex);
 	    for(int sample_i=0; sample_i < n_samples; sample_i++){
-	      peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
-	      mean_mat[sample_i] = seg1_mean_vec[sample_i];
-	      mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
-	      mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
-	    }
-	  }//feasible_loss<best_loss
-	}//peakStart<peakEnd
-      }//seg2_LastIndex
-    }//seg1_LastIndex
+	      left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+	      right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+	      //segment 1.
+	      candidate_loss_vec[sample_i] = seg1_loss_vec[sample_i];
+	      //segment 2.
+	      cumsum_value = 
+		right_cumsum_vec[seg2_LastIndex]-
+		left_cumsum_vec[seg1_LastIndex];
+	      data_bases = peakEnd-peakStart;
+	      seg2_mean = cumsum_value/data_bases;
+	      seg2_mean_vec[sample_i] = seg2_mean;
+	      candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg2_mean);
+	      //segment 3.
+	      cumsum_value = 
+		last_cumsum_vec[sample_i]-
+		right_cumsum_vec[seg2_LastIndex];
+	      bin_bases = seg3_chromEnd - peakEnd;
+	      data_bases = bin_bases - extra_after;
+	      seg3_mean = cumsum_value/data_bases;
+	      seg3_mean_vec[sample_i] = seg3_mean;
+	      candidate_loss_vec[sample_i] += OptimalPoissonLoss(cumsum_value, seg3_mean);
+	      if(seg1_mean < seg2_mean && seg2_mean > seg3_mean){
+		feasible_loss += candidate_loss_vec[sample_i];
+	      }else{
+		feasible_loss += flat_loss_vec[sample_i];
+	      }
+	    }//for(sample_i
+	    if(feasible_loss < best_loss){
+	      best_loss = feasible_loss;
+	      peak_start_end[0] = peakStart;
+	      peak_start_end[1] = peakEnd;
+	      best_seg1 = seg1_LastIndex;
+	      best_seg2 = seg2_LastIndex;
+	      for(int sample_i=0; sample_i < n_samples; sample_i++){
+		peak_loss_vec[sample_i] = candidate_loss_vec[sample_i];
+		mean_mat[sample_i] = seg1_mean_vec[sample_i];
+		mean_mat[sample_i+n_samples] = seg2_mean_vec[sample_i];
+		mean_mat[sample_i+n_samples*2] = seg3_mean_vec[sample_i];
+	      }
+	    }//if(feasible_loss<best_loss
+	  }//if(peakStart<peakEnd
+	}//for(seg2_LastIndex
+      }//if(unfilled_chromStart < peakStart
+    }//for(seg1_LastIndex
     if(best_seg1 == -1){
       //printf("no min found\n");
       for(int sample_i=0; sample_i < n_samples; sample_i++){

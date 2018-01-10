@@ -1,5 +1,10 @@
 TODOs
 
+2018.01.09
+
+In PeakSegJointFaster, only consider peaks which are inside range of
+observed non-zero data.
+
 2017.12.23
 
 Added PeakSegJointFaster C code with corresponding R functions:
