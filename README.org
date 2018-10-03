@@ -27,23 +27,173 @@ other peak detection algorithms for ChIP-seq data analysis:
 
 ** To use PeakSegJoint in practice on large genomic data sets
 
-The [[https://github.com/tdhock/PeakSegFPOP][PeakSegFPOP]] and [[https://github.com/tdhock/PeakSegPipeline][PeakSegPipeline]] repositories contain a pipeline
-which includes PeakSegJoint and our more recent PeakSegFPOP
-algorithm. We recommend to use these other packages (which use
-PeakSegJoint as a sub-routine) for predicting peaks in the whole
-genome of several samples.
+The [[https://github.com/tdhock/PeakSegPipeline][PeakSegPipeline]] repository contains a pipeline which includes
+PeakSegJoint and our more recent PeakSegFPOP algorithm. We recommend
+to use this other package (which uses PeakSegJoint as a sub-routine)
+for predicting peaks in the whole genome of several samples.
 
 ** R installation instructions and usage examples
 
-This R package contains [[file:src/PeakSegJoint.c][C code that implements the fast
-heuristic JointZoom algorithm]] described in the [[http://arxiv.org/abs/1506.01286][PeakSegJoint paper]]
-[[[https://github.com/tdhock/PeakSegJoint-paper][source]]]. 
+Install and load/attach package:
 
 #+BEGIN_SRC R
-  if(!require(devtools))install.packages("devtools")
-  devtools::install_github("tdhock/PeakSegJoint")
+  install.packages("PeakSegJoint")
   library(PeakSegJoint)
-  example(PeakSegJointSeveral) # JointZoom approximate segmentation algo.
-  example(PeakSegJointError) # Number of incorrect labels.
 #+END_SRC
 
+To run PeakSegJoint you need to get your data set in bedGraph-like
+data.frame format (chromStart, chromEnd, count) where "count" is the
+number of aligned DNA sequence reads at positions
+(chromStart,chromEnd]. There should also be columns "sample.id" (ID
+for each sample/track) and "sample.group" (ID for each group of
+samples with same expected peak up/down status, e.g. replicates or cell
+types).
+
+#+BEGIN_SRC R
+  library(PeakSegJoint)
+  data(H3K36me3.TDH.other.chunk1, envir=environment())
+  some.counts <- subset(
+    H3K36me3.TDH.other.chunk1$counts,
+    43000000 < chromEnd &
+    chromStart < 43200000)
+  some.counts$sample.group <- some.counts$cell.type
+  head(some.counts)
+#+END_SRC
+
+#+BEGIN_SRC 
+> head(some.counts)
+  cell.type  sample.id chromStart chromEnd count sample.group
+1    kidney McGill0023   43119140 43119199     3       kidney
+2    kidney McGill0023   43119199 43119211     2       kidney
+3    kidney McGill0023   43119211 43119216     3       kidney
+4    kidney McGill0023   43119216 43119222     4       kidney
+5    kidney McGill0023   43119222 43119240     3       kidney
+6    kidney McGill0023   43119240 43119284     2       kidney
+> 
+#+END_SRC
+
+Then you can run algo using the =PeakSegJointFaster= function giving
+your data.frame as the first argument.
+
+#+BEGIN_SRC R
+  fit <- PeakSegJointFaster(some.counts)
+#+END_SRC
+
+The resulting model fit object is a named list, with the following
+components. peak_start_end is a vector with start/end positions of the
+most likely common peak. data_start_end is a vector with start/end
+positions of the data, which was used to compute the likelihood/loss.
+
+#+BEGIN_SRC 
+> with(fit, rbind(peak_start_end, data_start_end))
+                   [,1]     [,2]
+peak_start_end 43157280 43180756
+data_start_end 43119015 43201099
+> 
+#+END_SRC
+
+mean_mat is a matrix with one row for each sample and
+three columns (mean before peak, mean in peak, mean after peak).
+
+#+BEGIN_SRC 
+> fit$mean_mat
+                                [,1]      [,2]     [,3]
+kidney/McGill0023           3.598615  8.728489 2.933491
+kidneyCancer/McGill0022     2.895257 10.498850 2.139557
+skeletalMuscleMD/McGill0013 1.220855  1.691600 1.366809
+skeletalMuscleMD/McGill0016 1.357977  1.967243 1.752986
+> 
+#+END_SRC
+
+To select the number of samples with a common peak, you can use a
+criterion based on the decrease in Poisson loss. The loss decrease
+values for the group-sparse model are
+
+#+BEGIN_SRC R
+> fit$group.loss.diff.vec
+    kidneyCancer           kidney skeletalMuscleMD 
+      -94886.231       -45108.124        -2913.815 
+> 
+#+END_SRC
+
+The above can be interpreted as follows. The sample.group with the
+most likely common peak is the first entry (kidneyCancer) -- the
+difference in Poisson loss between the model with and without a peak
+is -94886.231. The sample group with the next most likely common peak
+is kidney, then skeletalMuscleMD. The same kind of output is shown for
+each individual sample below:
+
+#+BEGIN_SRC 
+> fit$sample.loss.diff.vec
+    kidneyCancer/McGill0022           kidney/McGill0023 
+                 -94886.231                  -45108.124 
+skeletalMuscleMD/McGill0016 skeletalMuscleMD/McGill0013 
+                  -1781.187                   -1132.627 
+> 
+#+END_SRC
+
+Again the most likely sample with the common peak is the first entry
+(kidneyCancer/McGill0022), the second most likely sample is the second
+entry, etc. Based on the loss difference values above it seems pretty
+clear that the peaks in kidney/kidneyCancer samples are quite likely,
+whereas the skeletalMuscleMD peaks are not. We plot that model below:
+
+#+BEGIN_SRC R
+  peak.names <- names(fit$sample.loss.diff.vec[1:2])
+  peak.df <- data.frame(
+    sample.id=sub(".*/", "", peak.names),
+    sample.group=sub("/.*", "", peak.names),
+    peakStart=fit$peak_start_end[1],
+    peakEnd=fit$peak_start_end[2])
+  ggplot()+
+    theme_bw()+
+    theme(panel.margin=grid::unit(0, "lines"))+
+    facet_grid(sample.id + sample.group ~ ., scales="free")+
+    geom_rect(aes(
+      xmin=chromStart, xmax=chromEnd,
+      ymin=0, ymax=count),
+      data=some.counts)+
+    geom_segment(aes(
+      peakStart, 0,
+      xend=peakEnd, yend=0),
+      data=peak.df,
+      color="deepskyblue",
+      size=2)
+#+END_SRC
+
+Finally the sample.modelSelection and group.modelSelection components
+may be useful for supervised learning of a penalty function. They are
+computed via penaltyLearning::modelSelection and describe the solution
+of P*(lambda)=min_p L_p + lambda*p, where L_p is the Poisson loss of
+the model with p samples/groups with the common peak, and lambda is a
+non-negative penalty parameter (larger for fewer samples/groups with a
+common peak). For example
+
+#+BEGIN_SRC 
+> fit$group.modelSelection
+        min.lambda max.lambda min.log.lambda max.log.lambda      loss
+3groups      0.000   2913.815           -Inf       7.977218 -469853.8
+2groups   2913.815  45108.124       7.977218      10.716818 -466940.0
+1groups  45108.124  94886.231      10.716818      11.460434 -421831.9
+0groups  94886.231        Inf      11.460434            Inf -326945.6
+        complexity
+3groups          3
+2groups          2
+1groups          1
+0groups          0
+> 
+#+END_SRC
+
+The first row above means that for lambda in (0, 2913.815) or
+equivalently log(lambda) in (-Inf, 7.977218) we have p=3 groups with a
+common peak. We can use this for supervised learning of a penalty
+function if there are labels which indicate which model should be
+selected. For example if the labels indicate the model with p=2 groups
+has minimum label error, then we want to predict log(lambda) in
+(7.977218, 10.716818) for this data set -- this is the "target
+interval" of log(penalty)
+values. PeakSegPipeline::problem.joint.target can be used to compute
+this target interval on large labeled genomic data sets. We therefore
+recommend using PeakSegPipeline when you want to do joint peak
+detection for several samples with labels and aligned read coverage
+over the entire genome.
