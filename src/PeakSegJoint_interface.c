@@ -411,8 +411,6 @@ SEXP PeakSegJointFaster_interface(
   struct ProfileList profile_list;
   Ralloc_profile_list(profile_list_sexp, &profile_list);
   // allocVector for outputs.
-  struct PeakSegJointModelList *model_list = 
-    malloc_PeakSegJointModelList(n_profiles+1);
   SEXP model_list_sexp, model_list_names,
     mean_sexp, flat_loss_sexp, peak_loss_sexp,
     peak_start_end_sexp, data_start_end_sexp;
@@ -447,6 +445,7 @@ SEXP PeakSegJointFaster_interface(
     REAL(peak_loss_sexp),
     INTEGER(peak_start_end_sexp),
     INTEGER(data_start_end_sexp));
+  free_profile_list(&profile_list);
   if(status == ERROR_FASTER_NO_COVERAGE_DATA){
     error("no coverage data");
   }
@@ -465,7 +464,6 @@ SEXP PeakSegJointFaster_interface(
   if(status != 0){
     error("error code %d", status);
   }
-  free_profile_list(&profile_list);
   UNPROTECT(1); //model_list_sexp.
   return model_list_sexp;
 }

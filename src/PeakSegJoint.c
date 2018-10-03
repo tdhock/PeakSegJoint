@@ -324,7 +324,7 @@ PeakSegJointHeuristicStep2
   int status;
   int left_cumsum_value, right_cumsum_value, cumsum_value;
   int peakStart, peakEnd;
-  int best_seg1, best_seg2, sample_i;
+  int best_seg1, best_seg2=-1, sample_i;
   /* When performing the minimization over peakStart/End locations, it
    * is possible that at any given bases_per_bin value, there is no
    * better solution than what we found for the previous bases_per_bin
@@ -423,7 +423,7 @@ PeakSegJointHeuristicStep2
 	    bin_bases = peakStart - model_list->bin_start_end[0];
 	    data_bases = bin_bases - extra_before;
 	    mean_value = cumsum_value/data_bases;
-	    //printf("%d %f ", cumsum_value, bases_value);
+	    //printf("%d %f ", cumsum_value, bases_value); 
 	    seg1_mean_vec[sample_i] = mean_value;
 	    loss_value = OptimalPoissonLoss(cumsum_value, mean_value);
 	    seg1_loss_vec[sample_i] = loss_value;

@@ -5,6 +5,7 @@
 #include "binSum.h"
 #include <stdlib.h>
 #include <math.h>
+//#include <R.h>
 
 int PeakSegJointFaster(
   struct ProfileList *profile_list,
@@ -20,7 +21,7 @@ int PeakSegJointFaster(
     return ERROR_FASTER_NO_COVERAGE_DATA;
   }
   int chromStart, chromEnd, unfilled_chromStart, unfilled_chromEnd;
-  double seg1_mean, seg2_mean, seg3_mean;
+  double seg1_mean=-1, seg2_mean, seg3_mean;
   struct Profile *profile, *samples = profile_list->profile_vec;
   profile = samples;
   unfilled_chromEnd = get_max_chromEnd(profile);
@@ -67,11 +68,13 @@ int PeakSegJointFaster(
   if(unfilled_bases % bases_per_bin != 0){
     n_bins ++ ;
   }
+  if(n_bins < bin_factor*2){
+    n_bins = bin_factor*2;
+  }
   int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
   int extra_before = extra_bases/2;
   int extra_after = extra_bases - extra_before;
-  /* printf("n_bins=%d bases_per_bin=%d extra_before=%d extra_after=%d\n", */
-  /* 	 n_bins, bases_per_bin, extra_before, extra_after); */
+  //Rprintf("bin_factor=%d n_bins=%d bases_per_bin=%d extra_before=%d extra_after=%d\n", bin_factor, n_bins, bases_per_bin, extra_before, extra_after);
   //int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
@@ -224,7 +227,6 @@ int PeakSegJointFaster(
    * value. In that case, we begin the search anew at a lower
    * resolution, but we need to copy the cumsums from the following
    * index of left_right_vec: */
-  int no_min_index = bin_factor - 2;
   int left_chromStart, right_chromStart;
   /*
     The while loop below corresponds to line 3 of the JointZoom
@@ -356,27 +358,30 @@ int PeakSegJointFaster(
 	}//for(seg2_LastIndex
       }//if(unfilled_chromStart < peakStart
     }//for(seg1_LastIndex
-    if(best_seg1 == -1){
-      //printf("no min found\n");
-      for(int sample_i=0; sample_i < n_samples; sample_i++){
-	left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	left_initial_cumsum_vec[sample_i] = left_cumsum_vec[no_min_index];
-	right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	right_initial_cumsum_vec[sample_i] = right_cumsum_vec[no_min_index];
+    for(int sample_i=0; sample_i < n_samples; sample_i++){
+      left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
+      right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
+      if(best_seg1 == -1){
+	/* the bin_factor is the number of new bins that get put into old bins.
+	   [ ] old bin   
+	   _ _ new bins
+	   bin_factor=2 [ _ _ ]   peakStart [ _ _ ]
+	   bin_factor=3 [ _ _ _ ] peakStart [ _ _ _ ]
+     
+	   We always start the search on the new level from the old bin just
+	   before the peakStart/End. Therefore if no new min is found, the
+	   best choice is the old one, seg1_LastIndex=bin_factor-1 */
+	best_seg1 = bin_factor-1;
+	best_seg2 = bin_factor-1;
+	//Rprintf("no new min found! best_seg1=%d best_seg2=%d\n", best_seg1, best_seg2);
       }
-    }else{
-      for(int sample_i=0; sample_i < n_samples; sample_i++){
-	if(best_seg1 != 0){
-	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
-	  left_initial_cumsum_vec[sample_i] = left_cumsum_vec[best_seg1-1];
-	}
-	if(best_seg2 != 0){
-	  right_cumsum_vec = right_cumsum_mat + n_bins*sample_i;
-	  right_initial_cumsum_vec[sample_i] = right_cumsum_vec[best_seg2-1];
-	}
-      }//diff_i
+      if(best_seg1 != 0){
+	left_initial_cumsum_vec[sample_i] = left_cumsum_vec[best_seg1-1];
+      }
+      if(best_seg2 != 0){
+	right_initial_cumsum_vec[sample_i] = right_cumsum_vec[best_seg2-1];
+      }
     }
-    //printf("\n");
   }//while(1 < bases_per_bin)
   //printf("free at end\n");
   free(sample_count_mat);

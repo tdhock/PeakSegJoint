@@ -1,5 +1,11 @@
 TODOs
 
+2018.10.3
+
+memory problem fix -- now we make sure that n_bins >= bin_factor*2.
+
+avoid memory leak by free'ing profile_list before stopping with an error.
+
 2018.01.09
 
 In PeakSegJointFaster, only consider peaks which are inside range of
