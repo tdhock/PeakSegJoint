@@ -587,7 +587,7 @@ PeakSegJointFaster <- structure(function
   group.list <- split(paste(id.df$sample.path), id.df$sample.group, drop=TRUE)
   fit.list <- list()
   for(bin.factor in bin.factor.vec){
-    fit.fast <- PeakSegJoint:::PeakSegJointFasterOne(profile.list, bin.factor)
+    fit.fast <- PeakSegJointFasterOne(profile.list, bin.factor)
     rownames(fit.fast$mean_mat) <- fit.fast$sample.id
     fit.fast$is.feasible <- with(fit.fast, {
       mean_mat[,1] < mean_mat[,2] & mean_mat[,2] > mean_mat[,3]

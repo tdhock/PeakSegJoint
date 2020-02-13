@@ -1,7 +1,7 @@
 \name{ProfileList}
 \alias{ProfileList}
 \title{ProfileList}
-\description{Convert a data.frame or list of profiles to a list that can be
+\description{Convert a data.frame or list of \code{profiles} to a list that can be
 passed to .Call("PeakSegJointHeuristic...").}
 \usage{ProfileList(profiles)}
 \arguments{

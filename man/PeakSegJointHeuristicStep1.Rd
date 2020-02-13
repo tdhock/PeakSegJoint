@@ -6,15 +6,16 @@ algorithm. This is the GridSearch subroutine of the JointZoom algorithm
 in arXiv:1506.01286. NB: this function is only for testing the C code
 against the R implementation (search tests/testthat/*.R for Step1).
 For real data see
-PeakSegJointSeveral.}
-\usage{PeakSegJointHeuristicStep1(profiles, bin.factor = 2L)}
+\code{\link{PeakSegJointSeveral}}.}
+\usage{PeakSegJointHeuristicStep1(profiles, 
+    bin.factor = 2L)}
 \arguments{
   \item{profiles}{List of data.frames with columns chromStart, chromEnd, count, or
 single data.frame with additional column sample.id.}
   \item{bin.factor}{Size of bin pyramid. Bigger values result in slower computation.}
 }
 
-\value{List of model fit results, which can be passed to ConvertModelList
+\value{List of model fit results, which can be passed to \code{\link{ConvertModelList}}
 for easier interpretation.}
 
 \author{Toby Dylan Hocking}

@@ -48,7 +48,7 @@ void multiClusterPeaks_interface
 
 static R_NativePrimitiveArgType binSum_args[] = {
   INTSXP, INTSXP, INTSXP, INTSXP,
-  INTSXP, INTSXP, INTSXP, INTSXP
+  REALSXP, INTSXP, INTSXP, INTSXP
 };
 
 void binSum_interface(

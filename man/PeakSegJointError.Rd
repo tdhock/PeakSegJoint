@@ -2,9 +2,10 @@
 \alias{PeakSegJointError}
 \title{PeakSegJointError}
 \description{Compute number of incorrect regions for every PeakSegJoint model.}
-\usage{PeakSegJointError(converted, problem.regions)}
+\usage{PeakSegJointError(converted, 
+    problem.regions)}
 \arguments{
-  \item{converted}{Result of ConvertModelList.}
+  \item{converted}{Result of \code{\link{ConvertModelList}}.}
   \item{problem.regions}{data.frame of annotated region labels.}
 }
 
