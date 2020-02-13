@@ -1,1 +1,1 @@
-double OptimalPoissonLoss(int cumsum_value, double mean_value);
+double OptimalPoissonLoss(double cumsum_value, double mean_value);

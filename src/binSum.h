@@ -9,7 +9,7 @@ int binSum
  int *profile_chromEnd, 
  int *profile_coverage, 
  int n_profiles,
- int *bin_total, 
+ double *bin_total, 
  int bin_size,
  int n_bins, 
  int bin_chromStart,
@@ -29,6 +29,6 @@ binSumLR
 (int *data_start_end,
  int *chromStart, int *chromEnd,
  int *coverage, int n_entries,
- int *left_bin_vec, int *right_bin_vec,
+ double *left_bin_vec, double *right_bin_vec,
  int left_chromStart, int right_chromStart,
  int bases_per_bin, int n_bins);

@@ -4,6 +4,7 @@
 #include "OptimalPoissonLoss.h"
 #include "binSum.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 //#include <R.h>
 
@@ -79,9 +80,11 @@ int PeakSegJointFaster(
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
 
-  int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *sample_count_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
   double *last_cumsum_vec = (double*) malloc(n_samples*sizeof(double));
-  int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *sample_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
 
   double *seg1_mean_vec = (double*)malloc(sizeof(double)*n_samples);
   double *seg2_mean_vec = (double*)malloc(sizeof(double)*n_samples);
@@ -90,19 +93,23 @@ int PeakSegJointFaster(
   double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
   double *candidate_loss_vec = (double*)malloc(sizeof(double)*n_samples);
 
-  int *left_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  int *left_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
-  int *right_initial_cumsum_vec = (int*) malloc(n_samples * sizeof(int));
+  double *left_bin_vec = (double*) malloc(n_bins * sizeof(double));
+  double *right_bin_vec = (double*) malloc(n_bins * sizeof(double));
+  double *left_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *right_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *left_initial_cumsum_vec = 
+    (double*) malloc(n_samples * sizeof(double));
+  double *right_initial_cumsum_vec = 
+    (double*) malloc(n_samples * sizeof(double));
   
-  int *left_cumsum_vec, *right_cumsum_vec;
-  int left_cumsum_value, right_cumsum_value;
+  double *left_cumsum_vec, *right_cumsum_vec;
+  double left_cumsum_value, right_cumsum_value;
   int peakStart, peakEnd;
   int best_seg1, best_seg2;
 
-  int *count_vec, *cumsum_vec, cumsum_value;
+  double *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
@@ -147,6 +154,7 @@ int PeakSegJointFaster(
     }
     last_cumsum_vec[sample_i] = cumsum_value;
     seg1_mean = cumsum_value / data_bases;
+    //printf("cumsum=%f mean=%f\n", cumsum_value, seg1_mean);
     flat_loss_vec[sample_i] = OptimalPoissonLoss(cumsum_value, seg1_mean);
   }
   /*

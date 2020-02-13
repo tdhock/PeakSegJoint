@@ -3,10 +3,16 @@ library(PeakSegJoint)
 context("Faster")
 
 data(overflow.list, envir=environment())
+if(FALSE){#for testing.
+  bad.df <- overflow.list[[2]]
+}
 flat.loss <- sapply(overflow.list, function(bad.df){
   w <- with(bad.df, chromEnd-chromStart)
-  m <- sum(as.numeric(bad.df$count)*w)/sum(w)
-  PoissonLoss(bad.df$count, m, w)
+  x <- as.numeric(bad.df$count)
+  cusum <- sum(x*w)
+  bases <- sum(w)
+  m <- cusum/bases
+  PoissonLoss(x, m, w)
 })
 fit <- PeakSegJointFasterOne(overflow.list, 2)
 test_that("flat_loss_vec is finite", {
