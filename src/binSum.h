@@ -20,7 +20,7 @@ int oneBin
  int *profile_chromEnd, 
  int *profile_coverage, 
  int n_profiles,
- int *bin_total,
+ double *bin_total,
  int bin_chromStart,
  int bin_chromEnd);
 

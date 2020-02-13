@@ -13,7 +13,8 @@ binSumLR
  int left_chromStart, int right_chromStart,
  int bases_per_bin, int n_bins){
   int bin_chromEnd, bin_chromStart;
-  int extra_chromStart, extra_chromEnd, extra_bases, extra_coverage;
+  int extra_chromStart, extra_chromEnd, extra_bases;
+  double extra_coverage;
   int status;
   /* printf("left bin_size=%d bins=%d start=%d\n",  */
   /* 	 bases_per_bin, n_bins, left_chromStart); */
@@ -123,7 +124,7 @@ int oneBin
  int *profile_chromEnd, 
  int *profile_coverage, 
  int n_profiles,
- int *bin_total,
+ double *bin_total,
  int bin_chromStart,
  int bin_chromEnd){
   return binSum(

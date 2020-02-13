@@ -56,7 +56,7 @@ void binSum_interface(
   int *profile_chromEnd,
   int *profile_coverage,
   int *n_profiles,
-  int *bin_total,
+  double *bin_total,
   int *bin_size,
   int *n_bins,
   int *bin_chromStart){

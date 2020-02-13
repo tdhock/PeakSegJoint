@@ -558,7 +558,8 @@ int PeakSegJointHeuristicStep3
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
   struct LossIndex *diff_index_vec = 
     (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
-  int n_feasible, peakStart, peakEnd, status, total;
+  int n_feasible, peakStart, peakEnd, status;
+  double total;
   int dataStart = model_list->data_start_end[0];
   int dataEnd = model_list->data_start_end[1];
   double data_bases, mean_value, loss_value;
