@@ -1,21 +1,22 @@
 \name{binSum}
 \alias{binSum}
 \title{binSum}
-\description{Compute sum of compressed coverage profile in bins, using fast C
+\description{Compute sum of \code{compressed} coverage profile in bins, using fast C
 code.}
-\usage{binSum(compressed, bin.chromStart = 0L, bin.size = 1L, 
-    n.bins = 2000L, empty.as.zero = FALSE)}
+\usage{binSum(compressed, bin.chromStart = 0L, 
+    bin.size = 1L, n.bins = 2000L, 
+    empty.as.zero = FALSE)}
 \arguments{
   \item{compressed}{data.frame with integer columns chromStart, chromEnd, count.}
   \item{bin.chromStart}{Base before first bin.}
   \item{bin.size}{Bin size.}
   \item{n.bins}{Number of bins.}
   \item{empty.as.zero}{Sometimes the last few bins do not have any overlapping data in
-compressed. If TRUE, set these counts to 0. If FALSE, ignore these
-bins (returning a data.frame with fewer than n.bins rows).}
+\code{compressed}. If TRUE, set these counts to 0. If FALSE, ignore these
+bins (returning a data.frame with fewer than \code{n.bins} rows).}
 }
 
-\value{data.frame with n.bins rows and columns chromStart, chromEnd,
+\value{data.frame with \code{n.bins} rows and columns chromStart, chromEnd,
 count, mean.}
 
 \author{Toby Dylan Hocking}

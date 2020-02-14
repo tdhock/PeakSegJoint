@@ -12,15 +12,16 @@ the same as all the models detected in Step2. This is guaranteed
 as of 24 July 2015 to return a feasible segmentation (seg1 < seg2
 > seg3). NB: this function is mostly for internal testing purposes
 (search tests/testthat/*.R for 'Heuristic('). For real data use
-PeakSegJointSeveral.}
-\usage{PeakSegJointHeuristic(profiles, bin.factor = 2L)}
+\code{\link{PeakSegJointSeveral}}.}
+\usage{PeakSegJointHeuristic(profiles, 
+    bin.factor = 2L)}
 \arguments{
   \item{profiles}{List of data.frames with columns chromStart, chromEnd, count, or
 single data.frame with additional column sample.id.}
   \item{bin.factor}{Size of bin pyramid. Bigger values result in slower computation.}
 }
 
-\value{List of model fit results, which can be passed to ConvertModelList
+\value{List of model fit results, which can be passed to \code{\link{ConvertModelList}}
 for easier interpretation.}
 
 \author{Toby Dylan Hocking}

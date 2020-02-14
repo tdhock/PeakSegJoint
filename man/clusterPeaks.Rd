@@ -1,13 +1,13 @@
 \name{clusterPeaks}
 \alias{clusterPeaks}
 \title{clusterPeaks}
-\description{Cluster peaks into overlapping groups.}
+\description{Cluster \code{peaks} into overlapping groups.}
 \usage{clusterPeaks(peaks)}
 \arguments{
   \item{peaks}{data.frame with columns chromStart, chromEnd.}
 }
 
-\value{peaks data.frame, sorted by chromStart, with an additional column
+\value{\code{peaks} data.frame, sorted by chromStart, with an additional column
 cluster.}
 
 \author{Toby Dylan Hocking}

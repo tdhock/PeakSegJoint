@@ -9,11 +9,12 @@ binSumLR
 (int *data_start_end,
  int *chromStart, int *chromEnd,
  int *coverage, int n_entries,
- int *left_bin_vec, int *right_bin_vec,
+ double *left_bin_vec, double *right_bin_vec,
  int left_chromStart, int right_chromStart,
  int bases_per_bin, int n_bins){
   int bin_chromEnd, bin_chromStart;
-  int extra_chromStart, extra_chromEnd, extra_bases, extra_coverage;
+  int extra_chromStart, extra_chromEnd, extra_bases;
+  double extra_coverage;
   int status;
   /* printf("left bin_size=%d bins=%d start=%d\n",  */
   /* 	 bases_per_bin, n_bins, left_chromStart); */
@@ -123,7 +124,7 @@ int oneBin
  int *profile_chromEnd, 
  int *profile_coverage, 
  int n_profiles,
- int *bin_total,
+ double *bin_total,
  int bin_chromStart,
  int bin_chromEnd){
   return binSum(
@@ -143,7 +144,7 @@ int binSum
  int *profile_chromEnd, 
  int *profile_coverage, 
  int n_profiles,
- int *bin_total, 
+ double *bin_total, 
  int bin_size,
  int n_bins, 
  int bin_chromStart,
@@ -223,7 +224,8 @@ int binSum
     /* printf("begin_count_after=%d count_until=%d coverage=%d\n", */
     /* 	   begin_count_after, count_until, */
     /* 	   profile_coverage[profile_i]); */
-    bin_total[bin_i] += profile_coverage[profile_i] * bases;
+    double coverage_dbl = profile_coverage[profile_i];
+    bin_total[bin_i] += coverage_dbl * bases;
     bin_touched[bin_i] = 1;
     profile_i += profile_add;
     // setup next iteration.

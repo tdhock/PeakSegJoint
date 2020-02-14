@@ -1,13 +1,14 @@
 \name{PeakSegJointFasterOne}
 \alias{PeakSegJointFasterOne}
 \title{PeakSegJointFasterOne}
-\description{Run the PeakSegJointFaster heuristic optimization algorithm, which
+\description{Run the \code{\link{PeakSegJointFaster}} heuristic optimization algorithm, which
 gives an approximate solution to a multi-sample Poisson maximum
 likelihood segmentation problem. Given S samples, this function
 computes a sequence of S+1 PeakSegJoint models, with 0, ..., S
 samples with an overlapping peak (maximum of one peak per
 sample). }
-\usage{PeakSegJointFasterOne(profiles, bin.factor = 2L)}
+\usage{PeakSegJointFasterOne(profiles, 
+    bin.factor = 2L)}
 \arguments{
   \item{profiles}{List of data.frames with columns chromStart, chromEnd, count, or
 single data.frame with additional column sample.id.}
@@ -173,7 +174,7 @@ if(interactive() && require(ggplot2)){
     for(N.samples in N.samples.vec){
       partial.list <- full.list[1:N.samples]
       result <- microbenchmark(
-        Heuristic=PeakSegJointHeuristic(partial.list, 2L),
+        Heuristic=PeakSegJointHeuristicStep2(partial.list, 2L),
         Faster=PeakSegJointFasterOne(partial.list, 2L),
         times=2L)
       time.df.list[[paste(N.samples)]] <- data.frame(

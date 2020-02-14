@@ -24,7 +24,7 @@ test_that("binSum 1bp with constant 1 profile", {
                  n.bins=2000L)
   expect_identical(bins$chromStart, 0:1999)
   expect_identical(bins$chromEnd, 1:2000)
-  expect_identical(bins$count, rep(1L, 2000))
+  expect_identical(bins$count, rep(1, 2000))
   expect_equal(bins$mean, rep(1, 2000))
 })
 
@@ -38,7 +38,7 @@ test_that("binSum 2bp with constant 1 profile", {
                  n.bins=2000L)
   expect_identical(bins$chromStart, as.integer(seq(0, by=2, l=2000)))
   expect_identical(bins$chromEnd, as.integer(seq(2, by=2, l=2000)))
-  expect_identical(bins$count, rep(2L, 2000))
+  expect_identical(bins$count, rep(2, 2000))
   expect_equal(bins$mean, rep(1, 2000))
 })
 
@@ -60,8 +60,8 @@ test_that("binSum 3bp with non-constant profile", {
                  n.bins=2000L)
   expect_identical(bins$chromStart, as.integer(seq(0, by=3, l=2000)))
   expect_identical(bins$chromEnd, as.integer(seq(3, by=3, l=2000)))
-  expected.total <- rep(0L, 2000)
-  expected.total[1:4] <- as.integer(c(6, 6, 3, 1))
+  expected.total <- rep(0, 2000)
+  expected.total[1:4] <- c(6, 6, 3, 1)
   expect_identical(bins$count, expected.total)
   expected.mean <- expected.total/3
   expect_equal(bins$mean, expected.mean)
@@ -85,8 +85,8 @@ test_that("binSum 3bp with non-constant profile + 1000", {
                  n.bins=2000L)
   expect_identical(bins$chromStart, as.integer(seq(1000, by=3, l=2000)))
   expect_identical(bins$chromEnd, as.integer(seq(1003, by=3, l=2000)))
-  expected.total <- rep(0L, 2000)
-  expected.total[1:4] <- as.integer(c(6, 6, 3, 1))
+  expected.total <- rep(0, 2000)
+  expected.total[1:4] <- c(6, 6, 3, 1)
   expect_identical(bins$count, expected.total)
   expected.mean <- expected.total/3
   expect_equal(bins$mean, expected.mean)

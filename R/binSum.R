@@ -30,7 +30,7 @@ binSum <- structure(function
      profile.chromEnd=as.integer(compressed$chromEnd),
      profile.coverage=as.integer(compressed$count),
      n.profiles=as.integer(nrow(compressed)),
-     bin.total=as.integer(bin.total),
+     bin.total=as.double(bin.total),
      bin.size=as.integer(bin.size),
      n.bins=as.integer(n.bins),
      bin.chromStart=as.integer(bin.chromStart),

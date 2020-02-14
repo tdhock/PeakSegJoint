@@ -84,8 +84,9 @@ int PeakSegJointHeuristicStep1(
   //printf("bin_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
   // sample_*_mat variables are matrices n_bins x n_samples (in
   // contrast to model_*_mat which are n_bins x n_segments=3).
-  int *sample_count_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  int *count_vec, *cumsum_vec, cumsum_value;
+  double *sample_count_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     profile = samples + sample_i;
@@ -141,7 +142,8 @@ int PeakSegJointHeuristicStep1(
   int bin_i, offset;
   double mean_value, loss_value;
   double flat_loss_total = 0.0;
-  int *sample_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *sample_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
   struct LossIndex *diff_index_vec = 
     (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
   int n_feasible;
@@ -305,10 +307,12 @@ PeakSegJointHeuristicStep2
   int bases_per_bin;
   int left_chromStart, right_chromStart;
   //printf("before malloc n_bins=%d n_samples=%d\n", n_bins, n_samples);
-  int *left_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *right_bin_vec = (int*) malloc(n_bins * sizeof(int));
-  int *left_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
-  int *right_cumsum_mat = (int*) malloc(n_bins * n_samples * sizeof(int));
+  double *left_bin_vec = (double*) malloc(n_bins * sizeof(double));
+  double *right_bin_vec = (double*) malloc(n_bins * sizeof(double));
+  double *left_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *right_cumsum_mat = 
+    (double*) malloc(n_bins * n_samples * sizeof(double));
   double *seg1_mean_vec = model_list->mean_mat;
   double *seg2_mean_vec = model_list->mean_mat + n_samples;
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
@@ -320,9 +324,9 @@ PeakSegJointHeuristicStep2
     model_list->bin_start_end[0];
   int extra_after = model_list->bin_start_end[1] -
     model_list->data_start_end[1];
-  int *left_cumsum_vec, *right_cumsum_vec;
+  double *left_cumsum_vec, *right_cumsum_vec;
   int status;
-  int left_cumsum_value, right_cumsum_value, cumsum_value;
+  double left_cumsum_value, right_cumsum_value, cumsum_value;
   int peakStart, peakEnd;
   int best_seg1, best_seg2=-1, sample_i;
   /* When performing the minimization over peakStart/End locations, it
@@ -554,7 +558,8 @@ int PeakSegJointHeuristicStep3
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
   struct LossIndex *diff_index_vec = 
     (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
-  int n_feasible, peakStart, peakEnd, status, total;
+  int n_feasible, peakStart, peakEnd, status;
+  double total;
   int dataStart = model_list->data_start_end[0];
   int dataEnd = model_list->data_start_end[1];
   double data_bases, mean_value, loss_value;

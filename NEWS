@@ -1,5 +1,9 @@
 TODOs
 
+2020.2.13
+
+fix int overflow problem in C code by using double instead.
+
 2018.10.3
 
 memory problem fix -- now we make sure that n_bins >= bin_factor*2.
