@@ -1,5 +1,3 @@
-/* -*- compile-command: "R CMD INSTALL .." -*- */
-
 #ifndef PROFILEH
 #include "profile.h"
 #endif

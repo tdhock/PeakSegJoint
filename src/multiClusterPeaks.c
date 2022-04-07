@@ -1,5 +1,3 @@
-/* -*- compile-command: "R CMD INSTALL .." -*- */
-
 #include "multiClusterPeaks.h"
 #include <stdlib.h>
 

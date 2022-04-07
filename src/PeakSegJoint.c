@@ -1,10 +1,9 @@
-/* -*- compile-command: "R CMD INSTALL .." -*- */
-
 #include "PeakSegJoint.h"
 #include "OptimalPoissonLoss.h"
 #include "binSum.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <R.h>
 
 int LossIndex_compare(const void *a, const void *b){
   const struct LossIndex *A = a, *B = b;
@@ -84,8 +83,7 @@ int PeakSegJointHeuristicStep1(
   //printf("bin_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
   // sample_*_mat variables are matrices n_bins x n_samples (in
   // contrast to model_*_mat which are n_bins x n_segments=3).
-  double *sample_count_mat = 
-    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *sample_count_mat = Calloc(n_bins * n_samples, double);
   double *count_vec, *cumsum_vec, cumsum_value;
   int status;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
@@ -102,7 +100,7 @@ int PeakSegJointHeuristicStep1(
     /* } */
     /* printf("\n"); */
     if(status != 0){
-      free(sample_count_mat);
+      Free(sample_count_mat);
       return status;
     }
     /* Profiles may not have the same first chromStart and last
@@ -121,7 +119,7 @@ int PeakSegJointHeuristicStep1(
 		    seg1_chromStart,
 		    EMPTY_AS_ZERO);
     if(status != 0){
-      free(sample_count_mat);
+      Free(sample_count_mat);
       return status;
     }
     count_vec[0] -= extra_count;
@@ -133,7 +131,7 @@ int PeakSegJointHeuristicStep1(
 		    unfilled_chromEnd,
 		    EMPTY_AS_ZERO);
     if(status != 0){
-      free(sample_count_mat);
+      Free(sample_count_mat);
       return status;
     }
     count_vec[n_bins - 1] -= extra_count;
@@ -142,10 +140,8 @@ int PeakSegJointHeuristicStep1(
   int bin_i, offset;
   double mean_value, loss_value;
   double flat_loss_total = 0.0;
-  double *sample_cumsum_mat = 
-    (double*) malloc(n_bins * n_samples * sizeof(double));
-  struct LossIndex *diff_index_vec = 
-    (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
+  double *sample_cumsum_mat = Calloc(n_bins * n_samples, double);
+  struct LossIndex *diff_index_vec = Calloc(n_samples,struct LossIndex);
   int n_feasible;
   for(int sample_i=0; sample_i < n_samples; sample_i++){
     cumsum_value = 0;
@@ -175,8 +171,8 @@ int PeakSegJointHeuristicStep1(
   double *seg1_mean_vec = model_list->mean_mat;
   double *seg2_mean_vec = model_list->mean_mat + n_samples;
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
-  double *peak_loss_vec = (double*)malloc(sizeof(double)*n_samples);
-  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
+  double *peak_loss_vec = Calloc(n_samples,double);
+  double *seg1_loss_vec = Calloc(n_samples,double);
   /*
     The for loops below implement the GridSearch() function mentioned
     on line 2 of the JointZoom algorithm in the PeakSegJoint paper.
@@ -287,11 +283,11 @@ int PeakSegJointHeuristicStep1(
       }//if(n_feasible)
     }//seg2_LastIndex
   }//seg2_FirstIndex
-  free(sample_cumsum_mat);
-  free(sample_count_mat);
-  free(peak_loss_vec);
-  free(seg1_loss_vec);
-  free(diff_index_vec);
+  Free(sample_cumsum_mat);
+  Free(sample_count_mat);
+  Free(peak_loss_vec);
+  Free(seg1_loss_vec);
+  Free(diff_index_vec);
   return status;
 }
 
@@ -306,18 +302,14 @@ PeakSegJointHeuristicStep2
   struct Profile *profile;
   int bases_per_bin;
   int left_chromStart, right_chromStart;
-  //printf("before malloc n_bins=%d n_samples=%d\n", n_bins, n_samples);
-  double *left_bin_vec = (double*) malloc(n_bins * sizeof(double));
-  double *right_bin_vec = (double*) malloc(n_bins * sizeof(double));
-  double *left_cumsum_mat = 
-    (double*) malloc(n_bins * n_samples * sizeof(double));
-  double *right_cumsum_mat = 
-    (double*) malloc(n_bins * n_samples * sizeof(double));
+  double *left_bin_vec = Calloc(n_bins, double);
+  double *right_bin_vec = Calloc(n_bins, double);
+  double *left_cumsum_mat = Calloc(n_bins * n_samples, double);
+  double *right_cumsum_mat = Calloc(n_bins * n_samples, double);
   double *seg1_mean_vec = model_list->mean_mat;
   double *seg2_mean_vec = model_list->mean_mat + n_samples;
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
-  double *seg1_loss_vec = (double*)malloc(sizeof(double)*n_samples);
-  //printf("after malloc\n");
+  double *seg1_loss_vec = Calloc(n_samples,double);
   double total_loss, loss_value, mean_value;
   double bin_bases, data_bases;
   int extra_before = model_list->data_start_end[0] - 
@@ -367,11 +359,11 @@ PeakSegJointHeuristicStep2
 			    bases_per_bin, n_bins);
 	  if(status != 0){
 	    //printf("binSumLR bad status\n");
-	    free(left_bin_vec);
-	    free(right_bin_vec);
-	    free(left_cumsum_mat);
-	    free(right_cumsum_mat);
-	    free(seg1_loss_vec);
+	    Free(left_bin_vec);
+	    Free(right_bin_vec);
+	    Free(left_cumsum_mat);
+	    Free(right_cumsum_mat);
+	    Free(seg1_loss_vec);
 	    return status;
 	  }
 	  left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
@@ -537,12 +529,12 @@ PeakSegJointHeuristicStep2
       }//while(1 < bases_per_bin)
     }//if(loss < INFINITY
   }//for(n_peaks
-  //printf("free at end\n");
-  free(left_bin_vec);
-  free(right_bin_vec);
-  free(left_cumsum_mat);
-  free(right_cumsum_mat);
-  free(seg1_loss_vec);
+  //printf("Free at end\n");
+  Free(left_bin_vec);
+  Free(right_bin_vec);
+  Free(left_cumsum_mat);
+  Free(right_cumsum_mat);
+  Free(seg1_loss_vec);
   return 0;
 }
 
@@ -556,8 +548,7 @@ int PeakSegJointHeuristicStep3
   double *seg1_mean_vec = model_list->mean_mat;
   double *seg2_mean_vec = model_list->mean_mat + n_samples;
   double *seg3_mean_vec = model_list->mean_mat + n_samples*2;
-  struct LossIndex *diff_index_vec = 
-    (struct LossIndex *)malloc(sizeof(struct LossIndex)*n_samples);
+  struct LossIndex *diff_index_vec = Calloc(n_samples,struct LossIndex);
   int n_feasible, peakStart, peakEnd, status;
   double total;
   int dataStart = model_list->data_start_end[0];
@@ -578,7 +569,7 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, dataStart, peakStart);
 	if(status != 0){
-	  free(diff_index_vec);
+	  Free(diff_index_vec);
 	  return status;
 	}
 	data_bases = peakStart - dataStart;
@@ -590,7 +581,7 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, peakStart, peakEnd);
 	if(status != 0){
-	  free(diff_index_vec);
+	  Free(diff_index_vec);
 	  return status;
 	}
 	data_bases = peakEnd - peakStart;
@@ -602,7 +593,7 @@ int PeakSegJointHeuristicStep3
 			profile->coverage, profile->n_entries,
 			&total, peakEnd, dataEnd);
 	if(status != 0){
-	  free(diff_index_vec);
+	  Free(diff_index_vec);
 	  return status;
 	}
 	data_bases = dataEnd - peakEnd;
@@ -657,6 +648,6 @@ int PeakSegJointHeuristicStep3
       }//if(n_feasible)
     }//if(prev_model->loss[0] < INFINITY
   }//for(n_peaks
-  free(diff_index_vec);
+  Free(diff_index_vec);
   return 0;
 }

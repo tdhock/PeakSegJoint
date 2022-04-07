@@ -1,5 +1,3 @@
-/* -*- compile-command: "R CMD INSTALL .." -*- */
-
 #define PROFILEH
 
 struct ProfileList {

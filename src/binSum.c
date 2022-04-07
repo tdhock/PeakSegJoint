@@ -1,8 +1,7 @@
-/* -*- compile-command: "R CMD INSTALL .." -*- */
-
 #include "binSum.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <R.h>
 
 int
 binSumLR
@@ -164,7 +163,7 @@ int binSum
   }
   /* printf("bin_chromStart=%d bin_size=%d n_bins=%d status=%d\n", */
   /* 	 bin_chromStart, bin_size, n_bins, status_for_empty_bin); */
-  int *bin_touched = (int*) malloc(sizeof(int) * n_bins);
+  int *bin_touched = Calloc(n_bins,int);
   for(bin_i = 0; bin_i < n_bins; bin_i++){
     bin_total[bin_i] = 0;
     bin_touched[bin_i] = 0;
@@ -242,7 +241,7 @@ int binSum
 
   // If EMPTY_AS_ZERO flag, return now (untouched totals are zero).
   if(status_for_empty_bin == EMPTY_AS_ZERO){
-    free(bin_touched);
+    Free(bin_touched);
     return 0;
   }
   // If there was no data at all that overlapped a bin (not even
@@ -254,6 +253,6 @@ int binSum
       status = status_for_empty_bin;
     }
   }
-  free(bin_touched);
+  Free(bin_touched);
   return status;
 }
