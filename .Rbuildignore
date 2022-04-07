@@ -1,3 +1,4 @@
+.dir-locals.el
 .travis.yml
 .httr-oauth
 build.sh
