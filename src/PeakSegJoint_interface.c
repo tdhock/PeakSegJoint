@@ -110,7 +110,7 @@ free_profile_list
   free(profile_list->profile_vec);
 }
 
-SEXP allocPeakSegJointModelList(){
+SEXP allocPeakSegJointModelList(void){
   return allocVector(VECSXP, 11);
 }
 
