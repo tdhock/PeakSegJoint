@@ -1,5 +1,5 @@
 .dir-locals.el
-.travis.yml
+.github
 .httr-oauth
 build.sh
 README.org
