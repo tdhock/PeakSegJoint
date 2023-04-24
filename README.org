@@ -1,6 +1,7 @@
-PeakSegJoint: supervised joint peak detection ([[http://arxiv.org/abs/1506.01286][arXiv:1506.01286]])
+| [[file:tests/testthat][tests]]    | [[https://github.com/tdhock/PeakSegJoint/actions][https://github.com/tdhock/PeakSegJoint/workflows/R-CMD-check/badge.svg]]  |
+| [[https://github.com/jimhester/covr][coverage]] | [[https://app.codecov.io/gh/tdhock/PeakSegJoint?branch=master][https://codecov.io/gh/tdhock/PeakSegJoint/branch/master/graph/badge.svg]] |
 
-[[https://travis-ci.org/tdhock/PeakSegJoint][https://travis-ci.org/tdhock/PeakSegJoint.png?branch=master]]
+PeakSegJoint: supervised joint peak detection ([[http://arxiv.org/abs/1506.01286][arXiv:1506.01286]])
 
 There are two major differences between PeakSegJoint and all of the
 other peak detection algorithms for ChIP-seq data analysis:
