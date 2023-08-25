@@ -4,8 +4,7 @@
 \description{Compute the feature matrix for this joint segmentation problem.}
 \usage{featureMatrixJoint(profile.list)}
 \arguments{
-  \item{profile.list}{
-}
+  \item{profile.list}{profile.list}
 }
 
 \value{Numeric feature matrix (samples x features).}
