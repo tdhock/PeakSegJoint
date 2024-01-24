@@ -9,9 +9,9 @@ maximum likelihood segment with mean zero must be zero.}
 \usage{PoissonLoss(count, seg.mean, 
     weight = 1)}
 \arguments{
-  \item{count}{count}
-  \item{seg.mean}{seg.mean}
-  \item{weight}{weight}
+  \item{count}{count }
+  \item{seg.mean}{seg.mean }
+  \item{weight}{weight }
 }
 
 
