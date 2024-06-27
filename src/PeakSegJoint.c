@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <R.h>
+#include <limits.h>
 
 int LossIndex_compare(const void *a, const void *b){
   const struct LossIndex *A = a, *B = b;
@@ -72,12 +73,13 @@ int PeakSegJointHeuristicStep1(
   model_list->n_bins[0] = n_bins;
   model_list->bases_per_bin[0] = bases_per_bin;
   model_list->bin_factor[0] = bin_factor;
-  int extra_bases = n_bins  * bases_per_bin - unfilled_bases;
-  int extra_before = extra_bases/2;
-  int extra_after = extra_bases - extra_before;
+  double extra_bases = n_bins  * bases_per_bin - unfilled_bases;//int overflow
+  double extra_before = extra_bases/2;
+  double extra_after = extra_bases - extra_before;
   //int extra_count;
   int seg1_chromStart = unfilled_chromStart - extra_before;
-  int seg3_chromEnd = unfilled_chromEnd + extra_after;
+  double seg3_chromEnd_dbl = unfilled_chromEnd + extra_after;
+  int seg3_chromEnd = (seg3_chromEnd_dbl > INT_MAX) ? INT_MAX : (unfilled_chromEnd + extra_after);
   model_list->bin_start_end[0] = seg1_chromStart;
   model_list->bin_start_end[1] = seg3_chromEnd;
   //printf("bin_start_end=[%d,%d]\n", seg1_chromStart, seg3_chromEnd);
