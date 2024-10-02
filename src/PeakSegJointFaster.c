@@ -78,23 +78,23 @@ int PeakSegJointFaster(
   int seg1_chromStart = unfilled_chromStart - extra_before;
   int seg3_chromEnd = unfilled_chromEnd + extra_after;
 
-  double *sample_count_mat = Calloc(n_bins * n_samples,double);
-  double *last_cumsum_vec = Calloc(n_samples,double);
-  double *sample_cumsum_mat = Calloc(n_bins * n_samples,double);
+  double *sample_count_mat = R_Calloc(n_bins * n_samples,double);
+  double *last_cumsum_vec = R_Calloc(n_samples,double);
+  double *sample_cumsum_mat = R_Calloc(n_bins * n_samples,double);
 
-  double *seg1_mean_vec = Calloc(n_samples,double);
-  double *seg2_mean_vec = Calloc(n_samples,double);
-  double *seg3_mean_vec = Calloc(n_samples,double);
+  double *seg1_mean_vec = R_Calloc(n_samples,double);
+  double *seg2_mean_vec = R_Calloc(n_samples,double);
+  double *seg3_mean_vec = R_Calloc(n_samples,double);
   
-  double *seg1_loss_vec = Calloc(n_samples,double);
-  double *candidate_loss_vec = Calloc(n_samples,double);
+  double *seg1_loss_vec = R_Calloc(n_samples,double);
+  double *candidate_loss_vec = R_Calloc(n_samples,double);
 
-  double *left_bin_vec = Calloc(n_bins,double);
-  double *right_bin_vec = Calloc(n_bins,double);
-  double *left_cumsum_mat = Calloc(n_bins * n_samples,double);
-  double *right_cumsum_mat = Calloc(n_bins * n_samples,double);
-  double *left_initial_cumsum_vec = Calloc(n_samples,double);
-  double *right_initial_cumsum_vec = Calloc(n_samples,double);
+  double *left_bin_vec = R_Calloc(n_bins,double);
+  double *right_bin_vec = R_Calloc(n_bins,double);
+  double *left_cumsum_mat = R_Calloc(n_bins * n_samples,double);
+  double *right_cumsum_mat = R_Calloc(n_bins * n_samples,double);
+  double *left_initial_cumsum_vec = R_Calloc(n_samples,double);
+  double *right_initial_cumsum_vec = R_Calloc(n_samples,double);
   
   double *left_cumsum_vec, *right_cumsum_vec;
   double left_cumsum_value, right_cumsum_value;
@@ -112,23 +112,23 @@ int PeakSegJointFaster(
 		    bases_per_bin, n_bins, seg1_chromStart, 
 		    EMPTY_AS_ZERO);
     if(status != 0){
-      Free(sample_count_mat);
-      Free(last_cumsum_vec);
-      Free(sample_cumsum_mat);
+      R_Free(sample_count_mat);
+      R_Free(last_cumsum_vec);
+      R_Free(sample_cumsum_mat);
   
-      Free(seg1_mean_vec);
-      Free(seg2_mean_vec);
-      Free(seg3_mean_vec);
+      R_Free(seg1_mean_vec);
+      R_Free(seg2_mean_vec);
+      R_Free(seg3_mean_vec);
 
-      Free(seg1_loss_vec);
-      Free(candidate_loss_vec);
+      R_Free(seg1_loss_vec);
+      R_Free(candidate_loss_vec);
 
-      Free(left_bin_vec);
-      Free(right_bin_vec);
-      Free(left_cumsum_mat);
-      Free(right_cumsum_mat);
-      Free(left_initial_cumsum_vec);
-      Free(right_initial_cumsum_vec);
+      R_Free(left_bin_vec);
+      R_Free(right_bin_vec);
+      R_Free(left_cumsum_mat);
+      R_Free(right_cumsum_mat);
+      R_Free(left_initial_cumsum_vec);
+      R_Free(right_initial_cumsum_vec);
       return status;
     }
   }//for sample_i
@@ -254,23 +254,23 @@ int PeakSegJointFaster(
 			bases_per_bin, n_bins);
       if(status != 0){
 	//printf("binSumLR bad status\n");
-	Free(sample_count_mat);
-	Free(last_cumsum_vec);
-	Free(sample_cumsum_mat);
+	R_Free(sample_count_mat);
+	R_Free(last_cumsum_vec);
+	R_Free(sample_cumsum_mat);
   
-	Free(seg1_mean_vec);
-	Free(seg2_mean_vec);
-	Free(seg3_mean_vec);
+	R_Free(seg1_mean_vec);
+	R_Free(seg2_mean_vec);
+	R_Free(seg3_mean_vec);
 
-	Free(seg1_loss_vec);
-	Free(candidate_loss_vec);
+	R_Free(seg1_loss_vec);
+	R_Free(candidate_loss_vec);
 
-	Free(left_bin_vec);
-	Free(right_bin_vec);
-	Free(left_cumsum_mat);
-	Free(right_cumsum_mat);
-	Free(left_initial_cumsum_vec);
-	Free(right_initial_cumsum_vec);
+	R_Free(left_bin_vec);
+	R_Free(right_bin_vec);
+	R_Free(left_cumsum_mat);
+	R_Free(right_cumsum_mat);
+	R_Free(left_initial_cumsum_vec);
+	R_Free(right_initial_cumsum_vec);
 	return status;
       }
       left_cumsum_vec = left_cumsum_mat + n_bins*sample_i;
@@ -383,24 +383,24 @@ int PeakSegJointFaster(
       }
     }
   }//while(1 < bases_per_bin)
-  //printf("Free at end\n");
-  Free(sample_count_mat);
-  Free(last_cumsum_vec);
-  Free(sample_cumsum_mat);
+  //printf("R_Free at end\n");
+  R_Free(sample_count_mat);
+  R_Free(last_cumsum_vec);
+  R_Free(sample_cumsum_mat);
   
-  Free(seg1_mean_vec);
-  Free(seg2_mean_vec);
-  Free(seg3_mean_vec);
+  R_Free(seg1_mean_vec);
+  R_Free(seg2_mean_vec);
+  R_Free(seg3_mean_vec);
 
-  Free(seg1_loss_vec);
-  Free(candidate_loss_vec);
+  R_Free(seg1_loss_vec);
+  R_Free(candidate_loss_vec);
 
-  Free(left_bin_vec);
-  Free(right_bin_vec);
-  Free(left_cumsum_mat);
-  Free(right_cumsum_mat);
-  Free(left_initial_cumsum_vec);
-  Free(right_initial_cumsum_vec);
+  R_Free(left_bin_vec);
+  R_Free(right_bin_vec);
+  R_Free(left_cumsum_mat);
+  R_Free(right_cumsum_mat);
+  R_Free(left_initial_cumsum_vec);
+  R_Free(right_initial_cumsum_vec);
   
   return 0;
 }

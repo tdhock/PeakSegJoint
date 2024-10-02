@@ -90,7 +90,7 @@ Ralloc_profile_list
   int profile_i;
   SEXP df, chromStart, chromEnd, coverage;
   profile_list->n_profiles = length(profile_list_sexp);
-  profile_list->profile_vec = Calloc(profile_list->n_profiles,struct Profile);
+  profile_list->profile_vec = R_Calloc(profile_list->n_profiles,struct Profile);
   for(profile_i=0; profile_i < profile_list->n_profiles; profile_i++){
     df = VECTOR_ELT(profile_list_sexp, profile_i);
     profile = profile_list->profile_vec + profile_i;
@@ -249,9 +249,9 @@ Ralloc_model_struct
 struct PeakSegJointModelList *
 malloc_PeakSegJointModelList(int n_models){
   struct PeakSegJointModelList *model_list = 
-    Calloc(1,struct PeakSegJointModelList);
+    R_Calloc(1,struct PeakSegJointModelList);
   model_list->n_models = n_models;
-  model_list->model_vec = Calloc(n_models,struct PeakSegJointModel);
+  model_list->model_vec = R_Calloc(n_models,struct PeakSegJointModel);
   return model_list;
 }
 
