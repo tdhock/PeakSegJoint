@@ -12,7 +12,7 @@ single data.frame with additional column sample.id.}
 \value{Named list of data.frames with columns chromStart, chromEnd,
 count.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

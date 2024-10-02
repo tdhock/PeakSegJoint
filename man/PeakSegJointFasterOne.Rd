@@ -17,7 +17,7 @@ single data.frame with additional column sample.id.}
 
 \value{List of model fit results, see examples to see how to use it.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

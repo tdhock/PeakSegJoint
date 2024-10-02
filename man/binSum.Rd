@@ -19,7 +19,7 @@ bins (returning a data.frame with fewer than \code{n.bins} rows).}
 \value{data.frame with \code{n.bins} rows and columns chromStart, chromEnd,
 count, mean.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 
