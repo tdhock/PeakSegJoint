@@ -10,7 +10,7 @@
 \value{\code{peaks} data.frame, sorted by chromStart, with an additional column
 cluster.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

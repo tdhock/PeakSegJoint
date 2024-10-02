@@ -19,7 +19,7 @@ single data.frame with additional column sample.id.}
 \value{List of model fit results, which can be passed to \code{\link{ConvertModelList}}
 for easier interpretation.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

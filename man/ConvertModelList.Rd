@@ -16,7 +16,7 @@ as segments, but with only the second/peak segments; loss has one
 row for each model size; modelSelection has one row for each model
 size that can be selected, see exactModelSelection.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

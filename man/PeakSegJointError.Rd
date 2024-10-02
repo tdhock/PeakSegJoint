@@ -17,7 +17,7 @@ exactModelSelection), target (numeric vector of length 2, lower
 and upper limits of target interval of log.lambda penalty values
 in the interval regression problem).}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

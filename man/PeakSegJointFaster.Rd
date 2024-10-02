@@ -19,7 +19,7 @@ chromEnd, count.}
 
 \value{List of model fit results.}
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 

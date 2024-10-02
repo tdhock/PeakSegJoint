@@ -16,7 +16,7 @@ maximum likelihood segment with mean zero must be zero.}
 
 
 
-\author{Toby Dylan Hocking}
+\author{Toby Dylan Hocking <toby.hocking@r-project.org> [aut, cre]}
 
 
 
