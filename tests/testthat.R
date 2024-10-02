@@ -1,4 +1,5 @@
-library(testthat)
-suite <- Sys.getenv("TEST_SUITE")
-if(suite=="")suite <- NULL
-test_check("PeakSegJoint", filter=suite)
+if(require(testthat)){
+  suite <- Sys.getenv("TEST_SUITE")
+  if(suite=="")suite <- NULL
+  test_check("PeakSegJoint", filter=suite)
+}
