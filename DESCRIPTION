@@ -1,5 +1,4 @@
 Package: PeakSegJoint
-Maintainer: Toby Dylan Hocking <toby.hocking@r-project.org>
 Authors@R: person(
  given = c("Toby", "Dylan"),
  family = "Hocking",
