@@ -21,6 +21,9 @@ RCMD="R --vanilla CMD"
 $RCMD build $RELEASE | tee build.out
 PKG_TGZ=$(grep building build.out|sed "s/.*\($PKG.*.tar.gz\).*/\1/")
 
+# https://www.stats.ox.ac.uk/pub/bdr/Strict/00README.txt
+export _R_USE_STRICT_R_HEADERS_=true
+
 echo Installing $PKG_TGZ
 $RCMD INSTALL $PKG_TGZ
 
