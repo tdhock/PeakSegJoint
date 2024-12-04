@@ -177,6 +177,7 @@ test_that("no segfault", {
     param.name <- paste(param)
     param.int <- as.integer(param)
     fit <- PeakSegJointHeuristic(some.counts, param.int)
+    expect_is(fit, "list")
   }
 })
 
