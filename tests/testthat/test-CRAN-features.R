@@ -2,7 +2,6 @@ library(testthat)
 context("feature computation")
 library(PeakSegJoint)
 data(H3K27ac.TDH.MMM4)
-
 profile.list <- ProfileList(H3K27ac.TDH.MMM4)
 profile.list$empty <-
   data.frame(chromStart=integer(),

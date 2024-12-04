@@ -1,3 +1,7 @@
+Changes in version 2024.12.4
+
+- update src/profile.c to avoid invalid memory access, thanks CRAN.
+
 Changes in version 2024.10.1
 
 - update src/*.c to use R_ versions of Calloc and Free, so that compilation works with _R_USE_STRICT_R_HEADERS_=true, thanks CRAN.

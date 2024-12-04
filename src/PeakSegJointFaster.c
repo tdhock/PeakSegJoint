@@ -99,7 +99,7 @@ int PeakSegJointFaster(
   double *left_cumsum_vec, *right_cumsum_vec;
   double left_cumsum_value, right_cumsum_value;
   int peakStart, peakEnd;
-  int best_seg1, best_seg2;
+  int best_seg1, best_seg2 = -1;
 
   double *count_vec, *cumsum_vec, cumsum_value;
   int status;

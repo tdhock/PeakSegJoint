@@ -29,11 +29,15 @@ featureMatrixJoint <- structure(function(profile.list){
       }
       loss
     }, error=function(e){
-      bases.vec <- with(sample.counts, chromEnd-chromStart)
-      seg.bases <- sum(bases.vec)
-      seg.mean <- sum(sample.counts$count  * bases.vec)/seg.bases
-      loss0 <- PoissonLoss(sample.counts$count, seg.mean, bases.vec)/seg.bases
-      c(loss0, loss0)
+      if(!identical(e$message, "bin factor too large")){
+        stop(e)
+      }else{
+        bases.vec <- with(sample.counts, chromEnd-chromStart)
+        seg.bases <- sum(bases.vec)
+        seg.mean <- sum(sample.counts$count  * bases.vec)/seg.bases
+        loss0 <- PoissonLoss(sample.counts$count, seg.mean, bases.vec)/seg.bases
+        c(loss0, loss0)
+      }
     })
     stopifnot(length(loss) == 2)
     bins <-

@@ -4,7 +4,7 @@ Authors@R: person(
  family = "Hocking",
  role = c("aut", "cre"),
  email = "toby.hocking@r-project.org")
-Version: 2024.10.1
+Version: 2024.12.4
 License: GPL-3
 URL: https://github.com/tdhock/PeakSegJoint
 BugReports: https://github.com/tdhock/PeakSegJoint/issues
